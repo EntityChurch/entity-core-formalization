@@ -1,0 +1,20 @@
+# Spin toolchain — the INDEPENDENT-ENCODING cross-check (cross-check #B).
+#
+# Why this exists (see ../docs/HANDOFF-CROSSCHECK.md): the TLA+ models are one encoding, by one
+# author, checked by one engine. Spin is a different formalism (Promela: explicit-state,
+# channel-based, C-like) with a different model checker. Re-encoding a module independently and
+# showing it AGREES with the TLA+ corroborates that the transcription is faithful to V7 — the
+# real attack on the 5th wall, and the analog of the multi-language conformance peers
+# (go/rust/py) and of Spike B's Tamarin+ProVerif agreement. Same make+podman discipline.
+#
+# Spin verifies by GENERATING a C verifier (pan.c) from the model, COMPILING it, and RUNNING it
+# exhaustively — so the image carries spin + a C toolchain. Pinned base for reproducibility.
+FROM docker.io/library/debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        spin gcc libc6-dev make \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work
+# No ENTRYPOINT: make targets pass the concrete command (spin -a ... ; or sh -c "gcc ... && ./pan").
+CMD ["spin", "-V"]

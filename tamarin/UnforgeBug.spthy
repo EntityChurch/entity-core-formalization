@@ -1,0 +1,60 @@
+theory UnforgeBug
+/*
+ * Spike B — NEGATIVE CONTROL in Tamarin (cross-check of UnforgeBug.pv).
+ * Identical to Unforge.spthy EXCEPT the verifier OMITS the §5.5 chain-linkage check: the
+ * child cap is verified under its OWN claimed granter gClaim, with no requirement that
+ * gClaim equals the root's grantee gA. A corrupt-key rule gives the adversary a keypair it
+ * can sign with. Expectation: deleg_unforgeable is FALSIFIED — the adversary appends a
+ * self-signed child onto the public P->A root and the verifier accepts it. Tamarin's analog
+ * of ProVerif's `is false` and TLA+'s "Deadlock reached": the model finds the §5.5/§5.5a
+ * linkage bug class the moment the check is removed.
+ */
+begin
+
+builtins: signing
+
+restriction Equality:  "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:      "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:      "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), Out(pk(~skA)) ]
+
+// Adversary obtains its own keypair (knows the secret key) — a dishonest principal.
+rule Corrupt_Key:
+    [ Fr(~skX) ] --[ Corrupt(pk(~skX)) ]-> [ Out(pk(~skX)), Out(~skX) ]
+
+rule Issue_Root:
+    let m = <pk(~skA), s> sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !LtkA(~skA), In(s) ]
+  --[ IssuedRoot(pk(~skA), s) ]->
+    [ Out(<pk(~skA), s, sig>) ]
+
+rule Delegate:
+    let mroot = <pk(~skA), s> mchild = <gB, s2, pk(~skA)> csig = sign(mchild, ~skA) in
+    [ !LtkA(~skA), !PkP(pkP), In(<pk(~skA), s, sigroot>), In(<gB, s2>) ]
+  --[ Eq(verify(sigroot, mroot, pkP), true), Delegated(pk(~skA), gB, s2) ]->
+    [ Out(<gB, s2, pk(~skA), csig>) ]
+
+// BUGGY verifier: child verified under its own claimed granter gClaim; NO tie to gA (§5.5
+// linkage omitted). gClaim and gA are independent variables — nothing forces them equal.
+rule Verify_Deleg_NoLinkage:
+    let mroot  = <gA, s>
+        mchild = <gB, s2, gClaim>
+    in
+    [ !PkP(pkP), In(<gA, s, sigroot>), In(<gB, s2, gClaim, sigchild>) ]
+  --[ Eq(verify(sigroot,  mroot,  pkP),    true),
+      Eq(verify(sigchild, mchild, gClaim), true),
+      AcceptedDeleg(gB, s2) ]->
+    [ ]
+
+// Same lemma as Unforge.spthy — now expected to be FALSIFIED.
+lemma deleg_unforgeable:
+  "All gB s2 #i.
+     AcceptedDeleg(gB, s2) @ i
+     ==> (Ex gA #j. Delegated(gA, gB, s2) @ j & #j < #i)"
+
+end

@@ -1,0 +1,57 @@
+(* Phase 2 / Inc 8 — NEGATIVE CONTROL for Expiry.pv (§5.5 temporal validity), ProVerif.
+ *
+ * The ONLY change from Expiry.pv: the verifier omits the §5.5 temporal check (the
+ * `expires_at < t` consult). An expired cap is then accepted — stale-cap admit. The
+ * expired-at-t0 query flips to false-with-attack.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+type tstamp.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const t0: tstamp [data].
+const t1: tstamp [data].
+const t2: tstamp [data].
+const wit: bitstring [data].
+fun le(tstamp, tstamp): bitstring
+reduc    le(t0, t0) = wit
+otherwise le(t0, t1) = wit
+otherwise le(t0, t2) = wit
+otherwise le(t1, t1) = wit
+otherwise le(t1, t2) = wit
+otherwise le(t2, t2) = wit.
+
+free skP: skey [private].
+
+event Issued(pkey, tstamp).
+event Accepted(pkey, tstamp).
+
+query g: pkey; event(Accepted(g, t0)).
+   (* expect: REACHABLE (false) — the dropped temporal check admits an expired cap. *)
+query g: pkey; event(Accepted(g, t2)).
+
+let Pauthority(gA: pkey) =
+  in(net, exp: tstamp);
+  event Issued(gA, exp);
+  out(net, sign((gA, exp), skP)).
+
+(* BUG: the §5.5 temporal check is gone — the verifier accepts regardless of expiry. *)
+let Verifier(gA: pkey) =
+  in(net, rc: bitstring);
+  let (=gA, exp: tstamp) = checksign(rc, pk(skP)) in
+  event Accepted(gA, exp).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Verifier(gA) )

@@ -1,0 +1,84 @@
+(* Phase 2 / Inc 8 — TEMPORAL VALIDITY: capability expiry at a single sampled t
+ * (§5.5 + §5.10, A-LEAN-1 v7.76), ProVerif.
+ *
+ * Models the V7 §5.5 per-link temporal check (spec lines 2637-2639):
+ *
+ *     ; Temporal validity (`t` sampled once at function entry — v7.76; NOT per link)
+ *     if current.data.expires_at is not null and current.data.expires_at < t: return DENY
+ *
+ * `t` is the evaluation timestamp, "sampled ONCE per verdict" and "a declared Layer-1
+ * input" (§5.10 v7.76). A cap is accepted only if it is not expired: t <= expires_at
+ * (DENY strictly when expires_at < t, so expires_at == t is still valid). This is the
+ * sole temporal defense — ExpiryBug.pv removes it (the "stale cap admit" fail-open).
+ *
+ * Time is a small finite order {t0 < t1 < t2}; `le(a,b)` is the enumerated <= relation
+ * (cf. NoEscalation's finite authority order). The verdict samples a single t = t1 and
+ * applies it (faithful to "sampled once"). The CROSS-PEER determinism question — two
+ * peers at materially different t near a TTL boundary (§5.10) — is a distributed
+ * property in TLA+'s lane, not modeled here. expires_at arithmetic abstracted to the
+ * order; created_at / ttl-subtraction is TtlCaveat's / Lean's job.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+type tstamp.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* ---- finite tstamp order (§5.5 temporal): le(a,b) reduces iff a <= b ---- *)
+const t0: tstamp [data].   (* earliest *)
+const t1: tstamp [data].   (* the sampled evaluation timestamp t (A-LEAN-1: sampled once) *)
+const t2: tstamp [data].   (* latest *)
+const wit: bitstring [data].
+fun le(tstamp, tstamp): bitstring
+reduc    le(t0, t0) = wit
+otherwise le(t0, t1) = wit
+otherwise le(t0, t2) = wit
+otherwise le(t1, t1) = wit
+otherwise le(t1, t2) = wit
+otherwise le(t2, t2) = wit.
+
+free skP: skey [private].   (* honest root authority P (verifier's own peer, §5.5) *)
+
+(* ---- events ---- *)
+event Issued(pkey, tstamp).     (* P signed a cap with this expires_at *)
+event Accepted(pkey, tstamp).   (* verifier accepted a cap with this expires_at, at sampled t *)
+
+(* ---- THE temporal-validity lemma ----
+ * A cap that is expired at the sampled t (expires_at = t0 < t1 = t) is never accepted. *)
+query g: pkey; event(Accepted(g, t0)).
+   (* expect: NOT reachable (false) = expired caps rejected. *)
+
+(* Non-vacuity: a live cap (expires_at = t2, strictly after t) CAN be accepted. *)
+query g: pkey; event(Accepted(g, t2)).
+   (* expect: reachable (true) — the model has teeth. *)
+
+(* ---- honest principals ---- *)
+
+(* P issues a cap to A with expires_at = exp (the network picks the expiry). *)
+let Pauthority(gA: pkey) =
+  in(net, exp: tstamp);
+  event Issued(gA, exp);
+  out(net, sign((gA, exp), skP)).
+
+(* Verifier (V7 §5.5): samples the single evaluation timestamp t = t1, accepts the cap
+ * only if it is not expired — t <= expires_at. *)
+let Verifier(gA: pkey) =
+  in(net, rc: bitstring);
+  let (=gA, exp: tstamp) = checksign(rc, pk(skP)) in
+  let okv = le(t1, exp) in        (* §5.5: DENY iff expires_at < t; t = t1 sampled once *)
+  event Accepted(gA, exp).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Verifier(gA) )

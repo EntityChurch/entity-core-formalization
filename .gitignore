@@ -1,0 +1,41 @@
+# Toolchain binaries — never commit jars/binaries; document how to fetch them instead
+tla2tools.jar
+*.jar
+tla/toolbox-state/
+tla/states/
+*.st                 # TLC state dumps
+MC.out
+
+# TLA+ Toolbox / TLC scratch
+*.toolbox/
+metadir/
+*_TTrace_*.tla
+*_TTrace_*.bin
+*.old                 # pcal.trans pre-translation backup
+
+# Tamarin / ProVerif build + proof artifacts
+tamarin/output/
+*.proof
+*.spthy.tmp
+oracle.log
+
+# Apalache (SMT) output
+_apalache-out/
+.apalache/
+
+# Spin (Promela) generated verifier
+spin/pan
+pan
+pan.*
+*.trail
+_spin_nvr.tmp
+
+# Per-machine resource-cap overrides (RESOURCE-CAPS.md) — never committed
+caps.local.mk
+
+# Editor / OS
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/

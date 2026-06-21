@@ -1,0 +1,78 @@
+theory Binding
+/*
+ * Phase 1 / Lemma 3 — GRANTEE-BINDING + NO-REPLAY in Tamarin (lockstep cross-check of
+ * Binding.pv, and the tool that proves no-replay cleanly).
+ *
+ * V7 §5.2 verify_request: step 2 the EXECUTE is signed by execute.data.author; step 3
+ * capability.data.grantee == execute.data.author (the wielder must be the cap's grantee)
+ * + chain rooted at P. A capability is bound to its grantee — an intercepted cap cannot
+ * be wielded by anyone else (no confused-deputy / theft).
+ *
+ * NO-REPLAY: a fresh per-request nonce, accepted at most once by the verifier — modeled
+ * by the single-use restriction NoReplay over the Used(n) action (a verifier seen-set).
+ * Tamarin's linear semantics model single-use precisely; the injective no_replay lemma
+ * closes here where ProVerif's non-atomic table get/else could not. Symbolic sign/verify
+ * is the §7.3 crypto wall; the chain interior is abstracted to "cap signed by P".
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneG:     "All #i #j. OnlyG() @ i & OnlyG() @ j ==> #i = #j"
+// Single-use: the verifier accepts each nonce at most once (idempotent seen-set).
+restriction NoReplay: "All n #i #j. Used(n) @ i & Used(n) @ j ==> #i = #j"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_G:
+    [ Fr(~skG) ] --[ OnlyG() ]-> [ !LtkG(~skG), !PkG(pk(~skG)), Out(pk(~skG)) ]
+
+// P issues a cap to grantee G: <grantee, 'capTag'> signed by P.
+rule Issue:
+    let csig = sign(<gG, 'capTag'>, ~skP) in
+    [ !LtkP(~skP), !PkG(gG) ] --[ IssuedCap(gG) ]-> [ Out(<gG, 'capTag', csig>) ]
+
+// Honest grantee G authors an execute with a fresh nonce, signing <nonce, grantee>.
+// Eq(cg, pk(~skG)) ensures G only authors with its own cap.
+rule Author:
+    let esig = sign(<~n, cg>, ~skG) in
+    [ !LtkG(~skG), !PkP(pkP), In(<cg, 'capTag', csig>), Fr(~n) ]
+  --[ Eq(verify(csig, <cg, 'capTag'>, pkP), true), Eq(cg, pk(~skG)),
+      Authored(pk(~skG), ~n) ]->
+    [ Out(<pk(~skG), cg, 'capTag', csig, ~n, esig>) ]
+
+// Verifier (V7 §5.2): cap valid (grantee cg, signed by P), execute signed by author,
+// binding cg == author, nonce single-use.
+rule Verify:
+    [ !PkP(pkP), In(<author, cg, 'capTag', csig, n, esig>) ]
+  --[ Eq(verify(csig, <cg, 'capTag'>, pkP), true),   // cap valid, rooted at P; grantee cg
+      Eq(verify(esig, <n, cg>, author), true),        // step 2: author signed the execute
+      Eq(cg, author),                                 // step 3: grantee-binding
+      Used(n),
+      AcceptedExec(cg, n) ]->                          // records the cap's grantee
+    [ ]
+
+/* ---- the binding + no-replay lemmas ---- */
+
+// (1) Grantee-binding: an accepted execute wielding a cap with grantee g implies g
+//     authored it. No confused-deputy / capability theft.
+lemma binding:
+  "All g n #i. AcceptedExec(g, n) @ i ==> (Ex #j. Authored(g, n) @ j & #j < #i)"
+
+// (2) No-replay: each accepted execute is backed by an authoring AND is the unique
+//     acceptance for that nonce — old/captured executes cannot be replayed.
+lemma no_replay:
+  "All g n #i.
+     AcceptedExec(g, n) @ i
+     ==> (Ex #j. Authored(g, n) @ j & #j < #i)
+       & (All #i2. AcceptedExec(g, n) @ i2 ==> #i = #i2)"
+
+// Non-vacuity: an honest execute IS accepted.
+lemma accepted_reachable:
+  exists-trace
+  "Ex g n #i. AcceptedExec(g, n) @ i"
+
+end

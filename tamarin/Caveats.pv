@@ -1,0 +1,92 @@
+(* Phase 2 / Inc 6 — DELEGATION CAVEAT: no_delegation (§5.7), ProVerif.
+ *
+ * Models V7 §5.7 `check_delegation_caveats`, the `no_delegation` branch:
+ *
+ *     if caveats.no_delegation == true: return false
+ *
+ * The caveat lives on the PARENT cap and is enforced per-link in the §5.5 chain walk
+ * against the parent's direct child. A cap minted with no_delegation MUST NOT have an
+ * accepted delegated child. This is the verify-time defense; nothing stops a delegator
+ * from re-signing a child (V7 constrains nothing at sign time — §5.7: "enforced per-link
+ * in the chain walk"), so the verifier's caveat consult is the SOLE line of defense —
+ * exactly what CaveatsBug.pv removes.
+ *
+ * Built on NoEscalation.pv's scaffold (signatures §7.3 + §5.5 linkage). `scope` is opaque
+ * here (a single constant) — this theory isolates the caveat check; the authority order is
+ * NoEscalation's. The delegation_caveats BLOCK is abstracted to its one load-bearing bit
+ * (the no_delegation flag); max_delegation_depth/ttl are Inc 7/8.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+type scope.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* ---- the §5.7 no_delegation flag, carried in the signed cap body ----
+ * 'nodeleg'  = delegation_caveats.no_delegation == true  (further delegation forbidden)
+ * 'okdeleg'  = no_delegation unset/false                 (further delegation permitted)
+ *)
+const nodeleg: bitstring [data].
+const okdeleg: bitstring [data].
+
+const theScope: scope [data].   (* opaque authority — the order is NoEscalation's job *)
+
+free skP: skey [private].   (* honest root authority P (verifier's own peer, §5.5) *)
+
+(* ---- events ---- *)
+event IssuedRoot(pkey, bitstring).    (* P signed a root cap: (grantee, no_delegation flag) *)
+event Delegated(pkey, pkey).          (* A re-signed a child for grantee *)
+event AcceptedDeleg(pkey, bitstring). (* verifier accepted a 2-link chain; tag = root flag *)
+
+(* ---- THE no_delegation lemma ----
+ * A delegated chain rooted at a no_delegation cap is never accepted. *)
+query gB: pkey; event(AcceptedDeleg(gB, nodeleg)).
+   (* expect: NOT reachable (false) in the correct model = caveat honored. *)
+
+(* Non-vacuity: a child of a delegable (okdeleg) root CAN be accepted. *)
+query gB: pkey; event(AcceptedDeleg(gB, okdeleg)).
+   (* expect: reachable (true) — the model has teeth. *)
+
+(* ---- honest principals ---- *)
+
+(* P issues a root cap to A carrying caveat flag nd. P signs whatever flag it is asked to
+ * mint (V7 constrains nothing at sign time); a nd=nodeleg request models P legitimately
+ * minting a no-delegation cap, nd=okdeleg a delegable one. *)
+let Pauthority(gA: pkey) =
+  in(net, nd: bitstring);
+  event IssuedRoot(gA, nd);
+  out(net, sign((gA, theScope, nd), skP)).
+
+(* Delegator A: holds a P-rooted cap; re-signs a child for any grantee. Does NOT self-police
+ * the caveat — §5.7 is enforced at VERIFY time, per link. *)
+let Delegator(skA: skey) =
+  in(net, rc: bitstring);
+  let (=pk(skA), s: scope, nd: bitstring) = checksign(rc, pk(skP)) in
+  in(net, gB: pkey);
+  event Delegated(pk(skA), gB);
+  out(net, sign((gB, s, pk(skA)), skA)).   (* child: (grantee, scope, parent-granter) *)
+
+(* Verifier (V7 §5.5 + §5.7): 2-link chain root(P->gA) + child(gA->gB). Signatures + §5.5
+ * linkage (shared gA) + check_delegation_caveats: the parent's no_delegation must NOT be set
+ * for the delegation link to pass. *)
+let Verifier(gA: pkey) =
+  in(net, (rc: bitstring, dc: bitstring));
+  let (=gA, sRoot: scope, nd: bitstring) = checksign(rc, pk(skP)) in   (* root signed by P *)
+  let (gB: pkey, =sRoot, =gA) = checksign(dc, gA) in                   (* child signed by gA; linkage *)
+  if nd = okdeleg then                                                  (* §5.7: no_delegation NOT set *)
+    event AcceptedDeleg(gB, nd).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Delegator(skA) | !Verifier(gA) )

@@ -1,0 +1,63 @@
+(* Phase 2 / Inc 11a — NEGATIVE CONTROL for BindingReplay.pv (no-replay), ProVerif.
+ *
+ * The ONLY change: the verifier uses a FIXED, non-fresh challenge (`fixedC`) instead of
+ * sampling a fresh one per verdict — the freshness handshake is defeated. A captured
+ * execute (signed over fixedC) is then replayed and accepted by many verdicts: multiple
+ * AcceptedExec(g, fixedC) for ONE Authored(g, fixedC). The INJECTIVE no-replay query flips
+ * to false-with-attack; the binding correspondence still holds (replay is orthogonal to
+ * binding), mirroring Tamarin's BindingReplayBug.spthy.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const capTag: bitstring [data].
+const fixedC: bitstring [data].    (* BUG: a fixed challenge, not freshly sampled per verdict *)
+
+free skP: skey [private].
+free skG: skey [private].
+
+event Authored(pkey, bitstring).
+event AcceptedExec(pkey, bitstring).
+
+query g: pkey, c: bitstring;
+  inj-event(AcceptedExec(g, c)) ==> inj-event(Authored(g, c)).
+   (* expect: false + attack — a captured execute is accepted by multiple verdicts. *)
+
+query g: pkey, c: bitstring;
+  event(AcceptedExec(g, c)) ==> event(Authored(g, c)).
+
+query g: pkey, c: bitstring; event(AcceptedExec(g, c)).
+
+let Pissue(gG: pkey) =
+  out(net, sign((gG, capTag), skP)).
+
+let Granteeproc(gG: pkey) =
+  in(net, cap: bitstring);
+  let (=gG, =capTag) = checksign(cap, pk(skP)) in
+  in(net, c: bitstring);
+  event Authored(gG, c);
+  out(net, (gG, cap, sign((c, cap, gG), skG))).
+
+(* BUG: fixed challenge — no per-verdict freshness. *)
+let Verifier =
+  out(net, fixedC);
+  in(net, (author: pkey, cap: bitstring, esig: bitstring));
+  let (=fixedC, =cap, =author) = checksign(esig, author) in
+  let (grantee: pkey, =capTag) = checksign(cap, pk(skP)) in
+  if grantee = author then
+    event AcceptedExec(grantee, fixedC).
+
+process
+  out(net, pk(skP));
+  let gG = pk(skG) in
+  out(net, gG);
+  ( !Pissue(gG) | !Granteeproc(gG) | !Verifier )

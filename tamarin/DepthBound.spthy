@@ -1,0 +1,90 @@
+theory DepthBound
+/*
+ * Phase 2 / Inc 7 — DELEGATION CAVEAT: max_delegation_depth (§5.7) in Tamarin
+ * (lockstep cross-check of DepthBound.pv).
+ *
+ * V7 §5.7: `if depth >= caveats.max_delegation_depth: return false`. depth is the
+ * verifier-computed hop count below the caveat-setting cap (positional, anchored at the
+ * honest root — a malicious mid-chain delegator cannot reset it). Per-link in the §5.5
+ * walk; the verifier's depth guard is the sole defense (DepthBoundBug removes it).
+ *
+ * Worked instance max_delegation_depth = 1 (§5.7's own example: "exactly one delegation").
+ * depth/bound are successor terms (d0=0, ds=+1, bound ds('d0')=1). The "depth < bound"
+ * relation is seeded as a persistent !Below fact (the same seed-the-order idiom as
+ * NoEscalation's two-rule attenuation) — only depth 0 is below bound 1. Chain
+ * P -> A(bound=1) -> B -> C: A->B is depth 0 (allow), B->C is depth 1 (deny). Larger
+ * bounds are a structural generalization.
+ */
+begin
+
+builtins: signing
+functions: ds/1
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+// The §5.7 "depth < bound" relation at the worked instance: depth 0 is below bound 1.
+// (No fact for depth 1 < bound 1 — that is the boundary the check enforces.)
+rule Setup_Order:
+    [ ] --[ Order() ]-> [ !Below('d0', ds('d0')) ]
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), Out(pk(~skA)) ]
+
+// P issues a root cap to A with max_delegation_depth = 1 (= ds('d0')).
+rule Issue_Root:
+    let m = <pk(~skA), ds('d0')>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !LtkA(~skA) ]
+  --[ IssuedRoot(pk(~skA), ds('d0')) ]->
+    [ Out(<pk(~skA), ds('d0'), sig>) ]
+
+// A delegates a link <gB, A> to any grantee gB the network supplies. No self-policing.
+rule Delegate:
+    let mlink = <gB, pk(~skA)>  csig = sign(mlink, ~skA) in
+    [ !LtkA(~skA), In(gB) ]
+  --[ Delegated(pk(~skA), gB) ]->
+    [ Out(<gB, pk(~skA), csig>) ]
+
+// Within-bound leaf (P -> A -> B): one delegation, depth 0. Requires depth 0 < bound.
+rule Verify_Shallow:
+    let mroot  = <gA, bnd>
+        mlink1 = <gB, gA>
+    in
+    [ !PkP(pkP), !Below('d0', bnd),
+      In(<gA, bnd, sigroot>), In(<gB, gA, sig1>) ]
+  --[ Eq(verify(sigroot, mroot,  pkP), true),
+      Eq(verify(sig1,    mlink1, gA),  true),
+      AcceptedLeaf(gB, 'one') ]->
+    [ ]
+
+// Over-bound leaf (P -> A -> B -> C): two delegations, depths 0 then 1. The depth-1 guard
+// (!Below(ds('d0'), bnd)) is unsatisfiable at bound 1 — the rule cannot fire.
+rule Verify_Deep:
+    let mroot  = <gA, bnd>
+        mlink1 = <gB, gA>
+        mlink2 = <gC, gB>
+    in
+    [ !PkP(pkP), !Below('d0', bnd), !Below(ds('d0'), bnd),
+      In(<gA, bnd, sigroot>), In(<gB, gA, sig1>), In(<gC, gB, sig2>) ]
+  --[ Eq(verify(sigroot, mroot,  pkP), true),
+      Eq(verify(sig1,    mlink1, gA),  true),
+      Eq(verify(sig2,    mlink2, gB),  true),
+      AcceptedLeaf(gC, 'two') ]->
+    [ ]
+
+/* ---- the depth-bound lemma ---- */
+
+// Under max_delegation_depth = 1, a leaf reached by 2 delegations is never accepted.
+lemma depth_bound_honored:
+  "not (Ex gC #i. AcceptedLeaf(gC, 'two') @ i)"
+
+// Non-vacuity: a leaf reached by 1 delegation (within bound) CAN be accepted.
+lemma accepted_reachable:
+  exists-trace
+  "Ex gB #i. AcceptedLeaf(gB, 'one') @ i"
+
+end

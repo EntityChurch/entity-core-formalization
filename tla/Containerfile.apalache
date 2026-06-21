@@ -1,0 +1,26 @@
+# Apalache toolchain — the SYMBOLIC (SMT) cross-check engine for the TLA+ models.
+#
+# Why this exists (cross-check #A, see ../docs/HANDOFF-CROSSCHECK.md): TLC (entity-tla image)
+# checks the models EXHAUSTIVELY but only at a finite bound (N=2 peers, etc.). Apalache checks
+# the SAME .tla symbolically with Z3, which (a) is a second independent engine and (b) can prove
+# an INDUCTIVE INVARIANT — Init => Inv and Inv /\ Next => Inv' — which holds for ALL N at once,
+# converting a bounded check into an unbounded proof. Same make+podman discipline as entity-tla.
+#
+# Pinned base + pinned Apalache release for reproducibility (mirrors the spec-data SHA-pin).
+FROM docker.io/library/eclipse-temurin:21-jre-noble
+
+# Apalache release (https://github.com/apalache-mc/apalache/releases). Override at build time:
+#   --build-arg APALACHE_VERSION=0.58.0
+ARG APALACHE_VERSION=0.58.0
+ARG APALACHE_URL=https://github.com/apalache-mc/apalache/releases/download/v${APALACHE_VERSION}/apalache.tgz
+
+# ADD fetches the URL at build time (no curl/wget needed); the remote tarball is not
+# auto-extracted, so unpack it explicitly. The tgz lays down apalache/{bin,lib}.
+ADD ${APALACHE_URL} /opt/apalache.tgz
+RUN tar xzf /opt/apalache.tgz -C /opt && rm /opt/apalache.tgz
+
+ENV PATH="/opt/apalache/bin:${PATH}"
+WORKDIR /work
+# apalache-mc is the launcher (parse/typecheck/check/simulate). make targets pass the subcommand.
+ENTRYPOINT ["apalache-mc"]
+CMD ["version"]

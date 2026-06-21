@@ -1,0 +1,82 @@
+(* Phase 2 / Inc 9 — NEGATIVE CONTROL for DeepChainN.pv (§5.5a deep granter-frame), ProVerif.
+ *
+ * The ONLY change from DeepChainN.pv: the verifier canonicalizes the leaf against the
+ * VERIFIER frame (pk(skV)) instead of the leaf's granter B. Two foreign hops deep, B's
+ * bare-`*` leaf now widens into V's namespace — the deep FOREIGN-GRANTER cross-peer admit.
+ * The V-namespace query flips to false-with-attack. (As in Phase-1 DeepChainBug, the legit
+ * B-namespace case also breaks — the mis-framing redirects B's authority to V — an honest
+ * consequence of the wrong frame, not a separate property.)
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+free skV: skey [private].
+free skA: skey [private].
+free skB: skey [private].
+
+fun res(pkey, bitstring): bitstring [data].
+const star: bitstring [data].
+const allp: bitstring [data].
+fun awild(pkey): bitstring [data].
+
+fun canon(bitstring, pkey): bitstring
+reduc
+    forall fr: pkey;            canon(star, fr)     = awild(fr)
+  otherwise
+    forall p: pkey, fr: pkey;   canon(awild(p), fr) = awild(p)
+  otherwise
+    forall fr: pkey;            canon(allp, fr)     = allp.
+
+fun covok(bitstring, bitstring): bitstring
+reduc
+    forall p: pkey, path: bitstring; covok(awild(p), res(p, path)) = res(p, path)
+  otherwise
+    forall r: bitstring;             covok(allp, r)                = r.
+
+event DelegatedLeaf(pkey, pkey).
+event Authorized(bitstring).
+
+query s: bitstring; event(Authorized(res(pk(skV), s))).
+   (* expect: REACHABLE (false) — the wrong frame admits V's namespace, deep. *)
+query s: bitstring; event(Authorized(res(pk(skB), s))).
+
+let Vroot(gA: pkey) =
+  out(net, sign((gA, allp), skV)).
+
+let DelegA(gA: pkey) =
+  in(net, rc: bitstring);
+  let (=gA, rres: bitstring) = checksign(rc, pk(skV)) in
+  in(net, gBx: pkey);
+  out(net, sign((gBx, allp, gA), skA)).
+
+let DelegB(gB: pkey) =
+  in(net, lc1: bitstring);
+  let (=gB, =allp, gAp: pkey) = checksign(lc1, pk(skA)) in
+  in(net, gC: pkey);
+  event DelegatedLeaf(gB, gC);
+  out(net, sign((gC, star, gB), skB)).
+
+(* BUG: canonicalize the leaf against the VERIFIER frame pk(skV), not the leaf granter B. *)
+let Verifier(gA: pkey, gB: pkey) =
+  in(net, (rc: bitstring, lc1: bitstring, lc2: bitstring, target: bitstring));
+  let (=gA, =allp) = checksign(rc, pk(skV)) in
+  let (=gB, =allp, =gA) = checksign(lc1, gA) in
+  let (gC: pkey, lpat: bitstring, =gB) = checksign(lc2, gB) in
+  let okwit: bitstring = covok(canon(lpat, pk(skV)), target) in   (* BUG: verifier frame *)
+  event Authorized(target).
+
+process
+  out(net, pk(skV));
+  let gA = pk(skA) in
+  let gB = pk(skB) in
+  out(net, gA); out(net, gB);
+  ( !Vroot(gA) | !DelegA(gA) | !DelegB(gB) | !Verifier(gA, gB) )

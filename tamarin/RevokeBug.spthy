@@ -1,0 +1,48 @@
+theory RevokeBug
+/*
+ * NEGATIVE CONTROL for Revoke.spthy — the HonorRevocation restriction (is_revoked
+ * consultation) is REMOVED. Expect revoked_never_passes to FALSIFY: a revoked cap is
+ * still accepted afterwards (the §5.1 silent fail-open). Tamarin cross-check of RevokeBug.pv.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+// P issues a cap (fresh id ~cid, signed). Persistent !Issued = cryptographic validity.
+rule Issue:
+    let cap = <~cid, sign(~cid, ~skP)> in
+    [ !LtkP(~skP), Fr(~cid) ]
+  --[ Issue(~cid) ]->
+    [ Out(cap), !Issued(~cid) ]
+
+// Verifier (§5.1 + §5.5): cap valid AND (via HonorRevocation) not revoked earlier.
+rule Verify:
+    [ !PkP(pkP), In(<cid, sig>), !Issued(cid) ]
+  --[ Eq(verify(sig, cid, pkP), true), Accept(cid) ]->
+    [ ]
+
+// Revoke (§6.2): write the revocation marker for the cap.
+rule Revoke:
+    [ !Issued(cid) ]
+  --[ Revoke(cid) ]->
+    [ ]
+
+/* ---- the revocation lemma ---- */
+
+// RevokedNeverPasses: a cap is accepted only BEFORE it is revoked — once the marker is
+// written, no later acceptance is possible.
+lemma revoked_never_passes:
+  "All cid #r #a. Revoke(cid) @ r & Accept(cid) @ a ==> #a < #r"
+
+// Non-vacuity: a (non-revoked) cap IS accepted.
+lemma accept_reachable:
+  exists-trace
+  "Ex cid #a. Accept(cid) @ a"
+
+end

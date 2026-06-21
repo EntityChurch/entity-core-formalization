@@ -1,0 +1,48 @@
+(* Phase 2 / Inc 10 — NEGATIVE CONTROL for MultisigKN.pv (K=2/N=3 threshold), ProVerif.
+ *
+ * The verifier accepts on a SINGLE signature (the local peer S1's), counting threshold met
+ * without a second distinct signer — the M3/M4 threshold bypass. The threshold query flips
+ * to false-with-attack (S1 alone signs; neither S2 nor S3 does).
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const rootC: bitstring [data].
+
+free skS1: skey [private].
+free skS2: skey [private].
+free skS3: skey [private].
+
+event Signed(pkey).
+event AcceptMulti().
+
+query event(AcceptMulti()) ==>
+  (event(Signed(pk(skS1))) && (event(Signed(pk(skS2))) || event(Signed(pk(skS3))))).
+   (* expect: false + attack — accepted with only S1's single signature. *)
+
+query event(AcceptMulti()).
+
+let Signer(sk: skey) =
+  event Signed(pk(sk));
+  out(net, sign(rootC, sk)).
+
+(* BUG: a single valid signature (the local peer's) is accepted — threshold not enforced. *)
+let Verifier =
+  in(net, sig1: bitstring);
+  let (=rootC) = checksign(sig1, pk(skS1)) in
+  event AcceptMulti().
+
+process
+  out(net, pk(skS1));
+  out(net, pk(skS2));
+  out(net, pk(skS3));
+  ( !Signer(skS1) | !Signer(skS2) | !Signer(skS3) | !Verifier )

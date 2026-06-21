@@ -1,0 +1,40 @@
+# Tamarin toolchain (Spike B, comparison tool) — containerized, make + podman only.
+#
+# Uses the official prebuilt linux64 binary from the Tamarin GitHub release (pinned),
+# plus Maude (Tamarin's required rewriting backend) from apt. Avoids the slow/fiddly
+# from-source GHC/Haskell-stack build entirely. Reproducible per pinned version.
+FROM docker.io/library/ubuntu:24.04
+
+# Tamarin reads theory files via the locale encoding; default POSIX locale rejects the
+# non-ASCII bytes (§, em-dashes) in our spec-citation comments. Force UTF-8.
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+ARG TAMARIN_VERSION=1.12.0
+ARG TAMARIN_URL=https://github.com/tamarin-prover/tamarin-prover/releases/download/${TAMARIN_VERSION}/tamarin-prover-${TAMARIN_VERSION}-linux64-ubuntu.tar.gz
+
+# Maude is Tamarin's rewriting backend. Ubuntu 24.04's apt ships Maude 3.2, which Tamarin
+# 1.12.0 flags as an unsupported point-release (warning, but proves correctly). Pin the
+# Tamarin-blessed Maude 3.4 prebuilt binary instead — clears the warning, reproducible.
+ARG MAUDE_URL=https://github.com/maude-lang/Maude/releases/download/Maude3.4/Maude-linux.zip
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends graphviz ca-certificates unzip \
+ && rm -rf /var/lib/apt/lists/*
+
+ADD ${MAUDE_URL} /tmp/maude.zip
+RUN mkdir -p /opt/maude \
+ && unzip -o /tmp/maude.zip -d /opt/maude \
+ && cp "$(find /opt/maude -type f -name 'maude*.linux64' | head -1)" /usr/local/bin/maude \
+ && chmod +x /usr/local/bin/maude \
+ && rm /tmp/maude.zip
+# MAUDE_LIB must point at the dir holding prelude.maude (the zip extracts to Linux64/).
+ENV MAUDE_LIB=/opt/maude/Linux64
+
+ADD ${TAMARIN_URL} /tmp/tamarin.tar.gz
+RUN mkdir -p /opt/tamarin \
+ && tar -xzf /tmp/tamarin.tar.gz -C /opt/tamarin \
+ && cp "$(find /opt/tamarin -type f -name tamarin-prover | head -1)" /usr/local/bin/tamarin-prover \
+ && chmod +x /usr/local/bin/tamarin-prover \
+ && rm /tmp/tamarin.tar.gz
+
+WORKDIR /work

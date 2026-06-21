@@ -1,0 +1,91 @@
+theory DeepChainN
+/*
+ * Phase 2 / Inc 9 — DEEP CHAIN (N=3, TWO foreign mids) + granter-frame in Tamarin
+ * (lockstep cross-check of DeepChainN.pv).
+ *
+ * Generalizes Phase-1 DeepChain.spthy from V -> A -> B (one foreign mid) to
+ * V -> A -> B -> C with TWO foreign mids (A, B), the leaf granted by the DEEPER mid B.
+ * V7 §5.5a Amendment 1: each peer-relative pattern canonicalizes against its OWN granter.
+ * B's bare-'star' leaf reaches B's namespace only — never V's — even two foreign hops
+ * deep. The correct vs. buggy FRAME is which namespace the request is bound to:
+ * Eq(reqns, gB) [leaf granter B] vs Eq(reqns, pkV) [verifier frame]. Symbolic
+ * sign/verify = §7.3 wall; the A->B link grants open 'allp' (attenuation not the gate).
+ */
+begin
+
+builtins: signing
+functions: res/2
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneV:     "All #i #j. OnlyV() @ i & OnlyV() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+restriction OneB:     "All #i #j. OnlyB() @ i & OnlyB() @ j ==> #i = #j"
+
+rule Setup_V:
+    [ Fr(~skV) ] --[ OnlyV(), VKey(pk(~skV)) ]-> [ !LtkV(~skV), !PkV(pk(~skV)), Out(pk(~skV)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA(), AKey(pk(~skA)) ]-> [ !LtkA(~skA), !PkA(pk(~skA)), Out(pk(~skA)) ]
+
+rule Setup_B:
+    [ Fr(~skB) ] --[ OnlyB(), BKey(pk(~skB)) ]-> [ !LtkB(~skB), !PkB(pk(~skB)), Out(pk(~skB)) ]
+
+// V issues a root cap to A granting '/*/*' ('allp').
+rule Vroot:
+    let m = <gA, 'allp'>  sig = sign(m, ~skV) in
+    [ !LtkV(~skV), !PkA(gA) ]
+  --[ ]->
+    [ Out(<gA, 'allp', sig>) ]
+
+// A (foreign mid #1) delegates 'allp' onward to any gB (honest chain routes gB = B).
+rule DelegateA:
+    let mroot = <pk(~skA), 'allp'>
+        mlink = <gB, 'allp', pk(~skA)>
+        lsig  = sign(mlink, ~skA)
+    in
+    [ !LtkA(~skA), !PkV(pkV), In(<pk(~skA), 'allp', sigroot>), In(gB) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true), DelegatedLink(pk(~skA), gB) ]->
+    [ Out(<gB, 'allp', pk(~skA), lsig>) ]
+
+// B (foreign mid #2) delegates a bare-'star' leaf (B's own-namespace intent) to any gC.
+rule DelegateB:
+    let mlink = <pk(~skB), 'allp', gAp>
+        mleaf = <gC, 'star', pk(~skB)>
+        lsig  = sign(mleaf, ~skB)
+    in
+    [ !LtkB(~skB), !PkA(gAp), In(<pk(~skB), 'allp', gAp, sigA>) ]
+  --[ Eq(verify(sigA, mlink, gAp), true), DelegatedLeaf(pk(~skB), gC) ]->
+    [ Out(<gC, 'star', pk(~skB), lsig>) ]
+
+// Verifier dispatch (§5.5 + §5.5a), CORRECT: canon the bare-'star' leaf against the LEAF
+// granter frame gB. A request <reqns, path> is covered only when reqns = gB.
+rule Verify_StarLeaf:
+    let mroot = <gA, 'allp'>
+        mlink = <gB, 'allp', gA>
+        mleaf = <gC, 'star', gB>
+    in
+    [ !PkV(pkV), !PkA(gA), !PkB(gB),          // foreign mids pinned to their honest identities
+      In(<gA, 'allp', sigroot>),
+      In(<gB, 'allp', gA, siglink>),
+      In(<gC, 'star', gB, sigleaf>),
+      In(<reqns, path>) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true),
+      Eq(verify(siglink, mlink, gA),  true),
+      Eq(verify(sigleaf, mleaf, gB),  true),
+      Eq(reqns, gB),                          // §5.5a CORRECT: coverage frame = leaf granter B
+      Authorized(res(reqns, path)) ]->
+    [ ]
+
+/* ---- the deep granter-frame lemma ---- */
+
+// No cross-peer escalation at depth: V's namespace is never authorized via B's bare-star leaf.
+lemma no_xpeer_escalation:
+  "All pkV path #i #k.
+     VKey(pkV) @ k & Authorized(res(pkV, path)) @ i ==> F"
+
+// Non-vacuity: the bare-star leaf DOES legitimately authorize B's own namespace.
+lemma legit_reachable:
+  exists-trace
+  "Ex pkB path #i #k. BKey(pkB) @ k & Authorized(res(pkB, path)) @ i"
+
+end

@@ -1,0 +1,21 @@
+# TLA+ toolchain (Spike A) — containerized per the make+podman-only build discipline.
+# No host Java, no loose tla2tools.jar on the host: the JRE and the tools jar are
+# baked into this image and invoked via `make` targets (see tla/Makefile).
+#
+# Pinned base + pinned tools-jar release for reproducibility (mirrors the
+# spec-data SHA-pin discipline: a model result is reproducible per toolchain version).
+FROM docker.io/library/eclipse-temurin:21-jre-noble
+
+# TLA+ tools release. Pin to a tagged release rather than `latest` so the toolchain
+# version is part of the reproducibility envelope. Override at build time with
+#   --build-arg TLA_TOOLS_VERSION=v1.8.0
+ARG TLA_TOOLS_VERSION=v1.8.0
+ARG TLA_TOOLS_URL=https://github.com/tlaplus/tlaplus/releases/download/${TLA_TOOLS_VERSION}/tla2tools.jar
+
+# ADD fetches the URL at build time — avoids needing curl/wget in the image.
+ADD ${TLA_TOOLS_URL} /opt/tla/tla2tools.jar
+
+WORKDIR /work
+# Default entrypoint is the JVM; make targets pass the concrete tool class + args.
+ENTRYPOINT ["java", "-cp", "/opt/tla/tla2tools.jar"]
+CMD ["tlc2.TLC", "-help"]

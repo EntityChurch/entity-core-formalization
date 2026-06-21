@@ -1,0 +1,71 @@
+(* Phase 2 / Inc 7 — NEGATIVE CONTROL for DepthBound.pv (§5.7 max_delegation_depth), ProVerif.
+ *
+ * The ONLY change from DepthBound.pv: VerifyDeep omits the §5.7 depth guard on the B->C
+ * link (the deeper link). The over-bound leaf (2 delegations under max_delegation_depth=1)
+ * is then accepted — chain-too-deep admit. The `two` query flips to false-with-attack.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+type dpt.
+const d0: dpt [data].
+fun ds(dpt): dpt [data].
+const wit: bitstring [data].
+fun belowok(dpt, dpt): bitstring
+reduc forall b: dpt; belowok(d0, ds(b)) = wit.
+
+free skP: skey [private].
+
+const one: bitstring [data].
+const two: bitstring [data].
+
+event IssuedRoot(pkey, dpt).
+event Delegated(pkey, pkey).
+event AcceptedLeaf(pkey, bitstring).
+
+query gC: pkey; event(AcceptedLeaf(gC, two)).
+   (* expect: REACHABLE (false) — the dropped depth guard admits an over-deep chain. *)
+query gB: pkey; event(AcceptedLeaf(gB, one)).
+
+let Pauthority(gA: pkey) =
+  event IssuedRoot(gA, ds(d0));
+  out(net, sign((gA, ds(d0)), skP)).
+
+let Delegator(skA: skey) =
+  in(net, rc: bitstring);
+  let (=pk(skA), bnd: dpt) = checksign(rc, pk(skP)) in
+  in(net, gB: pkey);
+  event Delegated(pk(skA), gB);
+  out(net, sign((gB, pk(skA)), skA)).
+
+let VerifyShallow(gA: pkey) =
+  in(net, (rc: bitstring, l1: bitstring));
+  let (=gA, bnd: dpt) = checksign(rc, pk(skP)) in
+  let (gB: pkey, =gA) = checksign(l1, gA) in
+  let ok0 = belowok(d0, bnd) in
+  event AcceptedLeaf(gB, one).
+
+(* BUG: the depth-1 guard on the B->C link is gone — the over-deep leaf is admitted. *)
+let VerifyDeep(gA: pkey) =
+  in(net, (rc: bitstring, l1: bitstring, l2: bitstring));
+  let (=gA, bnd: dpt) = checksign(rc, pk(skP)) in
+  let (gB: pkey, =gA) = checksign(l1, gA) in
+  let ok0 = belowok(d0, bnd) in
+  let (gC: pkey, =gB) = checksign(l2, gB) in
+  event AcceptedLeaf(gC, two).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Delegator(skA) | !VerifyShallow(gA) | !VerifyDeep(gA) )

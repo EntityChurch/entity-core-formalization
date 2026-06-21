@@ -1,0 +1,51 @@
+theory MultisigKNBug
+/*
+ * Phase 2 / Inc 10 — NEGATIVE CONTROL for MultisigKN.spthy (K=2/N=3 threshold), Tamarin.
+ * The verifier accepts on a SINGLE signature (local peer S1), threshold not enforced (the
+ * M3/M4 bypass). threshold falsifies: S1 alone signs, neither S2 nor S3 does.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneS1:    "All #i #j. OnlyS1() @ i & OnlyS1() @ j ==> #i = #j"
+restriction OneS2:    "All #i #j. OnlyS2() @ i & OnlyS2() @ j ==> #i = #j"
+restriction OneS3:    "All #i #j. OnlyS3() @ i & OnlyS3() @ j ==> #i = #j"
+
+rule Setup_S1:
+    [ Fr(~skS1) ] --[ OnlyS1(), S1Key(pk(~skS1)) ]-> [ !LtkS1(~skS1), !PkS1(pk(~skS1)), Out(pk(~skS1)) ]
+
+rule Setup_S2:
+    [ Fr(~skS2) ] --[ OnlyS2(), S2Key(pk(~skS2)) ]-> [ !LtkS2(~skS2), !PkS2(pk(~skS2)), Out(pk(~skS2)) ]
+
+rule Setup_S3:
+    [ Fr(~skS3) ] --[ OnlyS3(), S3Key(pk(~skS3)) ]-> [ !LtkS3(~skS3), !PkS3(pk(~skS3)), Out(pk(~skS3)) ]
+
+rule Sign_S1:
+    [ !LtkS1(~skS1) ] --[ Signed(pk(~skS1)) ]-> [ Out(sign('rootC', ~skS1)) ]
+
+rule Sign_S2:
+    [ !LtkS2(~skS2) ] --[ Signed(pk(~skS2)) ]-> [ Out(sign('rootC', ~skS2)) ]
+
+rule Sign_S3:
+    [ !LtkS3(~skS3) ] --[ Signed(pk(~skS3)) ]-> [ Out(sign('rootC', ~skS3)) ]
+
+// BUG: a single valid signature (the local peer's) is accepted — threshold not enforced.
+rule Verify_bypass:
+    [ !PkS1(pkS1), In(sig1) ]
+  --[ Eq(verify(sig1, 'rootC', pkS1), true),
+      AcceptMulti() ]->
+    [ ]
+
+lemma threshold:
+  "All #a. AcceptMulti() @ a
+     ==> ( (Ex p1 #k1 #s1. S1Key(p1) @ k1 & Signed(p1) @ s1)
+         & ( (Ex p2 #k2 #s2. S2Key(p2) @ k2 & Signed(p2) @ s2)
+           | (Ex p3 #k3 #s3. S3Key(p3) @ k3 & Signed(p3) @ s3) ) )"
+
+lemma accept_reachable:
+  exists-trace
+  "Ex #a. AcceptMulti() @ a"
+
+end

@@ -1,0 +1,71 @@
+(* Phase 2 / Inc 10 — MULTI-SIG ROOT, parametric K=2 of N=3, ProVerif.
+ *
+ * Generalizes Phase-1 Multisig.pv from the fixed K=2/N=2 instance to K=2 of N=3 — closing
+ * the Phase-1 report boundary: "fixed K=2/N=2; larger thresholds are a structural
+ * generalization." V7 §3.6 multi-granter + §5.5 M3-M7: a multi-sig root is accepted only
+ * if `threshold`=2 DISTINCT members of the N=3 signer set {S1,S2,S3} signed (M4 verify,
+ * M3 dedupe), with the local peer S1 in the set AND signing (M6).
+ *
+ * With N=3 > K=2 the set genuinely exceeds the threshold: acceptance is any distinct pair
+ * that INCLUDES the local peer — {S1,S2} or {S1,S3}. The threshold property is therefore
+ * "S1 signed AND (S2 or S3 signed)" — two distinct signers, one of them local. Distinctness
+ * is structural (two different keys), so one signature replayed into both slots cannot
+ * reach threshold; accepting on a single signature is the MultisigKNBug bypass.
+ *
+ * Crypto = symbolic §7.3 wall; root content (signer list / threshold / grantee) abstracted
+ * to a signed constant.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const rootC: bitstring [data].     (* multi-sig root content (signer set + threshold abstracted) *)
+
+free skS1: skey [private].         (* signer 1 = the LOCAL PEER V (M6) *)
+free skS2: skey [private].         (* signer 2 *)
+free skS3: skey [private].         (* signer 3 *)
+
+event Signed(pkey).
+event AcceptMulti().
+
+(* THRESHOLD lemma (K=2 of N=3, incl. local peer M6): acceptance requires the local peer S1
+ * AND at least one other distinct signer (S2 or S3) to have signed — i.e. >= 2 distinct
+ * signers, one of them local. *)
+query event(AcceptMulti()) ==>
+  (event(Signed(pk(skS1))) && (event(Signed(pk(skS2))) || event(Signed(pk(skS3))))).
+
+(* Non-vacuity: with a valid quorum signing, the root IS accepted. *)
+query event(AcceptMulti()).
+
+(* Honest signer: signs the root content with its own key. *)
+let Signer(sk: skey) =
+  event Signed(pk(sk));
+  out(net, sign(rootC, sk)).
+
+(* Verifier, quorum {S1,S2}: local peer S1 + distinct co-signer S2 (§5.5 M4/M6). *)
+let Verifier12 =
+  in(net, (sig1: bitstring, sig2: bitstring));
+  let (=rootC) = checksign(sig1, pk(skS1)) in
+  let (=rootC) = checksign(sig2, pk(skS2)) in
+  event AcceptMulti().
+
+(* Verifier, quorum {S1,S3}: local peer S1 + distinct co-signer S3. *)
+let Verifier13 =
+  in(net, (sig1: bitstring, sig2: bitstring));
+  let (=rootC) = checksign(sig1, pk(skS1)) in
+  let (=rootC) = checksign(sig2, pk(skS3)) in
+  event AcceptMulti().
+
+process
+  out(net, pk(skS1));
+  out(net, pk(skS2));
+  out(net, pk(skS3));
+  ( !Signer(skS1) | !Signer(skS2) | !Signer(skS3) | !Verifier12 | !Verifier13 )

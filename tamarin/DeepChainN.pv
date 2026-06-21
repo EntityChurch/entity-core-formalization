@@ -1,0 +1,112 @@
+(* Phase 2 / Inc 9 — DEEP CHAIN (N=3, TWO foreign mids) + granter-frame, ProVerif.
+ *
+ * Generalizes Phase-1 DeepChain.pv from a 2-link chain (V -> A -> B, leaf granted by the
+ * single foreign mid A) to a 3-link chain V -> A -> B -> C with TWO distinct foreign mids
+ * (A, B), the leaf granted by the DEEPER foreign mid B. Closes the Phase-1 report's named
+ * boundary: "a 2-link instance models the foreign-granter frame; N-deep chains with
+ * multiple foreign mids are a structural generalization ... not separately checked."
+ *
+ * V7 §5.5a Amendment 1 (per-link granter frame; A-LEAN-3: this is what makes §5.6
+ * attenuation provably monotone). Each peer-relative pattern canonicalizes against ITS
+ * OWN granter's frame. The leaf (B->C) bare-`*` canonicalizes against B — it reaches B's
+ * namespace only, NEVER the verifier V's, even two foreign hops deep. The bug class
+ * (AUTHZ-ATTENUATION-FOREIGN-GRANTER) canonicalizes the leaf against the verifier frame V
+ * — now demonstrated to still be the only escalation at depth.
+ *
+ * Boundary (carried from Phase 1): the A->B link grants the open `/*/*` so per-link
+ * attenuation is trivial (Lemma 1 / NoEscalation owns the order); all weight is on the
+ * leaf's granter frame — the §5.5a surface. §5.4 path-segment matching is Lean's.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+free skV: skey [private].   (* V — verifier's own peer, root authority (§5.5) *)
+free skA: skey [private].   (* A — foreign mid #1 *)
+free skB: skey [private].   (* B — foreign mid #2 (the leaf's granter) *)
+
+(* ---- resources & patterns (V7 §5.5a) ---- *)
+fun res(pkey, bitstring): bitstring [data].   (* concrete resource res(peer_ns, path) *)
+const star: bitstring [data].                 (* bare peer-relative wildcard `*` *)
+const allp: bitstring [data].                 (* `/*/*` open cross-peer wildcard *)
+fun awild(pkey): bitstring [data].            (* `/{p}/*` absolute namespace wildcard *)
+
+(* canonicalize a pattern against a GRANTER frame (§5.5a): bare `*` resolves to the
+ * granter's own namespace; absolute forms are frame-independent. *)
+fun canon(bitstring, pkey): bitstring
+reduc
+    forall fr: pkey;            canon(star, fr)     = awild(fr)
+  otherwise
+    forall p: pkey, fr: pkey;   canon(awild(p), fr) = awild(p)
+  otherwise
+    forall fr: pkey;            canon(allp, fr)     = allp.
+
+(* coverage: does a canonicalized pattern cover a concrete resource? *)
+fun covok(bitstring, bitstring): bitstring
+reduc
+    forall p: pkey, path: bitstring; covok(awild(p), res(p, path)) = res(p, path)
+  otherwise
+    forall r: bitstring;             covok(allp, r)                = r.
+
+(* ---- events ---- *)
+event DelegatedLeaf(pkey, pkey).   (* B delegated the leaf to gC *)
+event Authorized(bitstring).       (* verifier authorized a request for a resource *)
+
+(* ---- THE deep granter-frame lemma ----
+ * Two foreign hops deep, the verifier never authorizes a request against V's namespace on
+ * the strength of B's bare-`*` leaf. *)
+query s: bitstring; event(Authorized(res(pk(skV), s))).
+   (* expect: NOT reachable (false) = no cross-peer escalation, deep. *)
+
+(* Non-vacuity: the bare-`*` leaf DOES legitimately authorize B's own namespace. *)
+query s: bitstring; event(Authorized(res(pk(skB), s))).
+   (* expect: reachable (true) — the model has teeth. *)
+
+(* ---- honest principals ---- *)
+
+(* V issues a root cap to A granting the broad `/*/*`. *)
+let Vroot(gA: pkey) =
+  out(net, sign((gA, allp), skV)).
+
+(* A (foreign mid #1): holds the V-rooted cap; delegates `/*/*` onward to a network-chosen
+ * grantee (the honest chain routes gB = B). *)
+let DelegA(gA: pkey) =
+  in(net, rc: bitstring);
+  let (=gA, rres: bitstring) = checksign(rc, pk(skV)) in
+  in(net, gBx: pkey);
+  out(net, sign((gBx, allp, gA), skA)).   (* link A->B: grants allp, parent A *)
+
+(* B (foreign mid #2): holds A's delegated cap; delegates a bare-`*` leaf (B's own-namespace
+ * intent) to any gC. *)
+let DelegB(gB: pkey) =
+  in(net, lc1: bitstring);
+  let (=gB, =allp, gAp: pkey) = checksign(lc1, pk(skA)) in   (* link A->B signed by A *)
+  in(net, gC: pkey);
+  event DelegatedLeaf(gB, gC);
+  out(net, sign((gC, star, gB), skB)).                       (* leaf B->C: bare star, parent B *)
+
+(* Verifier dispatch (§5.5 + §5.5a): root(V->A) + link(A->B) + leaf(B->C). Canonicalizes
+ * the leaf pattern against the LEAF's granter frame (gB = B). *)
+let Verifier(gA: pkey, gB: pkey) =
+  in(net, (rc: bitstring, lc1: bitstring, lc2: bitstring, target: bitstring));
+  let (=gA, =allp) = checksign(rc, pk(skV)) in                  (* root V->A, grants /*/* *)
+  let (=gB, =allp, =gA) = checksign(lc1, gA) in                 (* link A->B, linkage gA *)
+  let (gC: pkey, lpat: bitstring, =gB) = checksign(lc2, gB) in  (* leaf B->C, linkage gB *)
+  let okwit: bitstring = covok(canon(lpat, gB), target) in      (* §5.5a: canon against LEAF granter B *)
+  event Authorized(target).
+
+process
+  out(net, pk(skV));
+  let gA = pk(skA) in
+  let gB = pk(skB) in
+  out(net, gA); out(net, gB);
+  ( !Vroot(gA) | !DelegA(gA) | !DelegB(gB) | !Verifier(gA, gB) )

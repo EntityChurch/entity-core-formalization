@@ -1,0 +1,97 @@
+(* Phase 1 / Lemma 1 — NO-ESCALATION (attenuation), ProVerif.
+ *
+ * Models V7 §5.6 attenuation ("Child MUST be <= parent — can only restrict, never
+ * amplify") as an ORDER check inside §5.5 per-link chain verification. The symbolic
+ * mirror of Lean's `isAttenuated_trans`: across a delegation chain, an accepted leaf
+ * can never confer more authority than the honest root granted.
+ *
+ * Extends Spike B's Unforge.pv (chain LINKAGE + signatures, scope opaque) by giving
+ * `scope` a finite order. The §5.4 pattern-match arithmetic that decides the order for
+ * real resource paths is Lean's / abstracted here (verdict-interior wall); we model the
+ * order RELATION the verifier checks per link (§5.6 `is_attenuated`).
+ *
+ * The order (§5.6 "can only restrict"): `narrow(p)` is the strict attenuation of p. A
+ * child scope is a valid attenuation of parent p iff it equals p (identity) or
+ * narrow(p). narrow only goes DOWN — there is no term that un-narrows, so authority
+ * strictly above the root is unreachable by construction. We name the wide authority
+ * `scopeAdmin`; the strictly-narrower authority P actually grants is `narrow(scopeAdmin)`
+ * (think "read").
+ *
+ * Threat surface (faithful to V7): a delegator MAY re-sign ANY child scope — V7 does
+ * not constrain what a delegator signs; it enforces attenuation at VERIFY time, per
+ * link (§5.5 loop: `if not is_attenuated(current, parent): return DENY`). So the
+ * delegator below signs whatever scope the network supplies, and the verifier's
+ * is_attenuated check is the SOLE line of defense — exactly what NoEscalationBug.pv
+ * removes.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+type scope.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* ---- the authority order (V7 §5.6) ---- *)
+const scopeAdmin: scope [data].   (* wide authority — the escalation target *)
+fun narrow(scope): scope.         (* narrow(p) = the strict attenuation of p *)
+(* The authority P actually grants is narrow(scopeAdmin) (strictly below admin). *)
+
+free skP: skey [private].   (* honest root authority P (verifier's own peer, §5.5) *)
+
+(* ---- events ---- *)
+event IssuedRoot(pkey, scope).        (* P signed a root cap: (grantee, scope) *)
+event Delegated(pkey, pkey, scope).   (* A delegated to grantee at scope *)
+event AcceptedDeleg(pkey, scope).     (* verifier accepted a 2-link chain at scope *)
+
+(* ---- THE no-escalation lemma ----
+ * P issues to A at narrow(scopeAdmin) ONLY. Claim: the verifier never accepts a
+ * delegated chain conferring scopeAdmin — the attacker cannot escalate the granted
+ * (narrowed) authority into the wide one through delegation.
+ *)
+query gB: pkey; event(AcceptedDeleg(gB, scopeAdmin)).
+   (* expect: NOT reachable (false) in the correct model = no escalation. *)
+
+(* Non-vacuity: a properly-attenuated child (narrow(scopeAdmin)) CAN be accepted. *)
+query gB: pkey; event(AcceptedDeleg(gB, narrow(scopeAdmin))).
+   (* expect: reachable (true) — the model has teeth, accepts legitimate chains. *)
+
+(* ---- honest principals ---- *)
+
+(* P issues a root cap to the honest delegator A at narrow(scopeAdmin) only. *)
+let Pauthority(gA: pkey) =
+  event IssuedRoot(gA, narrow(scopeAdmin));
+  out(net, sign((gA, narrow(scopeAdmin)), skP)).
+
+(* Delegator A: holds a P-rooted cap granting (pk(skA), s); re-signs a child for any
+ * (gB, s2) the network asks for. A does NOT self-police the child scope — V7 leaves
+ * that to the verifier (§5.5/§5.6). *)
+let Delegator(skA: skey) =
+  in(net, rc: bitstring);
+  let (=pk(skA), s: scope) = checksign(rc, pk(skP)) in
+  in(net, (gB: pkey, s2: scope));
+  event Delegated(pk(skA), gB, s2);
+  out(net, sign((gB, s2, pk(skA)), skA)).   (* child: (grantee, scope, parent-granter) *)
+
+(* Verifier (V7 §5.5 + §5.6): 2-link chain root(P->gA) + child(gA->gB). Checks both
+ * signatures, the §5.5 linkage (shared gA), AND the §5.6 per-link attenuation: child
+ * scope s2 must be a valid attenuation of the parent (root) scope sRoot. *)
+let Verifier(gA: pkey) =
+  in(net, (rc: bitstring, dc: bitstring));
+  let (=gA, sRoot: scope) = checksign(rc, pk(skP)) in       (* root signed by P, grantee gA *)
+  let (gB: pkey, s2: scope, =gA) = checksign(dc, gA) in     (* child signed by gA; linkage gA *)
+  (* §5.6 attenuation check REMOVED — accept any child scope (the defect) *)
+  event AcceptedDeleg(gB, s2).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Delegator(skA) | !Verifier(gA) )

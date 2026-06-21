@@ -1,0 +1,62 @@
+(* Spike B — NEGATIVE CONTROL: unforgeability with the §5.5 chain-linkage check OMITTED.
+ *
+ * Identical to Unforge.pv EXCEPT the verifier's 2-link branch does NOT enforce
+ * parent.grantee == child.granter (V7 §5.5 linkage / §5.5a granter-frame). This is a
+ * faithful model of the bug class the v7.73 cohort cycle caught (Go/Rust/Python all
+ * initially mis-framed the per-link check). Expectation: the delegation-unforgeability
+ * lemma FAILS — the attacker, with its own key, appends a self-signed child onto the
+ * public P->A root cap and the verifier accepts it. ProVerif should report `false` and
+ * a concrete attack trace. This is Spike B's analog of Spike A's "Deadlock reached":
+ * the model rediscovers a real V7 bug class when the check is removed.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+type scope.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+free skP: skey [private].
+
+event IssuedRoot(pkey, scope).
+event Delegated(pkey, pkey, scope).
+event AcceptedDeleg(pkey, scope).
+
+(* Same delegation-unforgeability lemma as Unforge.pv — but now it should be FALSE. *)
+query gA: pkey, gB: pkey, s2: scope;
+  event(AcceptedDeleg(gB, s2)) ==> event(Delegated(gA, gB, s2)).
+
+let Pauthority(gA: pkey) =
+  in(net, s: scope);
+  event IssuedRoot(gA, s);
+  out(net, sign((gA, s), skP)).
+
+let Delegator(skA: skey) =
+  in(net, rc: bitstring);
+  let (=pk(skA), s: scope) = checksign(rc, pk(skP)) in
+  in(net, (gB: pkey, s2: scope));
+  event Delegated(pk(skA), gB, s2);
+  out(net, sign((gB, s2, pk(skA)), skA)).
+
+(* BUGGY verifier: accepts a 2-link chain WITHOUT checking the child's granter equals the
+ * root's grantee. gX is the granter the child claims; the verifier verifies dc under gX
+ * but never asserts gX == gA. *)
+let VerifierNoLinkage =
+  in(net, (rc: bitstring, dc: bitstring, gX: pkey));
+  let (gA: pkey, s: scope) = checksign(rc, pk(skP)) in        (* root signed by P, grantee gA *)
+  let (gB: pkey, s2: scope, gClaim: pkey) = checksign(dc, gX) in  (* child signed by gX *)
+  (* MISSING (the bug): no `gX = gA` linkage check (§5.5) and no `gClaim = gA` either. *)
+  event AcceptedDeleg(gB, s2).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Delegator(skA) | !VerifierNoLinkage )

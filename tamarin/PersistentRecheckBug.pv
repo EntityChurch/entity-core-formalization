@@ -1,0 +1,60 @@
+(* Phase 2 / Inc 12 — NEGATIVE CONTROL for PersistentRecheck.pv (§6.8 per-use re-check), ProVerif.
+ *
+ * The early async use re-checks the token (the cap passes a check). The later async use
+ * (phase 2) then accepts on the signature ALONE, skipping the §6.8 revocation re-check —
+ * "checked once at install, trusted forever." The cap is revoked between the uses (phase 1),
+ * yet the later use still passes: AcceptLate becomes reachable, so the re-check query flips
+ * to false-with-attack. (Tamarin's PersistentRecheckBug models the same fail-open as a
+ * cached !Approved fact that skips the Check; ProVerif drops the token consult directly —
+ * each tool's natural idiom for "the later use does not re-consult revocation.")
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+free tok:   channel [private].
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const capTag: bitstring [data].
+
+free skP:  skey [private].
+free skGr: skey [private].
+
+event AcceptEarly(pkey).
+event AcceptLate(pkey).
+
+query event(AcceptLate(pk(skGr))).    (* expect: REACHABLE (false) — cached use skips re-check. *)
+query event(AcceptEarly(pk(skGr))).
+
+let Setup =
+  let cap = sign((pk(skGr), capTag), skP) in
+  out(net, cap);
+  out(tok, cap);
+  phase 1;
+  in(tok, =cap).
+
+(* Early use: real token re-check (the cap passes a check here). *)
+let EarlyUse =
+  in(net, cap: bitstring);
+  let (g: pkey, =capTag) = checksign(cap, pk(skP)) in
+  in(tok, =cap);
+  event AcceptEarly(g);
+  out(tok, cap).
+
+(* Later use: BUG — accepts on the signature alone, skipping the §6.8 revocation re-check
+ * (the cap passed an earlier check, so the later async dispatch trusts it forever). *)
+let LateUse =
+  phase 2;
+  in(net, cap: bitstring);
+  let (g: pkey, =capTag) = checksign(cap, pk(skP)) in
+  event AcceptLate(g).
+
+process
+  out(net, pk(skP));
+  ( Setup | !EarlyUse | !LateUse )

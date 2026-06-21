@@ -1,0 +1,78 @@
+(* Phase 2 / Inc 12 — PERSISTENT-CAPABILITY PER-USE RE-CHECK (§6.8 + §5.1 + §1.7), ProVerif.
+ *
+ * Lockstep cross-check of PersistentRecheck.spthy. The core-spec property under the async/
+ * extension flows: a persistent capability (compute installation grant / continuation
+ * dispatch_capability / subscription dispatch token) is used across MULTIPLE async
+ * dispatches and MUST be re-validated at each use —
+ *   §6.8: "A revoked capability never passes a check, even if the same capability passed a
+ *          check earlier in the same operation."
+ * So an EARLY successful use must not grandfather a LATER use after revocation.
+ *
+ * Revocation = a linear validity token on private channel `tok` (as in Revoke.pv): each use
+ * consumes-and-REPLACES it (re-check, cap stays reusable while valid); REVOKE consumes it
+ * WITHOUT replacing. Phases order the timeline: phase 0 early use(s); phase 1 revoke; phase
+ * 2 a later async use — which finds no token and is denied. PersistentRecheckBug.pv caches
+ * the first approval and skips the token on the later use (checked-once, trusted-forever).
+ *
+ * SCOPE BOUNDARY (5th wall): models the §6.8/§5.1 CORE property governing the async flows,
+ * NOT the EXTENSION-CONTINUATION/-SUBSCRIPTION/-COMPUTE protocols (not in vendored v7.76 —
+ * a Phase-3 item). Chain interior + crypto abstracted (Lemmas 1-3).
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+free tok: channel [private].       (* per-cap validity token; absence == revoked *)
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const capTag: bitstring [data].
+
+free skP:  skey [private].         (* root authority P *)
+free skGr: skey [private].         (* grantee of the persistent cap *)
+
+event AcceptEarly(pkey).           (* accepted at an async use BEFORE revocation *)
+event AcceptLate(pkey).            (* accepted at an async use AFTER revocation *)
+
+(* RE-CHECK lemma: a later async use of the cap, after it is revoked, is never accepted —
+ * even though an earlier use of the SAME persistent cap was. *)
+query event(AcceptLate(pk(skGr))).    (* expect: NOT reachable (true) = re-checked, denied. *)
+
+(* Non-vacuity: an early (pre-revocation) async use of the persistent cap IS accepted. *)
+query event(AcceptEarly(pk(skGr))).   (* expect: reachable (true). *)
+
+(* Setup: P issues the persistent cap, serves its validity token; phase 1 REVOKES it
+ * (consumes the token without replacing). *)
+let Setup =
+  let cap = sign((pk(skGr), capTag), skP) in
+  out(net, cap);
+  out(tok, cap);
+  phase 1;
+  in(tok, =cap).                   (* §6.2 revoke: token consumed, never replaced *)
+
+(* Early async use (phase 0): re-checks the token, accepts, and REPLACES it (cap remains
+ * reusable while valid). *)
+let EarlyUse =
+  in(net, cap: bitstring);
+  let (g: pkey, =capTag) = checksign(cap, pk(skP)) in
+  in(tok, =cap);
+  event AcceptEarly(g);
+  out(tok, cap).
+
+(* Later async use (phase 2): §6.8 re-checks the token. The cap was revoked in phase 1, so
+ * no token exists — the later use is denied. *)
+let LateUse =
+  phase 2;
+  in(net, cap: bitstring);
+  let (g: pkey, =capTag) = checksign(cap, pk(skP)) in
+  in(tok, =cap);
+  event AcceptLate(g).
+
+process
+  out(net, pk(skP));
+  ( Setup | !EarlyUse | !LateUse )

@@ -1,0 +1,60 @@
+(* Phase 2 / Inc 6 — NEGATIVE CONTROL for Caveats.pv (§5.7 no_delegation), ProVerif.
+ *
+ * The ONLY change from Caveats.pv: the verifier omits the §5.7 no_delegation consult
+ * (the "mint the marker but never enforce it" fail-open). A no_delegation cap then has
+ * an accepted delegated child — delegate-past-prohibition. The no_delegation query flips
+ * to false-with-attack, the §5.7 bug class the consult defends against.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+type scope.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const nodeleg: bitstring [data].
+const okdeleg: bitstring [data].
+const theScope: scope [data].
+
+free skP: skey [private].
+
+event IssuedRoot(pkey, bitstring).
+event Delegated(pkey, pkey).
+event AcceptedDeleg(pkey, bitstring).
+
+query gB: pkey; event(AcceptedDeleg(gB, nodeleg)).
+   (* expect: REACHABLE (false) — the fail-open admits a no_delegation child. *)
+query gB: pkey; event(AcceptedDeleg(gB, okdeleg)).
+
+let Pauthority(gA: pkey) =
+  in(net, nd: bitstring);
+  event IssuedRoot(gA, nd);
+  out(net, sign((gA, theScope, nd), skP)).
+
+let Delegator(skA: skey) =
+  in(net, rc: bitstring);
+  let (=pk(skA), s: scope, nd: bitstring) = checksign(rc, pk(skP)) in
+  in(net, gB: pkey);
+  event Delegated(pk(skA), gB);
+  out(net, sign((gB, s, pk(skA)), skA)).
+
+(* BUG: the no_delegation consult is gone — the verifier accepts the delegated child
+ * regardless of the parent's caveat. *)
+let Verifier(gA: pkey) =
+  in(net, (rc: bitstring, dc: bitstring));
+  let (=gA, sRoot: scope, nd: bitstring) = checksign(rc, pk(skP)) in
+  let (gB: pkey, =sRoot, =gA) = checksign(dc, gA) in
+  event AcceptedDeleg(gB, nd).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Delegator(skA) | !Verifier(gA) )

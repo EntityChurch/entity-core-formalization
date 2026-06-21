@@ -1,0 +1,46 @@
+theory ExpiryBug
+/*
+ * Phase 2 / Inc 8 — NEGATIVE CONTROL for Expiry.spthy (§5.5 temporal validity), Tamarin.
+ * The only change: Verify drops the !Le('t1', exp) temporal guard. An expired cap is then
+ * accepted — stale-cap admit; expiry_validity falsifies with a trace.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+
+rule Setup_Time:
+    [ ] --[ Time() ]->
+    [ !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'),
+      !Le('t1','t1'), !Le('t1','t2'),
+      !Le('t2','t2') ]
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --> [ !PkA(pk(~skA)), Out(pk(~skA)) ]
+
+rule Issue:
+    let m = <pk(~skA), exp>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !PkA(pk(~skA)), In(exp) ]
+  --[ Issued(pk(~skA), exp) ]->
+    [ Out(<pk(~skA), exp, sig>) ]
+
+// BUG: the temporal guard !Le('t1', exp) is gone — expiry is not consulted.
+rule Verify:
+    let m = <gA, exp> in
+    [ !PkP(pkP), In(<gA, exp, sig>) ]
+  --[ Eq(verify(sig, m, pkP), true), Accepted(gA, exp) ]->
+    [ ]
+
+lemma expiry_validity:
+  "not (Ex g #i. Accepted(g, 't0') @ i)"
+
+lemma accepted_reachable:
+  exists-trace
+  "Ex g #i. Accepted(g, 't2') @ i"
+
+end

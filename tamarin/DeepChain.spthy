@@ -1,0 +1,79 @@
+theory DeepChain
+/*
+ * Phase 1 / Lemma 2 — DEEP CHAIN + GRANTER-FRAME canonicalization in Tamarin (lockstep
+ * cross-check of DeepChain.pv).
+ *
+ * V7 §5.5a Amendment 1: a peer-relative resource pattern canonicalizes against ITS OWN
+ * GRANTER's frame, never the verifier's. Chain V -> A -> B; the LEAF is granted by the
+ * foreign peer A. The verifier authorizes a request only if the leaf (canonicalized
+ * against the leaf granter A) covers it. A bare-star leaf from A reaches A's namespace
+ * only — NEVER the verifier V's namespace. The bug (DeepChainBug) canonicalizes against
+ * V, widening the foreign bare-star into V's namespace (AUTHZ-ATTENUATION-FOREIGN-GRANTER
+ * / captok_form_dispatch_minted_pl_presented_xpeer). Symbolic sign/verify = §7.3 wall.
+ *
+ * The correct vs. buggy FRAME is encoded in which namespace the Verify rule binds the
+ * request to: res(gA, path) [leaf granter frame] vs res(pkV, path) [verifier frame] —
+ * the structural mirror of ProVerif's canon(star, gA) vs canon(star, pk(skV)).
+ */
+begin
+
+builtins: signing
+functions: res/2     // res(peer_namespace, path) — a concrete resource
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneV:     "All #i #j. OnlyV() @ i & OnlyV() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+// Honest verifier/root V (§5.5 root-granter-local)
+rule Setup_V:
+    [ Fr(~skV) ] --[ OnlyV(), VKey(pk(~skV)) ]-> [ !LtkV(~skV), !PkV(pk(~skV)), Out(pk(~skV)) ]
+
+// Honest foreign delegator A
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA(), AKey(pk(~skA)) ]-> [ !LtkA(~skA), !PkA(pk(~skA)), Out(pk(~skA)) ]
+
+// V issues a root cap to A granting the open '/*/*' ('allp'); attenuation not the gate here.
+rule Vroot:
+    let m = <gA, 'allp'>  sig = sign(m, ~skV) in
+    [ !LtkV(~skV), !PkA(gA) ]
+  --[ ]->
+    [ Out(<gA, 'allp', sig>) ]
+
+// A delegates to any gB with a bare-'star' (peer-relative) resource — A's own-namespace intent.
+rule Delegate:
+    let mroot = <pk(~skA), 'allp'>
+        mleaf = <gB, 'star', pk(~skA)>
+        lsig  = sign(mleaf, ~skA)
+    in
+    [ !LtkA(~skA), !PkV(pkV), In(<pk(~skA), 'allp', sigroot>), In(gB) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true), Delegated(pk(~skA), gB, 'star') ]->
+    [ Out(<gB, 'star', pk(~skA), lsig>) ]
+
+// Verifier dispatch (§5.5 + §5.5a), CORRECT: canon the bare-'star' leaf against the
+// LEAF granter frame gA. A request <reqns, path> is covered only when its namespace
+// reqns equals the leaf granter frame — Eq(reqns, gA). (The structural mirror of
+// ProVerif's canon(star, gA): a bare-star leaf covers the granter's namespace only.)
+rule Verify_StarLeaf:
+    let mroot = <gA, 'allp'>
+        mleaf = <gB, 'star', gA>
+    in
+    [ !PkV(pkV), In(<gA, 'allp', sigroot>), In(<gB, 'star', gA, sigleaf>), In(<reqns, path>) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true),
+      Eq(verify(sigleaf, mleaf, gA),  true),
+      Eq(reqns, gA),                        // §5.5a CORRECT: coverage frame = leaf granter A
+      Authorized(res(reqns, path)) ]->
+    [ ]
+
+/* ---- the granter-frame lemma ---- */
+
+// No cross-peer escalation: V's own namespace is never authorized via A's bare-star leaf.
+lemma no_xpeer_escalation:
+  "All pkV path #i #k.
+     VKey(pkV) @ k & Authorized(res(pkV, path)) @ i ==> F"
+
+// Non-vacuity: the bare-star leaf DOES legitimately authorize A's own namespace.
+lemma legit_reachable:
+  exists-trace
+  "Ex pkA path #i #k. AKey(pkA) @ k & Authorized(res(pkA, path)) @ i"
+
+end

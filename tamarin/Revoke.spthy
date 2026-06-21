@@ -1,0 +1,61 @@
+theory Revoke
+/*
+ * Phase 1 / Lemma 4a — REVOCATION in Tamarin (lockstep cross-check of Revoke.pv).
+ *
+ * V7 §5.1: full verification = verify_capability_chain AND NOT is_revoked. A revocation
+ * marker (system/capability:revoke, §6.2) makes a cryptographically-valid cap fail.
+ *
+ * Modeling note: a mechanistic linear "validity token" consumed-and-replaced by verify
+ * does not terminate in Tamarin (the regenerated fact loops). The mechanistic proof is
+ * instead carried by the ProVerif cross-check (Revoke.pv, private-channel validity
+ * token). Here revocation is modeled with the standard terminating idiom — a trace
+ * restriction HonorRevocation encoding the verifier's is_revoked consultation ("accept a
+ * cap only if it was not revoked earlier"). The negative control (RevokeBug, restriction
+ * removed) is what gives it teeth: it surfaces the §5.1 silent fail-open. Crypto/chain
+ * interior abstracted (Spike B / Lemmas 1-3).
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+// is_revoked consultation: the verifier accepts a cap only if it was not revoked earlier.
+restriction HonorRevocation:
+  "All cid #a. Accept(cid) @ a ==> not (Ex #r. Revoke(cid) @ r & #r < #a)"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+// P issues a cap (fresh id ~cid, signed). Persistent !Issued = cryptographic validity.
+rule Issue:
+    let cap = <~cid, sign(~cid, ~skP)> in
+    [ !LtkP(~skP), Fr(~cid) ]
+  --[ Issue(~cid) ]->
+    [ Out(cap), !Issued(~cid) ]
+
+// Verifier (§5.1 + §5.5): cap valid AND (via HonorRevocation) not revoked earlier.
+rule Verify:
+    [ !PkP(pkP), In(<cid, sig>), !Issued(cid) ]
+  --[ Eq(verify(sig, cid, pkP), true), Accept(cid) ]->
+    [ ]
+
+// Revoke (§6.2): write the revocation marker for the cap.
+rule Revoke:
+    [ !Issued(cid) ]
+  --[ Revoke(cid) ]->
+    [ ]
+
+/* ---- the revocation lemma ---- */
+
+// RevokedNeverPasses: a cap is accepted only BEFORE it is revoked — once the marker is
+// written, no later acceptance is possible.
+lemma revoked_never_passes:
+  "All cid #r #a. Revoke(cid) @ r & Accept(cid) @ a ==> #a < #r"
+
+// Non-vacuity: a (non-revoked) cap IS accepted.
+lemma accept_reachable:
+  exists-trace
+  "Ex cid #a. Accept(cid) @ a"
+
+end

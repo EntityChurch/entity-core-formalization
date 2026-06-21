@@ -1,0 +1,57 @@
+theory CaveatsBug
+/*
+ * Phase 2 / Inc 6 — NEGATIVE CONTROL for Caveats.spthy (§5.7 no_delegation), Tamarin.
+ *
+ * The only change from Caveats.spthy: Verify_Deleg binds the parent flag nd freely
+ * instead of pattern-matching 'okdeleg' — the §5.7 no_delegation consult is gone. A
+ * no_delegation root then has an accepted delegated child (delegate-past-prohibition);
+ * no_delegation_honored falsifies with a trace.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), Out(pk(~skA)) ]
+
+rule Issue_Root:
+    let m = <pk(~skA), 'theScope', nd>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !LtkA(~skA), In(nd) ]
+  --[ IssuedRoot(pk(~skA), nd) ]->
+    [ Out(<pk(~skA), 'theScope', nd, sig>) ]
+
+rule Delegate:
+    let mroot  = <pk(~skA), s, nd>
+        mchild = <gB, s, pk(~skA)>
+        csig   = sign(mchild, ~skA)
+    in
+    [ !LtkA(~skA), !PkP(pkP), In(<pk(~skA), s, nd, sigroot>), In(gB) ]
+  --[ Eq(verify(sigroot, mroot, pkP), true), Delegated(pk(~skA), gB) ]->
+    [ Out(<gB, s, pk(~skA), csig>) ]
+
+// BUG: nd is bound, not constrained — the no_delegation consult is gone.
+rule Verify_Deleg:
+    let mroot  = <gA, sRoot, nd>
+        mchild = <gB, sRoot, gA>
+    in
+    [ !PkP(pkP), In(<gA, sRoot, nd, sigroot>), In(<gB, sRoot, gA, sigchild>) ]
+  --[ Eq(verify(sigroot,  mroot,  pkP), true),
+      Eq(verify(sigchild, mchild, gA),  true),
+      AcceptedDeleg(gB, nd) ]->
+    [ ]
+
+lemma no_delegation_honored:
+  "not (Ex gB #i. AcceptedDeleg(gB, 'nodeleg') @ i)"
+
+lemma accepted_reachable:
+  exists-trace
+  "Ex gB #i. AcceptedDeleg(gB, 'okdeleg') @ i"
+
+end

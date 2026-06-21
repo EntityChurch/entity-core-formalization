@@ -1,0 +1,70 @@
+theory RevokeMech
+/*
+ * Phase 2 / Inc 11b — MECHANISTIC REVOCATION in Tamarin (attempt to close the Phase-1
+ * cross-language gap).
+ *
+ * Phase 1 carried the mechanistic linear-token revocation in ProVerif only (Revoke.pv,
+ * private-channel validity token); the Tamarin cross-check used the terminating trace-
+ * restriction idiom (Revoke.spthy) because "a mechanistic regenerating linear token does
+ * not terminate in Tamarin." This theory attempts the mechanistic encoding directly:
+ *
+ *   Valid(cid)  — a LINEAR validity token == "marker absent" (§5.1 is_revoked).
+ *   Issue       creates Valid(cid).
+ *   Verify      CONSUMES and REPLACES Valid(cid) (a live cap stays reusable).
+ *   Revoke      CONSUMES Valid(cid) WITHOUT replacing it (marker written → gone forever).
+ *
+ * This is the precise §5.1 mechanism (no trace restriction). If Tamarin terminates here,
+ * the asymmetry is closed mechanistically in both tools; if it does not, the Phase-1
+ * finding (mechanistic token is ProVerif's lane; Tamarin uses the restriction) stands.
+ *
+ * RESULT (Phase 2 Inc 11b): does NOT terminate — `tamarin-prover --prove`
+ * ran >130s without closing (the regenerated Valid(cid) fact loops the backward search,
+ * exactly the documented failure mode). So the Phase-1 finding STANDS: mechanistic-token
+ * revocation is ProVerif's lane (Revoke.pv); Tamarin uses the terminating trace-restriction
+ * idiom (Revoke.spthy). This file is kept as the recorded non-terminating attempt — do NOT
+ * add it to the auto-verified matrix (it will hang). The no-replay asymmetry (Inc 11a) DID
+ * cross into ProVerif (BindingReplay.pv); this one is an irreducible tool-capability split.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+// P issues a cap (fresh id, signed). Valid(~cid) is the mechanistic validity token.
+rule Issue:
+    let cap = <~cid, sign(~cid, ~skP)> in
+    [ !LtkP(~skP), Fr(~cid) ]
+  --[ Issue(~cid) ]->
+    [ Out(cap), !Issued(~cid), Valid(~cid) ]
+
+// Verifier (§5.1 + §5.5): cap valid AND a validity token present; the token is consumed
+// and REPLACED so a live cap remains reusable.
+rule Verify:
+    [ !PkP(pkP), In(<cid, sig>), !Issued(cid), Valid(cid) ]
+  --[ Eq(verify(sig, cid, pkP), true), Accept(cid) ]->
+    [ Valid(cid) ]
+
+// Revoke (§6.2): consume the validity token WITHOUT replacing it — the marker is now
+// written, so no future verify can find a token.
+rule Revoke:
+    [ Valid(cid) ]
+  --[ Revoke(cid) ]->
+    [ ]
+
+/* ---- the revocation lemma ---- */
+
+// RevokedNeverPasses: a cap is accepted only BEFORE it is revoked.
+lemma revoked_never_passes:
+  "All cid #r #a. Revoke(cid) @ r & Accept(cid) @ a ==> #a < #r"
+
+// Non-vacuity: a (non-revoked) cap IS accepted.
+lemma accept_reachable:
+  exists-trace
+  "Ex cid #a. Accept(cid) @ a"
+
+end

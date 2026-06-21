@@ -1,0 +1,110 @@
+(* NEGATIVE CONTROL for DeepChain.pv — the §5.5a dispatch canonicalization uses the
+ * VERIFIER frame (pk(skV)) instead of the LEAF granter frame (gA). Expect the no-
+ * cross-peer-escalation query to FALSIFY: A's bare-star leaf, mis-canonicalized
+ * against V, widens into V's namespace and the verifier authorizes a cross-peer
+ * request it must deny. The FOREIGN-GRANTER / captok_form_dispatch_minted_pl bug class.
+ * canonicalizes against ITS OWN GRANTER's peer frame — NOT the verifier's. A bare `*`
+ * means `/{granter}/*` (the granter's namespace), never a universal cross-peer wildcard
+ * and never the verifier's namespace. The bug class (AUTHZ-ATTENUATION-FOREIGN-GRANTER-*,
+ * captok_form_dispatch_minted_pl_presented_xpeer) is canonicalizing a foreign-granted
+ * bare `*` against the verifier frame, silently widening it into the verifier's namespace.
+ *
+ * Structure: a V-rooted chain V -> A -> B. The LEAF is granted by the foreign peer A
+ * (granter frame A != verifier V). The §5.5 linkage + root-granter-local + §7.3
+ * signatures are carried (Spike B). The new content is the dispatch-time coverage check:
+ * canonicalize the leaf's resource against the LEAF's granter frame (A), then test it
+ * covers the request's target resource. The §5.4 path-segment matcher is Lean's /
+ * abstracted; we model the FRAME the canonicalization uses — the §5.5a load-bearing bit.
+ *
+ * Boundary: root grants the open `/*/*` so per-link attenuation trivially holds (Lemma 1
+ * covers the order check); all security weight here is on the granter-frame of the
+ * coverage canonicalization — exactly the §5.5a surface.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* honest verifier/root V and honest delegator A (foreign granter); attacker = network *)
+free skV: skey [private].   (* V — verifier's own peer, the root authority (§5.5) *)
+free skA: skey [private].   (* A — a foreign peer that holds a V-rooted cap and delegates *)
+
+(* ---- resources & patterns (V7 §5.5a) ---- *)
+fun res(pkey, bitstring): bitstring [data].   (* a concrete resource res(peer_ns, path) *)
+const star: bitstring [data].                 (* bare peer-relative wildcard `*` *)
+const allp: bitstring [data].                 (* `/*/*` open cross-peer wildcard *)
+fun awild(pkey): bitstring [data].            (* `/{p}/*` absolute namespace wildcard *)
+
+(* canonicalize a pattern against a GRANTER frame (§5.5a). The bare `*` resolves to the
+ * granter's own namespace; absolute forms are frame-independent. *)
+fun canon(bitstring, pkey): bitstring
+reduc
+    forall fr: pkey;            canon(star, fr)     = awild(fr)
+  otherwise
+    forall p: pkey, fr: pkey;   canon(awild(p), fr) = awild(p)
+  otherwise
+    forall fr: pkey;            canon(allp, fr)     = allp.
+
+(* coverage: does a canonicalized pattern cover a concrete resource? *)
+fun covok(bitstring, bitstring): bitstring
+reduc
+    forall p: pkey, path: bitstring; covok(awild(p), res(p, path)) = res(p, path)
+  otherwise
+    forall r: bitstring;             covok(allp, r)                = r.
+
+(* ---- events ---- *)
+event Delegated(pkey, pkey, bitstring).   (* A delegated to gB the resource pattern *)
+event Authorized(bitstring).              (* verifier authorized a request for a resource *)
+
+(* ---- THE granter-frame lemma ----
+ * A delegates to B the bare star (= A's own namespace, /A/ wildcard). The verifier must
+ * NEVER authorize a request against V's namespace (res of pk(skV)) on the strength of
+ * that leaf — a foreign-granted bare star does not reach the verifier's namespace.
+ *)
+query s: bitstring; event(Authorized(res(pk(skV), s))).
+   (* expect: NOT reachable (false) = no cross-peer escalation. *)
+
+(* Non-vacuity: the bare-`*` leaf DOES legitimately authorize A's own namespace. *)
+query s: bitstring; event(Authorized(res(pk(skA), s))).
+   (* expect: reachable (true) — the model has teeth. *)
+
+(* ---- honest principals ---- *)
+
+(* V issues a root cap to A granting the broad `/*/*` (so attenuation is not the gate
+ * here — the granter-frame of dispatch coverage is). *)
+let Vroot(gA: pkey) =
+  out(net, sign((gA, allp), skV)).
+
+(* A holds the V-rooted cap and delegates to any gB with a bare-`*` (peer-relative)
+ * resource — A's intent is "my own namespace". *)
+let Delegator(gA: pkey) =
+  in(net, rc: bitstring);
+  let (=gA, rres: bitstring) = checksign(rc, pk(skV)) in   (* root signed by V, grantee A *)
+  in(net, gB: pkey);
+  event Delegated(gA, gB, star);
+  out(net, sign((gB, star, gA), skA)).                     (* leaf: (grantee, pattern, parent-granter A) *)
+
+(* Verifier dispatch (V7 §5.5 + §5.5a). Accepts root(V->A) + leaf(A->B), then checks the
+ * request's target resource is covered by the leaf, canonicalizing the leaf pattern
+ * against the LEAF's granter frame (gA = A). *)
+let Verifier(gA: pkey) =
+  in(net, (rc: bitstring, lc: bitstring, target: bitstring));
+  let (=gA, rres: bitstring) = checksign(rc, pk(skV)) in          (* root signed by V, grantee A *)
+  let (=allp) = rres in                                            (* root grants /*/* (attenuation abstracted) *)
+  let (gB: pkey, lpat: bitstring, =gA) = checksign(lc, gA) in      (* leaf signed by A; §5.5 linkage gA *)
+  let okwit: bitstring = covok(canon(lpat, pk(skV)), target) in         (* DEFECT: canon against VERIFIER frame V, not leaf granter A *)
+  event Authorized(target).
+
+process
+  out(net, pk(skV));   (* V identity public *)
+  let gA = pk(skA) in
+  out(net, gA);        (* A identity public *)
+  ( !Vroot(gA) | !Delegator(gA) | !Verifier(gA) )

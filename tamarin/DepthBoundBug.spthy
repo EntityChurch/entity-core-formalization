@@ -1,0 +1,70 @@
+theory DepthBoundBug
+/*
+ * Phase 2 / Inc 7 — NEGATIVE CONTROL for DepthBound.spthy (§5.7 max_delegation_depth),
+ * Tamarin. The only change: Verify_Deep drops the depth-1 guard (!Below(ds('d0'), bnd)).
+ * The over-bound leaf (2 delegations under max_delegation_depth = 1) is then accepted —
+ * chain-too-deep admit; depth_bound_honored falsifies with a trace.
+ */
+begin
+
+builtins: signing
+functions: ds/1
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+rule Setup_Order:
+    [ ] --[ Order() ]-> [ !Below('d0', ds('d0')) ]
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), Out(pk(~skA)) ]
+
+rule Issue_Root:
+    let m = <pk(~skA), ds('d0')>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !LtkA(~skA) ]
+  --[ IssuedRoot(pk(~skA), ds('d0')) ]->
+    [ Out(<pk(~skA), ds('d0'), sig>) ]
+
+rule Delegate:
+    let mlink = <gB, pk(~skA)>  csig = sign(mlink, ~skA) in
+    [ !LtkA(~skA), In(gB) ]
+  --[ Delegated(pk(~skA), gB) ]->
+    [ Out(<gB, pk(~skA), csig>) ]
+
+rule Verify_Shallow:
+    let mroot  = <gA, bnd>
+        mlink1 = <gB, gA>
+    in
+    [ !PkP(pkP), !Below('d0', bnd),
+      In(<gA, bnd, sigroot>), In(<gB, gA, sig1>) ]
+  --[ Eq(verify(sigroot, mroot,  pkP), true),
+      Eq(verify(sig1,    mlink1, gA),  true),
+      AcceptedLeaf(gB, 'one') ]->
+    [ ]
+
+// BUG: the depth-1 guard is gone — the over-deep leaf is admitted.
+rule Verify_Deep:
+    let mroot  = <gA, bnd>
+        mlink1 = <gB, gA>
+        mlink2 = <gC, gB>
+    in
+    [ !PkP(pkP), !Below('d0', bnd),
+      In(<gA, bnd, sigroot>), In(<gB, gA, sig1>), In(<gC, gB, sig2>) ]
+  --[ Eq(verify(sigroot, mroot,  pkP), true),
+      Eq(verify(sig1,    mlink1, gA),  true),
+      Eq(verify(sig2,    mlink2, gB),  true),
+      AcceptedLeaf(gC, 'two') ]->
+    [ ]
+
+lemma depth_bound_honored:
+  "not (Ex gC #i. AcceptedLeaf(gC, 'two') @ i)"
+
+lemma accepted_reachable:
+  exists-trace
+  "Ex gB #i. AcceptedLeaf(gB, 'one') @ i"
+
+end

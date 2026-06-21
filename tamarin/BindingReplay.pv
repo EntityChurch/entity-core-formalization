@@ -1,0 +1,82 @@
+(* Phase 2 / Inc 11a — NO-REPLAY in ProVerif (closing the Phase-1 cross-language gap).
+ *
+ * Phase 1 proved no-replay in Tamarin only: ProVerif's table `get/else insert` is not
+ * atomic under replication, so the single-use idiom did not close there, and the Phase-1
+ * Binding.pv was kept to the binding correspondence (see its header note). This theory
+ * closes the gap with the idiom ProVerif IS good at: a CHALLENGE-RESPONSE freshness
+ * handshake, proving no-replay as an INJECTIVE correspondence (`inj-event`).
+ *
+ * V7 §5.2 verify_request with a verifier-issued freshness challenge (the standard defense
+ * against execute replay/reflection): the verifier samples a fresh challenge `c`, the
+ * grantee signs it into the execute, and the verifier binds acceptance to its own `c`.
+ * Each acceptance is then backed by a DISTINCT authoring — injective no-replay. A captured
+ * execute (carrying an old `c`) cannot be re-accepted by a later verdict (fresh `c'`).
+ *
+ * Grantee-binding (§5.2 step 3) is carried alongside, as in Binding.pv. Chain interior +
+ * crypto abstracted to "cap signed by root P" (Lemmas 1-2 own the chain).
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const capTag: bitstring [data].
+
+free skP: skey [private].          (* root authority P (verifier's own peer) *)
+free skG: skey [private].          (* honest grantee G *)
+
+(* ---- events ---- *)
+event Authored(pkey, bitstring).       (* G authored an execute answering challenge c *)
+event AcceptedExec(pkey, bitstring).   (* verifier accepted an execute bound to challenge c *)
+
+(* ---- THE no-replay lemma (INJECTIVE) ----
+ * Each acceptance maps to a DISTINCT authoring — old/captured executes cannot be replayed
+ * into a second acceptance. *)
+query g: pkey, c: bitstring;
+  inj-event(AcceptedExec(g, c)) ==> inj-event(Authored(g, c)).
+
+(* Grantee-binding (non-injective), as in Binding.pv: an accepted execute wielding a cap
+ * with grantee g implies g authored it. *)
+query g: pkey, c: bitstring;
+  event(AcceptedExec(g, c)) ==> event(Authored(g, c)).
+
+(* Non-vacuity: an honest challenge-response execute IS accepted. *)
+query g: pkey, c: bitstring; event(AcceptedExec(g, c)).
+
+(* ---- honest principals ---- *)
+
+let Pissue(gG: pkey) =
+  out(net, sign((gG, capTag), skP)).
+
+(* Honest grantee G: picks up its cap, receives a challenge c, authors an execute signing
+ * (c, cap, grantee) with its own key (§5.2 step 2). *)
+let Granteeproc(gG: pkey) =
+  in(net, cap: bitstring);
+  let (=gG, =capTag) = checksign(cap, pk(skP)) in
+  in(net, c: bitstring);
+  event Authored(gG, c);
+  out(net, (gG, cap, sign((c, cap, gG), skG))).
+
+(* Verifier (V7 §5.2 + freshness handshake): samples a fresh challenge c, accepts only an
+ * execute signed over THIS c by the cap's grantee (binding). Acceptance is tagged with c. *)
+let Verifier =
+  new c: bitstring;
+  out(net, c);
+  in(net, (author: pkey, cap: bitstring, esig: bitstring));
+  let (=c, =cap, =author) = checksign(esig, author) in       (* execute binds this fresh c *)
+  let (grantee: pkey, =capTag) = checksign(cap, pk(skP)) in   (* cap valid, rooted at P *)
+  if grantee = author then                                    (* §5.2 step 3: grantee-binding *)
+    event AcceptedExec(grantee, c).
+
+process
+  out(net, pk(skP));
+  let gG = pk(skG) in
+  out(net, gG);
+  ( !Pissue(gG) | !Granteeproc(gG) | !Verifier )

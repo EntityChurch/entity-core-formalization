@@ -1,0 +1,60 @@
+theory DeepChainBug
+/*
+ * NEGATIVE CONTROL for DeepChain.spthy — the §5.5a dispatch canonicalization uses the
+ * VERIFIER frame (pkV) instead of the LEAF granter frame (gA): Eq(reqns, pkV). Expect
+ * no_xpeer_escalation to FALSIFY — A's bare-star leaf, mis-framed against V, widens into
+ * V's namespace and the verifier authorizes a cross-peer request it must deny. The
+ * FOREIGN-GRANTER / captok_form_dispatch_minted_pl_presented_xpeer bug class. Tamarin
+ * cross-check of DeepChainBug.pv.
+ */
+begin
+
+builtins: signing
+functions: res/2
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneV:     "All #i #j. OnlyV() @ i & OnlyV() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+rule Setup_V:
+    [ Fr(~skV) ] --[ OnlyV(), VKey(pk(~skV)) ]-> [ !LtkV(~skV), !PkV(pk(~skV)), Out(pk(~skV)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA(), AKey(pk(~skA)) ]-> [ !LtkA(~skA), !PkA(pk(~skA)), Out(pk(~skA)) ]
+
+rule Vroot:
+    let m = <gA, 'allp'>  sig = sign(m, ~skV) in
+    [ !LtkV(~skV), !PkA(gA) ]
+  --[ ]->
+    [ Out(<gA, 'allp', sig>) ]
+
+rule Delegate:
+    let mroot = <pk(~skA), 'allp'>
+        mleaf = <gB, 'star', pk(~skA)>
+        lsig  = sign(mleaf, ~skA)
+    in
+    [ !LtkA(~skA), !PkV(pkV), In(<pk(~skA), 'allp', sigroot>), In(gB) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true), Delegated(pk(~skA), gB, 'star') ]->
+    [ Out(<gB, 'star', pk(~skA), lsig>) ]
+
+// DEFECT: coverage frame = verifier pkV, not leaf granter gA.
+rule Verify_StarLeaf:
+    let mroot = <gA, 'allp'>
+        mleaf = <gB, 'star', gA>
+    in
+    [ !PkV(pkV), In(<gA, 'allp', sigroot>), In(<gB, 'star', gA, sigleaf>), In(<reqns, path>) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true),
+      Eq(verify(sigleaf, mleaf, gA),  true),
+      Eq(reqns, pkV),                       // DEFECT: canon against VERIFIER frame V
+      Authorized(res(reqns, path)) ]->
+    [ ]
+
+lemma no_xpeer_escalation:
+  "All pkV path #i #k.
+     VKey(pkV) @ k & Authorized(res(pkV, path)) @ i ==> F"
+
+lemma legit_reachable:
+  exists-trace
+  "Ex pkA path #i #k. AKey(pkA) @ k & Authorized(res(pkA, path)) @ i"
+
+end

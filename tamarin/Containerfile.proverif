@@ -1,0 +1,14 @@
+# ProVerif toolchain (Spike B, lead tool) — containerized, make + podman only.
+# ProVerif is the lead because it is usually more automated (applied-pi surface);
+# Tamarin is the fallback/comparison (Containerfile.tamarin).
+#
+# Built from an opam base and pinned via `opam install proverif.<version>` so the
+# prover version is part of the reproducibility envelope (mirrors spec-data SHA-pins).
+FROM docker.io/ocaml/opam:debian-12-ocaml-4.14
+
+ARG PROVERIF_VERSION=2.05
+RUN opam update -y && opam install -y proverif.${PROVERIF_VERSION}
+
+# opam installs proverif into the switch; expose it on PATH for `make proverif`.
+ENV PATH="/home/opam/.opam/4.14/bin:${PATH}"
+WORKDIR /work

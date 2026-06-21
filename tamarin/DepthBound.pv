@@ -1,0 +1,111 @@
+(* Phase 2 / Inc 7 — DELEGATION CAVEAT: max_delegation_depth (§5.7), ProVerif.
+ *
+ * Models V7 §5.7 `check_delegation_caveats`, the max_delegation_depth branch:
+ *
+ *     if caveats.max_delegation_depth is not null:
+ *       if depth >= caveats.max_delegation_depth: return false
+ *
+ * `depth` is the verifier-computed number of hops BELOW the cap that set the caveat
+ * (positional — read off the chain it is given, NOT trusted from the child caps, so a
+ * malicious mid-chain delegator cannot reset it). The bound lives in the honest root
+ * cap. The check is per-link in the §5.5 walk.
+ *
+ * Modeled at the spec's own worked instance: max_delegation_depth = 1 ("exactly one
+ * delegation is allowed" — §5.7). depth/bound are successor terms (d0=0, ds=+1); the
+ * destructor `belowok(depth, bound)` computes depth < bound by structural recursion, so
+ * the arithmetic is real, not enumerated. Larger bounds are a structural generalization
+ * (cf. Multisig's fixed K). Chain: P -> A (bound=1) -> B -> C; A->B is depth 0 (allowed,
+ * 0<1), B->C is depth 1 (denied, 1>=1). The verifier's per-link depth guard is the sole
+ * defense — DepthBoundBug.pv removes the B->C-link guard.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* ---- depth & bound as successor terms; belowok = §5.7 `depth < max_delegation_depth` ----
+ * belowok(depth, bound) reduces (to a witness) iff depth is strictly below bound. *)
+type dpt.
+const d0: dpt [data].          (* depth 0 *)
+fun ds(dpt): dpt [data].       (* successor: ds(d) = d + 1 *)
+const wit: bitstring [data].
+(* `belowok(depth, bound)` reduces iff depth is strictly below bound. ProVerif destructors
+ * cannot recurse, so we model the relation AT the worked instance max_delegation_depth=1:
+ * the only depth strictly below bound 1 is depth 0. depth 0 (d0) passes for any positive
+ * bound; depth 1 (ds d0) has no clause and fails — exactly the §5.7 boundary for bound=1. *)
+fun belowok(dpt, dpt): bitstring
+reduc forall b: dpt; belowok(d0, ds(b)) = wit.
+(* belowok(d0, ds(d0)) = wit       (0 < 1 — allow)
+ * belowok(ds(d0), ds(d0)) = fails (1 < 1 false — deny) *)
+
+free skP: skey [private].   (* honest root authority P (verifier's own peer, §5.5) *)
+
+(* ---- the leaf depth tags ---- *)
+const one: bitstring [data].   (* leaf reached by 1 delegation (within bound) *)
+const two: bitstring [data].   (* leaf reached by 2 delegations (over bound=1) *)
+
+(* ---- events ---- *)
+event IssuedRoot(pkey, dpt).        (* P signed a root cap to A with max_delegation_depth=bound *)
+event Delegated(pkey, pkey).        (* a delegation link *)
+event AcceptedLeaf(pkey, bitstring).(* verifier accepted a leaf reached by N delegations *)
+
+(* ---- THE depth-bound lemma ----
+ * Under max_delegation_depth=1, a leaf reached by 2 delegations is never accepted. *)
+query gC: pkey; event(AcceptedLeaf(gC, two)).
+   (* expect: NOT reachable (false) = depth bound honored. *)
+
+(* Non-vacuity: a leaf reached by 1 delegation (within bound) CAN be accepted. *)
+query gB: pkey; event(AcceptedLeaf(gB, one)).
+   (* expect: reachable (true) — the model has teeth. *)
+
+(* ---- honest principals ---- *)
+
+(* P issues a root cap to A with max_delegation_depth = 1 (= ds(d0)). *)
+let Pauthority(gA: pkey) =
+  event IssuedRoot(gA, ds(d0));
+  out(net, sign((gA, ds(d0)), skP)).
+
+(* Honest delegator A: holds P's cap; re-signs a child link (gB, A) for any grantee gB the
+ * network supplies (the attacker may pick gB = a key it controls, then extend the chain
+ * itself). A does not self-police depth — §5.7 is verify-time. *)
+let Delegator(skA: skey) =
+  in(net, rc: bitstring);
+  let (=pk(skA), bnd: dpt) = checksign(rc, pk(skP)) in
+  in(net, gB: pkey);
+  event Delegated(pk(skA), gB);
+  out(net, sign((gB, pk(skA)), skA)).   (* link: (grantee, parent-granter) *)
+
+(* Verifier, within-bound leaf (P -> A -> B): one delegation, depth 0. *)
+let VerifyShallow(gA: pkey) =
+  in(net, (rc: bitstring, l1: bitstring));
+  let (=gA, bnd: dpt) = checksign(rc, pk(skP)) in   (* root: P->A, bound bnd *)
+  let (gB: pkey, =gA) = checksign(l1, gA) in         (* link A->B *)
+  let ok0 = belowok(d0, bnd) in                     (* §5.7: depth 0 < bound *)
+  event AcceptedLeaf(gB, one).
+
+(* Verifier, over-bound leaf (P -> A -> B -> C): two delegations, depths 0 then 1. The
+ * B->C link is signed by gB's key (attacker-controlled if it chose gB). Each link's depth
+ * is checked against A's bound. *)
+let VerifyDeep(gA: pkey) =
+  in(net, (rc: bitstring, l1: bitstring, l2: bitstring));
+  let (=gA, bnd: dpt) = checksign(rc, pk(skP)) in    (* root: P->A, bound bnd *)
+  let (gB: pkey, =gA) = checksign(l1, gA) in          (* link A->B, depth 0 *)
+  let ok0 = belowok(d0, bnd) in                      (* §5.7: depth 0 < bound *)
+  let (gC: pkey, =gB) = checksign(l2, gB) in          (* link B->C, depth 1 *)
+  let ok1 = belowok(ds(d0), bnd) in                  (* §5.7: depth 1 < bound *)
+  event AcceptedLeaf(gC, two).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Delegator(skA) | !VerifyShallow(gA) | !VerifyDeep(gA) )

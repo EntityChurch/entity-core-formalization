@@ -1,0 +1,86 @@
+theory NoEscalation
+/*
+ * Phase 1 / Lemma 1 — NO-ESCALATION (attenuation) in Tamarin (lockstep cross-check
+ * of NoEscalation.pv).
+ *
+ * V7 §5.6 attenuation as an order check inside §5.5 per-link verification. The order
+ * "can only restrict": narrow(p) is the strict attenuation of p; a child scope is a
+ * valid attenuation of parent p iff it equals p or narrow(p). narrow only goes down,
+ * so authority strictly above the root is unreachable by construction. Wide authority
+ * = the public constant 'admin'; the authority P grants is narrow('admin') ("read").
+ *
+ * Threat surface (faithful to V7): the delegator re-signs ANY child scope the network
+ * supplies (V7 constrains nothing at sign time); the verifier's per-link is_attenuated
+ * is the sole defense. Symbolic sign/verify is the §7.3 crypto wall.
+ */
+begin
+
+builtins: signing
+functions: narrow/1
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+// Honest root authority P (verifier's own root, §5.5 root-granter-local)
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+// Honest delegator A
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), Out(pk(~skA)) ]
+
+// P issues a root cap to A at narrow('admin') ONLY (the granted, attenuated authority).
+rule Issue_Root:
+    let m = <pk(~skA), narrow('admin')>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !LtkA(~skA) ]
+  --[ IssuedRoot(pk(~skA), narrow('admin')) ]->
+    [ Out(<pk(~skA), narrow('admin'), sig>) ]
+
+// A delegates to gB at ANY scope s2 the network asks for (no self-policing — §5.6 is
+// enforced at verify, not sign). Verifies its own P-rooted cap first.
+rule Delegate:
+    let mroot  = <pk(~skA), s>
+        mchild = <gB, s2, pk(~skA)>
+        csig   = sign(mchild, ~skA)
+    in
+    [ !LtkA(~skA), !PkP(pkP), In(<pk(~skA), s, sigroot>), In(<gB, s2>) ]
+  --[ Eq(verify(sigroot, mroot, pkP), true), Delegated(pk(~skA), gB, s2) ]->
+    [ Out(<gB, s2, pk(~skA), csig>) ]
+
+// Verifier, §5.6 attenuation enforced as two valid-child cases (OR over two rules):
+//   (a) identity:  child scope == parent scope
+//   (b) strict:    child scope == narrow(parent scope)
+rule Verify_Deleg_Id:
+    let mroot  = <gA, sRoot>
+        mchild = <gB, sRoot, gA>
+    in
+    [ !PkP(pkP), In(<gA, sRoot, sigroot>), In(<gB, sRoot, gA, sigchild>) ]
+  --[ Eq(verify(sigroot,  mroot,  pkP), true),
+      Eq(verify(sigchild, mchild, gA),  true),
+      AcceptedDeleg(gB, sRoot) ]->
+    [ ]
+
+rule Verify_Deleg_Narrow:
+    let mroot  = <gA, sRoot>
+        mchild = <gB, narrow(sRoot), gA>
+    in
+    [ !PkP(pkP), In(<gA, sRoot, sigroot>), In(<gB, narrow(sRoot), gA, sigchild>) ]
+  --[ Eq(verify(sigroot,  mroot,  pkP), true),
+      Eq(verify(sigchild, mchild, gA),  true),
+      AcceptedDeleg(gB, narrow(sRoot)) ]->
+    [ ]
+
+/* ---- the no-escalation lemma ---- */
+
+// No-escalation: the verifier never accepts a chain conferring the wide 'admin' scope
+// (P only ever granted narrow('admin')). The symbolic isAttenuated_trans.
+lemma no_escalation:
+  "not (Ex gB #i. AcceptedDeleg(gB, 'admin') @ i)"
+
+// Non-vacuity: a properly-attenuated (narrow('admin')) chain CAN be accepted.
+lemma accepted_reachable:
+  exists-trace
+  "Ex gB #i. AcceptedDeleg(gB, narrow('admin')) @ i"
+
+end

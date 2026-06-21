@@ -1,0 +1,74 @@
+theory PersistentRecheck
+/*
+ * Phase 2 / Inc 12 — PERSISTENT-CAPABILITY PER-USE RE-CHECK (§6.8 + §5.1 + §1.7), Tamarin.
+ *
+ * The core-spec property underneath the async/extension flows. A persistent capability —
+ * a compute INSTALLATION grant, a continuation `dispatch_capability`, a subscription
+ * dispatch token — is used REPEATEDLY across asynchronous dispatches. V7 requires it to be
+ * re-validated at EACH use:
+ *
+ *   §6.8 (line 3582): "A revoked capability never passes a check, even if the same
+ *      capability passed a check earlier in the same operation."
+ *   §5.5/§1.7: "Compute's installation grants are checked on every reactive sub-dispatch;
+ *      Continuation's stored dispatch_capability is checked on every continuation advance;
+ *      Subscription's dispatch tokens are checked on every notification." Revocation
+ *      checking is "required when capabilities are persisted and may outlive their issuance."
+ *
+ * So an EARLIER successful use must NOT grandfather a later use after revocation. The
+ * verifier re-consults revocation on every async use (the Check action, gated by the
+ * HonorRevocation restriction). PersistentRecheckBug caches the first approval and skips
+ * the re-check — the "checked once at install, trusted forever" fail-open.
+ *
+ * SCOPE BOUNDARY (5th wall): this models the §6.8/§5.1 CORE property that governs the
+ * async flows; it does NOT model the EXTENSION-CONTINUATION / EXTENSION-SUBSCRIPTION /
+ * EXTENSION-COMPUTE protocols themselves — those specs are not in the vendored v7.76
+ * snapshot, so their wire/dispatch mechanics are out of scope (a Phase-3 item gated on
+ * vendoring the extension specs). Chain interior + crypto abstracted (Lemmas 1-3).
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+// Per-use re-check: any use that re-consults revocation (Check) must find no prior marker.
+restriction HonorRevocation:
+  "All cid #a. Check(cid) @ a ==> not (Ex #r. Revoke(cid) @ r & #r < #a)"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+// P issues a PERSISTENT cap (fresh id, signed). !Issued is its long-lived validity.
+rule Issue:
+    let cap = <~cid, sign(~cid, ~skP)> in
+    [ !LtkP(~skP), Fr(~cid) ]
+  --[ Issue(~cid) ]->
+    [ Out(cap), !Issued(~cid) ]
+
+// Async use (continuation advance / notification / reactive sub-dispatch): the persistent
+// cap fires again. CORRECT: every use re-consults revocation (Check) before accepting.
+rule AsyncUse:
+    [ !PkP(pkP), In(<cid, sig>), !Issued(cid) ]
+  --[ Eq(verify(sig, cid, pkP), true), Check(cid), Accept(cid) ]->
+    [ ]
+
+// Revoke (§6.2): write the revocation marker.
+rule Revoke:
+    [ !Issued(cid) ]
+  --[ Revoke(cid) ]->
+    [ ]
+
+/* ---- the persistent-recheck lemmas ---- */
+
+// (1) Revoked-never-passes, ACROSS repeated async uses: no use succeeds after revocation,
+//     even though earlier uses of the same persistent cap succeeded.
+lemma revoked_never_passes:
+  "All cid #r #a. Revoke(cid) @ r & Accept(cid) @ a ==> #a < #r"
+
+// (2) Persistent re-use is real: the same cap is legitimately accepted at two distinct
+//     async uses (so lemma 1 is not vacuously about a single-use cap).
+lemma reused_twice:
+  exists-trace
+  "Ex cid #a #b. Accept(cid) @ a & Accept(cid) @ b & not (#a = #b)"
+
+end

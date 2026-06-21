@@ -1,0 +1,53 @@
+theory PersistentRecheckBug
+/*
+ * Phase 2 / Inc 12 — NEGATIVE CONTROL for PersistentRecheck.spthy (§6.8 per-use re-check),
+ * Tamarin. The verifier re-checks revocation only on the FIRST use and caches the approval
+ * (!Approved); subsequent async uses accept FROM THE CACHE without re-consulting revocation
+ * (no Check action, so they escape HonorRevocation). A cap revoked between uses then still
+ * fires a later async dispatch — the "checked once at install, trusted forever" fail-open.
+ * revoked_never_passes falsifies with a trace (earlier use passed, post-revoke cached use
+ * also passes).
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction HonorRevocation:
+  "All cid #a. Check(cid) @ a ==> not (Ex #r. Revoke(cid) @ r & #r < #a)"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Issue:
+    let cap = <~cid, sign(~cid, ~skP)> in
+    [ !LtkP(~skP), Fr(~cid) ]
+  --[ Issue(~cid) ]->
+    [ Out(cap), !Issued(~cid) ]
+
+// First use re-checks revocation (Check) and CACHES approval as a persistent fact.
+rule AsyncUse_First:
+    [ !PkP(pkP), In(<cid, sig>), !Issued(cid) ]
+  --[ Eq(verify(sig, cid, pkP), true), Check(cid), Accept(cid) ]->
+    [ !Approved(cid) ]
+
+// BUG: cached async use accepts from !Approved WITHOUT re-consulting revocation (no Check).
+rule AsyncUse_Cached:
+    [ !Approved(cid) ]
+  --[ Accept(cid) ]->
+    [ ]
+
+rule Revoke:
+    [ !Issued(cid) ]
+  --[ Revoke(cid) ]->
+    [ ]
+
+lemma revoked_never_passes:
+  "All cid #r #a. Revoke(cid) @ r & Accept(cid) @ a ==> #a < #r"
+
+lemma reused_twice:
+  exists-trace
+  "Ex cid #a #b. Accept(cid) @ a & Accept(cid) @ b & not (#a = #b)"
+
+end

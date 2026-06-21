@@ -1,0 +1,68 @@
+theory BindingReplayBug
+/*
+ * NEGATIVE CONTROL for Binding.spthy — the single-use NoReplay restriction is REMOVED
+ * (the verifier no longer enforces a seen-set). Expect `no_replay` to FALSIFY: a captured
+ * execute is replayed and accepted twice for one authoring (replay/reflection). `binding`
+ * still holds — replay is orthogonal to grantee-binding.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneG:     "All #i #j. OnlyG() @ i & OnlyG() @ j ==> #i = #j"
+// Single-use: the verifier accepts each nonce at most once (idempotent seen-set).
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_G:
+    [ Fr(~skG) ] --[ OnlyG() ]-> [ !LtkG(~skG), !PkG(pk(~skG)), Out(pk(~skG)) ]
+
+// P issues a cap to grantee G: <grantee, 'capTag'> signed by P.
+rule Issue:
+    let csig = sign(<gG, 'capTag'>, ~skP) in
+    [ !LtkP(~skP), !PkG(gG) ] --[ IssuedCap(gG) ]-> [ Out(<gG, 'capTag', csig>) ]
+
+// Honest grantee G authors an execute with a fresh nonce, signing <nonce, grantee>.
+// Eq(cg, pk(~skG)) ensures G only authors with its own cap.
+rule Author:
+    let esig = sign(<~n, cg>, ~skG) in
+    [ !LtkG(~skG), !PkP(pkP), In(<cg, 'capTag', csig>), Fr(~n) ]
+  --[ Eq(verify(csig, <cg, 'capTag'>, pkP), true), Eq(cg, pk(~skG)),
+      Authored(pk(~skG), ~n) ]->
+    [ Out(<pk(~skG), cg, 'capTag', csig, ~n, esig>) ]
+
+// Verifier (V7 §5.2): cap valid (grantee cg, signed by P), execute signed by author,
+// binding cg == author, nonce single-use.
+rule Verify:
+    [ !PkP(pkP), In(<author, cg, 'capTag', csig, n, esig>) ]
+  --[ Eq(verify(csig, <cg, 'capTag'>, pkP), true),   // cap valid, rooted at P; grantee cg
+      Eq(verify(esig, <n, cg>, author), true),        // step 2: author signed the execute
+      Eq(cg, author),                                 // step 3: grantee-binding
+      Used(n),
+      AcceptedExec(cg, n) ]->                          // records the cap's grantee
+    [ ]
+
+/* ---- the binding + no-replay lemmas ---- */
+
+// (1) Grantee-binding: an accepted execute wielding a cap with grantee g implies g
+//     authored it. No confused-deputy / capability theft.
+lemma binding:
+  "All g n #i. AcceptedExec(g, n) @ i ==> (Ex #j. Authored(g, n) @ j & #j < #i)"
+
+// (2) No-replay: each accepted execute is backed by an authoring AND is the unique
+//     acceptance for that nonce — old/captured executes cannot be replayed.
+lemma no_replay:
+  "All g n #i.
+     AcceptedExec(g, n) @ i
+     ==> (Ex #j. Authored(g, n) @ j & #j < #i)
+       & (All #i2. AcceptedExec(g, n) @ i2 ==> #i = #i2)"
+
+// Non-vacuity: an honest execute IS accepted.
+lemma accepted_reachable:
+  exists-trace
+  "Ex g n #i. AcceptedExec(g, n) @ i"
+
+end

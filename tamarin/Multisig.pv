@@ -1,0 +1,59 @@
+(* Phase 1 / Lemma 4b — MULTI-SIG ROOT (K-of-N), ProVerif.
+ *
+ * Models V7 §3.6 system/capability/multi-granter + §5.5 M3-M7: a multi-sig root cap is
+ * accepted only if at least `threshold` DISTINCT members of the signer set actually
+ * signed it (M4 per-signer verify, M3 dedupe), and the local peer is in the signer set
+ * AND signed (M6 root check). We model K=2 of N=2 with signer S1 = the local peer V.
+ *
+ * Distinctness/dedupe (M3 has_duplicates) is enforced structurally: the two accepted
+ * signatures must verify under two DIFFERENT signer keys (S1 and S2), so replaying one
+ * signer's signature into both slots cannot reach the threshold. Threshold bypass
+ * (accept with < K genuine signers) is the MultisigBug negative control.
+ *
+ * Crypto = symbolic §7.3 wall; the root content (signers list / threshold / grantee) is
+ * abstracted to a constant the signers sign — the new content is the K-of-N acceptance.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const rootC: bitstring [data].     (* the multi-sig root content (signer set + threshold + grantee abstracted) *)
+
+free skS1: skey [private].         (* signer 1 = the LOCAL PEER V (M6: local peer in signers & signs) *)
+free skS2: skey [private].         (* signer 2 = co-signer *)
+
+event Signed(pkey).                 (* a signer signed the root *)
+event AcceptMulti().                (* verifier accepted the K-of-N root *)
+
+(* THRESHOLD lemma: the root is accepted only if BOTH distinct signers (incl. the local
+ * peer S1) actually signed — no acceptance with fewer than `threshold` genuine signers. *)
+query event(AcceptMulti()) ==> (event(Signed(pk(skS1))) && event(Signed(pk(skS2)))).
+
+(* Non-vacuity: with both honest signers signing, the root IS accepted. *)
+query event(AcceptMulti()).
+
+(* Honest signer: signs the root content with its own key. *)
+let Signer(sk: skey) =
+  event Signed(pk(sk));
+  out(net, sign(rootC, sk)).
+
+(* Verifier (§5.5 M4/M6): requires `threshold`=2 valid signatures from DISTINCT signers
+ * of the set {S1, S2}; S1 is the local peer (M6). *)
+let Verifier =
+  in(net, (sig1: bitstring, sig2: bitstring));
+  let (=rootC) = checksign(sig1, pk(skS1)) in   (* valid sig by S1 = local peer (M6) *)
+  let (=rootC) = checksign(sig2, pk(skS2)) in   (* valid sig by S2, a distinct signer *)
+  event AcceptMulti().
+
+process
+  out(net, pk(skS1));
+  out(net, pk(skS2));
+  ( !Signer(skS1) | !Signer(skS2) | !Verifier )

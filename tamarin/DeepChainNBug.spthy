@@ -1,0 +1,79 @@
+theory DeepChainNBug
+/*
+ * Phase 2 / Inc 9 — NEGATIVE CONTROL for DeepChainN.spthy (§5.5a deep granter-frame),
+ * Tamarin. The only change: Verify_StarLeaf binds the request to the VERIFIER frame
+ * (Eq(reqns, pkV)) instead of the leaf granter B. Two foreign hops deep, B's bare-star
+ * leaf widens into V's namespace — deep FOREIGN-GRANTER cross-peer admit;
+ * no_xpeer_escalation falsifies. (legit_reachable also breaks — the mis-frame redirects
+ * B's authority to V — the same honest consequence as Phase-1 DeepChainBug.)
+ */
+begin
+
+builtins: signing
+functions: res/2
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneV:     "All #i #j. OnlyV() @ i & OnlyV() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+restriction OneB:     "All #i #j. OnlyB() @ i & OnlyB() @ j ==> #i = #j"
+
+rule Setup_V:
+    [ Fr(~skV) ] --[ OnlyV(), VKey(pk(~skV)) ]-> [ !LtkV(~skV), !PkV(pk(~skV)), Out(pk(~skV)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA(), AKey(pk(~skA)) ]-> [ !LtkA(~skA), !PkA(pk(~skA)), Out(pk(~skA)) ]
+
+rule Setup_B:
+    [ Fr(~skB) ] --[ OnlyB(), BKey(pk(~skB)) ]-> [ !LtkB(~skB), !PkB(pk(~skB)), Out(pk(~skB)) ]
+
+rule Vroot:
+    let m = <gA, 'allp'>  sig = sign(m, ~skV) in
+    [ !LtkV(~skV), !PkA(gA) ]
+  --[ ]->
+    [ Out(<gA, 'allp', sig>) ]
+
+rule DelegateA:
+    let mroot = <pk(~skA), 'allp'>
+        mlink = <gB, 'allp', pk(~skA)>
+        lsig  = sign(mlink, ~skA)
+    in
+    [ !LtkA(~skA), !PkV(pkV), In(<pk(~skA), 'allp', sigroot>), In(gB) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true), DelegatedLink(pk(~skA), gB) ]->
+    [ Out(<gB, 'allp', pk(~skA), lsig>) ]
+
+rule DelegateB:
+    let mlink = <pk(~skB), 'allp', gAp>
+        mleaf = <gC, 'star', pk(~skB)>
+        lsig  = sign(mleaf, ~skB)
+    in
+    [ !LtkB(~skB), !PkA(gAp), In(<pk(~skB), 'allp', gAp, sigA>) ]
+  --[ Eq(verify(sigA, mlink, gAp), true), DelegatedLeaf(pk(~skB), gC) ]->
+    [ Out(<gC, 'star', pk(~skB), lsig>) ]
+
+// BUG: bind the request to the VERIFIER frame pkV, not the leaf granter B.
+rule Verify_StarLeaf:
+    let mroot = <gA, 'allp'>
+        mlink = <gB, 'allp', gA>
+        mleaf = <gC, 'star', gB>
+    in
+    [ !PkV(pkV), !PkA(gA), !PkB(gB),          // foreign mids pinned to their honest identities
+      In(<gA, 'allp', sigroot>),
+      In(<gB, 'allp', gA, siglink>),
+      In(<gC, 'star', gB, sigleaf>),
+      In(<reqns, path>) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true),
+      Eq(verify(siglink, mlink, gA),  true),
+      Eq(verify(sigleaf, mleaf, gB),  true),
+      Eq(reqns, pkV),                         // BUG: coverage frame = verifier, not leaf granter
+      Authorized(res(reqns, path)) ]->
+    [ ]
+
+lemma no_xpeer_escalation:
+  "All pkV path #i #k.
+     VKey(pkV) @ k & Authorized(res(pkV, path)) @ i ==> F"
+
+lemma legit_reachable:
+  exists-trace
+  "Ex pkB path #i #k. BKey(pkB) @ k & Authorized(res(pkB, path)) @ i"
+
+end

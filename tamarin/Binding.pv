@@ -1,0 +1,83 @@
+(* Phase 1 / Lemma 3 — GRANTEE-BINDING + NO-REPLAY, ProVerif.
+ *
+ * Models V7 §5.2 verify_request:
+ *   step 2: the EXECUTE's signature is by execute.data.author (authentication);
+ *   step 3: capability.data.grantee == execute.data.author (the wielder MUST be the
+ *           capability's grantee), then the chain verifies (rooted at P).
+ *
+ * Security content: a capability is bound to its grantee — only the holder of the
+ * grantee's key can wield it. An attacker who intercepts a capability off the wire
+ * cannot use it (it cannot author a request as the grantee). This rules out
+ * confused-deputy / capability-theft.
+ *
+ * NO-REPLAY note: the injective (each-accept-maps-to-a-distinct-authoring) property is
+ * proved cleanly in the Tamarin cross-check (Binding.spthy) using a linear consumed-nonce
+ * FACT, which models single-use precisely. ProVerif's table `get/else insert` is NOT
+ * atomic under replication, so it does not faithfully model single-use — we therefore
+ * keep the ProVerif theory to the binding correspondence and prove no-replay in Tamarin.
+ * (A genuine "which tool is cleaner" finding for this fragment — see the report.)
+ *
+ * Chain verification + crypto are abstracted to "cap signed by root P" (Spike B /
+ * Lemmas 1-2 own the chain interior); the new content is steps 2-3 grantee-binding.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const capTag: bitstring [data].    (* marks a cap payload *)
+
+free skP: skey [private].          (* root authority P (verifier's own peer) *)
+free skG: skey [private].          (* honest grantee G — holds the capability *)
+
+(* ---- events ---- *)
+event IssuedCap(pkey).                 (* P issued a cap to this grantee *)
+event Authored(pkey, bitstring).       (* the grantee authored an execute with this nonce *)
+event AcceptedExec(pkey, bitstring).   (* verifier accepted an execute wielding a cap whose grantee is this pkey, nonce *)
+
+(* ---- THE binding + replay lemmas ---- *)
+
+(* (1) Grantee-binding: the verifier accepts an execute wielding a cap with grantee g
+ *     only if g actually authored that request. An attacker (any non-grantee) cannot
+ *     wield G's cap. *)
+query g: pkey, n: bitstring;
+  event(AcceptedExec(g, n)) ==> event(Authored(g, n)).
+
+(* ---- honest principals ---- *)
+
+(* P issues a root cap to grantee G: signs (grantee, capTag). *)
+let Pissue(gG: pkey) =
+  event IssuedCap(gG);
+  out(net, sign((gG, capTag), skP)).
+
+(* Honest grantee G: picks up its cap, authors an execute with a fresh nonce, signs the
+ * (nonce, cap, author) tuple with its own key (§5.2 step 2 — author signs the execute). *)
+let Granteeproc(gG: pkey) =
+  in(net, cap: bitstring);
+  let (=gG, =capTag) = checksign(cap, pk(skP)) in    (* this cap is granted to me *)
+  new n: bitstring;
+  event Authored(gG, n);
+  out(net, (gG, cap, n, sign((n, cap, gG), skG))).
+
+(* Verifier (V7 §5.2). esig is the execute signature by `author`; cap is the wielded
+ * capability (signed by P, carrying its grantee). *)
+let Verifier =
+  in(net, (author: pkey, cap: bitstring, n: bitstring, esig: bitstring));
+  let (=n, =cap, =author) = checksign(esig, author) in    (* step 2: author signed the execute *)
+  let (grantee: pkey, =capTag) = checksign(cap, pk(skP)) in (* step 3a: cap valid, rooted at P *)
+  if grantee = author then                                  (* step 3b: grantee == author (binding) *)
+    event AcceptedExec(grantee, n).
+
+process
+  out(net, pk(skP));
+  let gG = pk(skG) in
+  out(net, gG);
+  ( !Pissue(gG) | !Granteeproc(gG) | !Verifier )

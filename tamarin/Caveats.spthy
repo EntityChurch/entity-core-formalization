@@ -1,0 +1,74 @@
+theory Caveats
+/*
+ * Phase 2 / Inc 6 — DELEGATION CAVEAT: no_delegation (§5.7) in Tamarin (lockstep
+ * cross-check of Caveats.pv).
+ *
+ * V7 §5.7 check_delegation_caveats, no_delegation branch: a cap minted with
+ * no_delegation MUST NOT have an accepted delegated child. Enforced per-link in the
+ * §5.5 chain walk; nothing constrains the delegator at sign time, so the verifier's
+ * caveat consult is the sole defense (CaveatsBug.spthy removes it).
+ *
+ * Flags are public constants: 'nodeleg' (no_delegation==true) / 'okdeleg' (unset).
+ * The attacker knows both and may request either from the honest minter P. Symbolic
+ * sign/verify is the §7.3 crypto wall; `scope` opaque (NoEscalation owns the order).
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+// Honest root authority P (verifier's own root, §5.5 root-granter-local)
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+// Honest delegator A
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), Out(pk(~skA)) ]
+
+// P mints a root cap to A carrying caveat flag nd (chosen by the network: 'nodeleg' models
+// a no-delegation cap, 'okdeleg' a delegable one). P signs whatever it is asked (§5.7 is
+// verify-time).
+rule Issue_Root:
+    let m = <pk(~skA), 'theScope', nd>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !LtkA(~skA), In(nd) ]
+  --[ IssuedRoot(pk(~skA), nd) ]->
+    [ Out(<pk(~skA), 'theScope', nd, sig>) ]
+
+// A delegates to gB (re-signs a child). No self-policing of the caveat.
+rule Delegate:
+    let mroot  = <pk(~skA), s, nd>
+        mchild = <gB, s, pk(~skA)>
+        csig   = sign(mchild, ~skA)
+    in
+    [ !LtkA(~skA), !PkP(pkP), In(<pk(~skA), s, nd, sigroot>), In(gB) ]
+  --[ Eq(verify(sigroot, mroot, pkP), true), Delegated(pk(~skA), gB) ]->
+    [ Out(<gB, s, pk(~skA), csig>) ]
+
+// Verifier, §5.5 + §5.7: the delegation link passes ONLY when the parent's no_delegation
+// is unset. Pattern-matching 'okdeleg' in the root cap IS the caveat consult — the rule
+// cannot fire for a 'nodeleg' root.
+rule Verify_Deleg:
+    let mroot  = <gA, sRoot, 'okdeleg'>
+        mchild = <gB, sRoot, gA>
+    in
+    [ !PkP(pkP), In(<gA, sRoot, 'okdeleg', sigroot>), In(<gB, sRoot, gA, sigchild>) ]
+  --[ Eq(verify(sigroot,  mroot,  pkP), true),
+      Eq(verify(sigchild, mchild, gA),  true),
+      AcceptedDeleg(gB, 'okdeleg') ]->
+    [ ]
+
+/* ---- the no_delegation lemma ---- */
+
+// A delegated chain rooted at a no_delegation cap is never accepted.
+lemma no_delegation_honored:
+  "not (Ex gB #i. AcceptedDeleg(gB, 'nodeleg') @ i)"
+
+// Non-vacuity: a child of a delegable (okdeleg) root CAN be accepted.
+lemma accepted_reachable:
+  exists-trace
+  "Ex gB #i. AcceptedDeleg(gB, 'okdeleg') @ i"
+
+end

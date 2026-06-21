@@ -1,0 +1,47 @@
+theory BindingBug
+/*
+ * NEGATIVE CONTROL for Binding.spthy — the §5.2 step-3 grantee-binding check
+ * Eq(cg, author) is REMOVED. Expect `binding` to FALSIFY: an attacker authors its own
+ * execute (author = attacker) wielding the honest grantee G's intercepted cap, and the
+ * verifier accepts it — confused-deputy / capability theft. Tamarin cross-check of
+ * BindingBug.pv.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneG:     "All #i #j. OnlyG() @ i & OnlyG() @ j ==> #i = #j"
+restriction NoReplay: "All n #i #j. Used(n) @ i & Used(n) @ j ==> #i = #j"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_G:
+    [ Fr(~skG) ] --[ OnlyG() ]-> [ !LtkG(~skG), !PkG(pk(~skG)), Out(pk(~skG)) ]
+
+rule Issue:
+    let csig = sign(<gG, 'capTag'>, ~skP) in
+    [ !LtkP(~skP), !PkG(gG) ] --[ IssuedCap(gG) ]-> [ Out(<gG, 'capTag', csig>) ]
+
+rule Author:
+    let esig = sign(<~n, cg>, ~skG) in
+    [ !LtkG(~skG), !PkP(pkP), In(<cg, 'capTag', csig>), Fr(~n) ]
+  --[ Eq(verify(csig, <cg, 'capTag'>, pkP), true), Eq(cg, pk(~skG)),
+      Authored(pk(~skG), ~n) ]->
+    [ Out(<pk(~skG), cg, 'capTag', csig, ~n, esig>) ]
+
+// DEFECT: grantee-binding Eq(cg, author) REMOVED — any author may wield any cap.
+rule Verify:
+    [ !PkP(pkP), In(<author, cg, 'capTag', csig, n, esig>) ]
+  --[ Eq(verify(csig, <cg, 'capTag'>, pkP), true),
+      Eq(verify(esig, <n, cg>, author), true),
+      Used(n),
+      AcceptedExec(cg, n) ]->                          // records the cap's grantee (theft: cg=G, author=attacker)
+    [ ]
+
+lemma binding:
+  "All g n #i. AcceptedExec(g, n) @ i ==> (Ex #j. Authored(g, n) @ j & #j < #i)"
+
+end

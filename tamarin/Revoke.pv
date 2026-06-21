@@ -1,0 +1,67 @@
+(* Phase 1 / Lemma 4a — REVOCATION, ProVerif.
+ *
+ * Models V7 §5.1: full verification = verify_capability_chain(...) AND NOT is_revoked(...).
+ * A cap whose root has a revocation marker (written by system/capability:revoke, §6.2)
+ * MUST NOT pass — even though it is cryptographically valid. "An impl that writes the
+ * marker on revoke but does not read it in verify_request silently fails open" (§5.1):
+ * RevokeBug.pv is exactly that omission.
+ *
+ * Revocation is modeled as a LINEAR validity token on a private channel `tok`: issuing a
+ * cap emits its token; the verifier consumes-and-replaces it (so a live cap is reusable);
+ * REVOKE consumes it WITHOUT replacing (so a revoked cap has no token ever again). This
+ * is the precise mechanism (no table get/else incompleteness) and mirrors the Tamarin
+ * VToken cross-check. Phase 0 issues + revokes; phase 1 verifies (revoke-before-verify
+ * ordering). Chain interior + crypto abstracted (Spike B / Lemmas 1-3).
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+free tok: channel [private].       (* per-cap validity tokens; absence == revoked *)
+
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+const capTag: bitstring [data].
+
+free skP:  skey [private].         (* root authority P *)
+free skGr: skey [private].         (* grantee of the cap that gets REVOKED *)
+free skGo: skey [private].         (* grantee of the cap that stays valid (OK) *)
+
+event Revoked(bitstring).
+event Accept(pkey).                 (* verifier accepted a cap for this grantee *)
+
+(* RevokedNeverPasses: the revoked cap's grantee is never accepted. *)
+query event(Accept(pk(skGr))).     (* expect: NOT reachable (true) = revoked never passes. *)
+
+(* Non-vacuity: the non-revoked cap IS accepted. *)
+query event(Accept(pk(skGo))).     (* expect: reachable (true). *)
+
+(* phase 0: P issues both root caps and publishes them; capR is REVOKED (§6.2 marker
+ * written). phase 1: a validity token is served ONLY for the live cap capO (a revoked
+ * cap never gets a token == its marker is present). The verifier requires the token. *)
+let Setup =
+  let capR = sign((pk(skGr), capTag), skP) in
+  let capO = sign((pk(skGo), capTag), skP) in
+  out(net, capR);
+  out(net, capO);
+  event Revoked(capR);             (* §6.2 revoke marker for capR *)
+  phase 1;
+  ( ! out(tok, capO) ).            (* validity token served for the live cap only *)
+
+(* phase 1: verifier checks chain validity AND requires the validity token (§5.1
+ * is_revoked = "marker absent"). A revoked cap has no token, so it is denied. *)
+let Verifier =
+  phase 1;
+  in(net, cap: bitstring);
+  let (g: pkey, =capTag) = checksign(cap, pk(skP)) in   (* cap valid, rooted at P *)
+  in(tok, =cap);                                        (* §5.1: requires not-revoked token *)
+  event Accept(g).
+
+process
+  out(net, pk(skP));
+  ( Setup | !Verifier )

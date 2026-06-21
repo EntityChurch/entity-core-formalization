@@ -1,0 +1,61 @@
+theory Expiry
+/*
+ * Phase 2 / Inc 8 — TEMPORAL VALIDITY: capability expiry at a single sampled t
+ * (§5.5 + §5.10, A-LEAN-1 v7.76) in Tamarin (lockstep cross-check of Expiry.pv).
+ *
+ * V7 §5.5 (lines 2637-2639): `if current.data.expires_at < t: return DENY`. t is the
+ * evaluation timestamp "sampled ONCE per verdict" (§5.10 v7.76). Accept iff t <=
+ * expires_at. The verifier's temporal check is the sole defense (ExpiryBug removes it).
+ *
+ * Time is a finite order {t0 < t1 < t2} seeded as persistent !Le facts (the seed-the-
+ * order idiom). Sampled t = 't1'. The cross-peer "different t near a boundary" §5.10
+ * determinism question is TLA+'s lane, not modeled here.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+
+// Finite time order: all valid a <= b pairs over {t0,t1,t2}. (No !Le('t1','t0') — that is
+// the boundary the temporal check enforces.)
+rule Setup_Time:
+    [ ] --[ Time() ]->
+    [ !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'),
+      !Le('t1','t1'), !Le('t1','t2'),
+      !Le('t2','t2') ]
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --> [ !PkA(pk(~skA)), Out(pk(~skA)) ]
+
+// P issues a cap to A with expires_at = exp (the network picks the expiry constant).
+rule Issue:
+    let m = <pk(~skA), exp>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !PkA(pk(~skA)), In(exp) ]
+  --[ Issued(pk(~skA), exp) ]->
+    [ Out(<pk(~skA), exp, sig>) ]
+
+// Verifier §5.5: samples the single t = 't1', accepts only if not expired (t <= expires_at,
+// i.e. !Le('t1', exp) holds).
+rule Verify:
+    let m = <gA, exp> in
+    [ !PkP(pkP), !Le('t1', exp), In(<gA, exp, sig>) ]
+  --[ Eq(verify(sig, m, pkP), true), Accepted(gA, exp) ]->
+    [ ]
+
+/* ---- the temporal-validity lemma ---- */
+
+// A cap expired at the sampled t (expires_at = 't0' < 't1' = t) is never accepted.
+lemma expiry_validity:
+  "not (Ex g #i. Accepted(g, 't0') @ i)"
+
+// Non-vacuity: a live cap (expires_at = 't2', after t) CAN be accepted.
+lemma accepted_reachable:
+  exists-trace
+  "Ex g #i. Accepted(g, 't2') @ i"
+
+end

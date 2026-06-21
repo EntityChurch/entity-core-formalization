@@ -1,0 +1,88 @@
+theory Unforge
+/*
+ * Spike B — capability-chain UNFORGEABILITY in Tamarin (cross-check of Unforge.pv).
+ * Same fragment as the ProVerif model: V7 §5.5 chain verify + linkage + §7.3 signatures,
+ * built-in Dolev-Yao adversary. P issues a root cap to the honest delegator A ONLY; A may
+ * delegate to a grantee; the verifier enforces the §5.5 linkage parent.grantee==child.granter
+ * (modeled by reusing the variable gA in both the root tuple and the child tuple).
+ *
+ * Goal of the cross-check: confirm Tamarin AGREES with ProVerif (lemma holds) and that the
+ * model is non-vacuous (exists-trace). Symbolic sign/verify is our §7.3 crypto trust wall.
+ */
+begin
+
+builtins: signing
+
+restriction Equality:  "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:      "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:      "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+// Honest root authority P (the verifier's own root, §5.5 root-granter-local)
+rule Setup_P:
+    [ Fr(~skP) ]
+  --[ OnlyP() ]->
+    [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+// Honest delegator A
+rule Setup_A:
+    [ Fr(~skA) ]
+  --[ OnlyA() ]->
+    [ !LtkA(~skA), Out(pk(~skA)) ]
+
+// P issues a root cap to A ONLY: sign(<grantee=pk(skA), scope>, skP). (§5.5 / §7.3)
+rule Issue_Root:
+    let m   = <pk(~skA), s>
+        sig = sign(m, ~skP)
+    in
+    [ !LtkP(~skP), !LtkA(~skA), In(s) ]
+  --[ IssuedRoot(pk(~skA), s) ]->
+    [ Out(<pk(~skA), s, sig>) ]
+
+// A delegates to gB at scope s2: verifies its P-rooted cap, re-signs a child (§5.6).
+rule Delegate:
+    let mroot  = <pk(~skA), s>
+        mchild = <gB, s2, pk(~skA)>
+        csig   = sign(mchild, ~skA)
+    in
+    [ !LtkA(~skA), !PkP(pkP), In(<pk(~skA), s, sigroot>), In(<gB, s2>) ]
+  --[ Eq(verify(sigroot, mroot, pkP), true), Delegated(pk(~skA), gB, s2) ]->
+    [ Out(<gB, s2, pk(~skA), csig>) ]
+
+// Verifier accepts a 1-link root chain rooted at P.
+rule Verify_Root:
+    let mroot = <gA, s>
+    in
+    [ !PkP(pkP), In(<gA, s, sigroot>) ]
+  --[ Eq(verify(sigroot, mroot, pkP), true), AcceptedRoot(gA, s) ]->
+    [ ]
+
+// Verifier accepts a 2-link delegated chain: root (P->gA) + child (gA->gB), with the
+// §5.5 linkage enforced by the shared gA appearing as the child's third component.
+rule Verify_Deleg:
+    let mroot  = <gA, s>
+        mchild = <gB, s2, gA>
+    in
+    [ !PkP(pkP), In(<gA, s, sigroot>), In(<gB, s2, gA, sigchild>) ]
+  --[ Eq(verify(sigroot,  mroot,  pkP), true),
+      Eq(verify(sigchild, mchild, gA),  true),
+      AcceptedDeleg(gB, s2) ]->
+    [ ]
+
+/* ---- the unforgeability lemmas (mirror Unforge.pv) ---- */
+
+// (1) Root unforgeability: the verifier accepts a root for (g,s) only if P issued it.
+lemma root_unforgeable:
+  "All g s #i. AcceptedRoot(g, s) @ i ==> (Ex #j. IssuedRoot(g, s) @ j & #j < #i)"
+
+// (2) Delegation unforgeability: an accepted 2-link chain was actually delegated by A.
+lemma deleg_unforgeable:
+  "All gB s2 #i.
+     AcceptedDeleg(gB, s2) @ i
+     ==> (Ex gA #j. Delegated(gA, gB, s2) @ j & #j < #i)"
+
+// Sanity / non-vacuity: an honest delegated chain CAN be accepted (model has teeth).
+lemma accepted_reachable:
+  exists-trace
+  "Ex gB s2 #i. AcceptedDeleg(gB, s2) @ i"
+
+end

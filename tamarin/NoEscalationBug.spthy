@@ -1,0 +1,57 @@
+theory NoEscalationBug
+/*
+ * NEGATIVE CONTROL for NoEscalation.spthy — the §5.6 per-link attenuation check is
+ * REMOVED (the verifier accepts ANY child scope, not just <= parent). Expect
+ * no_escalation to FALSIFY: the attacker drives the honest delegator to sign an
+ * 'admin'-scoped child onto a narrow('admin')-rooted chain and the verifier accepts.
+ * Tamarin cross-check of NoEscalationBug.pv — proof the attenuation check is load-bearing.
+ */
+begin
+
+builtins: signing
+functions: narrow/1
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), Out(pk(~skA)) ]
+
+rule Issue_Root:
+    let m = <pk(~skA), narrow('admin')>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !LtkA(~skA) ]
+  --[ IssuedRoot(pk(~skA), narrow('admin')) ]->
+    [ Out(<pk(~skA), narrow('admin'), sig>) ]
+
+rule Delegate:
+    let mroot  = <pk(~skA), s>
+        mchild = <gB, s2, pk(~skA)>
+        csig   = sign(mchild, ~skA)
+    in
+    [ !LtkA(~skA), !PkP(pkP), In(<pk(~skA), s, sigroot>), In(<gB, s2>) ]
+  --[ Eq(verify(sigroot, mroot, pkP), true), Delegated(pk(~skA), gB, s2) ]->
+    [ Out(<gB, s2, pk(~skA), csig>) ]
+
+// DEFECT: single verify rule, child scope s2 entirely free — no attenuation constraint.
+rule Verify_Deleg:
+    let mroot  = <gA, sRoot>
+        mchild = <gB, s2, gA>
+    in
+    [ !PkP(pkP), In(<gA, sRoot, sigroot>), In(<gB, s2, gA, sigchild>) ]
+  --[ Eq(verify(sigroot,  mroot,  pkP), true),
+      Eq(verify(sigchild, mchild, gA),  true),
+      AcceptedDeleg(gB, s2) ]->
+    [ ]
+
+lemma no_escalation:
+  "not (Ex gB #i. AcceptedDeleg(gB, 'admin') @ i)"
+
+lemma accepted_reachable:
+  exists-trace
+  "Ex gB #i. AcceptedDeleg(gB, narrow('admin')) @ i"
+
+end

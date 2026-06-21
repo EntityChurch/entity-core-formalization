@@ -1,0 +1,94 @@
+[project]
+name   = "Entity Core Formalization"
+slug   = "entity-core-formalization"
+repo   = "entity-core-formalization"
+github = "https://github.com/EntityChurch/entity-core-formalization"
+intro  = """
+Formal design assurance for the Entity Core Protocol (v7). This repo machine-
+checks MODELS of the V7 design on the two layers the Lean proof work structurally
+cannot reach: distributed correctness + liveness under concurrency (TLA+, cross-
+checked by an independent Spin re-encoding and unbounded Apalache SMT proofs), and
+active-attacker protocol security (Tamarin + ProVerif, Dolev-Yao). It is a sibling
+to entity-core-architecture (the spec authority), entity-core-keystone (peers +
+the Lean logic proof), and the reference implementations — it verifies the DESIGN,
+not the code and not any generated peer.
+
+Honesty first (this is design assurance, off the release critical path): it is a
+strong DEMONSTRATOR, not a closed proof, and NOT a claim that "the protocol is
+proven correct." What is PROVEN unbounded vs only MODELED at a bound vs symbolic is
+stated exactly in docs/PROPERTIES.md; the deepest assumption — spec↔model fidelity,
+which no tool here closes — is named, not hidden. Build is make + podman only (no
+native model-checker toolchain on the host): `make build` then `make check` on a
+fresh clone runs the whole green matrix, with per-container resource caps so a
+runaway check dies at the cap instead of taking the host down.
+"""
+
+# ── Overview ────────────────────────────────────────────────────────────────
+[[doc]]
+path  = "README.md"
+title = "entity-core-formalization — overview"
+blurb = "What the repo is, where it sits in the family, and how it was gated (spike-first, demonstrator-altitude)."
+group = "Overview"
+
+[[doc]]
+path  = "docs/PRIOR-ART.md"
+title = "Prior art — the learning on-ramp"
+blurb = "Catalog of comparable formal models (AWS TLA+, TLS 1.3 Tamarin, macaroons/SPKI cap-attenuation) and the on-ramp for reading this work. README links here."
+group = "Overview"
+
+[[doc]]
+path  = "docs/SCOPING-AND-SPIKE-PLAN.md"
+title = "Scoping & spike-first plan"
+blurb = "Model-altitude rationale, the spike-first discipline, and the standing honest-caveats (the 5th wall). The methodology this repo's assurance rests on. README links here."
+group = "Overview"
+
+# ── Assurance & honest scope ────────────────────────────────────────────────
+[[doc]]
+path  = "docs/FINAL-ASSURANCE-SUMMARY.md"
+title = "Final Assurance Summary (capstone)"
+blurb = "What was proved, how far it goes, what it deliberately does not say; the 76-run re-verification matrix."
+group = "Assurance"
+
+[[doc]]
+path  = "docs/PROPERTIES.md"
+title = "Properties — PROVEN vs MODELED"
+blurb = "The honest scorecard: per property, the strength of result (unbounded proof vs bounded-exhaustive vs symbolic) and where it stops."
+group = "Assurance"
+
+[[doc]]
+path  = "docs/ASSURANCE-MAP.md"
+title = "Assurance Map & the limits walls"
+blurb = "The complete formal-assurance map and the trust boundaries — above all the 5th wall (spec↔model fidelity)."
+group = "Assurance"
+
+[[doc]]
+path  = "docs/CROSSCHECK-RESULTS.md"
+title = "Cross-check results (Spin + Apalache)"
+blurb = "Independent Spin re-encodings and unbounded Apalache inductive proofs, both agreeing with TLC across every modeled subsystem."
+group = "Assurance"
+
+# ── TLA+ specs (concurrency + liveness; Apalache unbounded) ─────────────────
+[[doc]]
+path  = "tla/README.md"
+title = "TLA+ workspace — concurrency & liveness"
+blurb = "The TLA+/PlusCal models (TLC + Apalache), make+podman toolchain, and how to reproduce each run. Specs live in tla/*.tla."
+group = "TLA+ specs"
+
+[[doc]]
+path  = "tla/PHASE1-FORMALIZATION-REPORT.md"
+title = "TLA+ formalization report (all-Core concurrency)"
+blurb = "The 7 concurrency subsystems, safety + liveness, each §-cited and demonstrated falsifiable by a negative control."
+group = "TLA+ specs"
+
+# ── Tamarin / ProVerif specs (active attacker) ──────────────────────────────
+[[doc]]
+path  = "tamarin/README.md"
+title = "Tamarin/ProVerif workspace — active attacker"
+blurb = "The Dolev-Yao symbolic models (ProVerif lead, Tamarin comparison), toolchain, and reproduction. Specs live in tamarin/*.pv and *.spthy."
+group = "Tamarin/ProVerif specs"
+
+[[doc]]
+path  = "tamarin/PHASE2-FORMALIZATION-REPORT.md"
+title = "Tamarin/ProVerif formalization report (surface-closure)"
+blurb = "The 12 active-attacker lemmas (lockstep both provers) + the one documented non-closure (RevokeMech non-termination)."
+group = "Tamarin/ProVerif specs"
