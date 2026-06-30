@@ -92,3 +92,9 @@ path  = "tamarin/PHASE2-FORMALIZATION-REPORT.md"
 title = "Tamarin/ProVerif formalization report (surface-closure)"
 blurb = "The 12 active-attacker lemmas (lockstep both provers) + the one documented non-closure (RevokeMech non-termination)."
 group = "Tamarin/ProVerif specs"
+
+[[doc]]
+path  = "docs/status/STATUS.md"
+title = "Status"
+blurb = "Current project status — where the project is, recent work, backlog, and what's next."
+group = "Overview"
