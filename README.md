@@ -240,6 +240,12 @@ docs/
   CORROBORATION.md        ← how many engines carry each subject, and every subject that
                             rests on one, by name (`make enginecount`)
   CROSSCHECK-RESULTS.md   ← Spin + Apalache independent corroboration
+  DISCIPLINE-CHARTER.md   ← the rules this repo earned and the bug behind each one, with
+                            the gate that enforces it (D13-D20; D1-D12 are ecosystem-wide)
+  agents/memory/          ← durable notes, entered through INDEX.md and opened by SYMPTOM:
+                            encoder limits, container failures that look like model
+                            failures, what each extension track refuted, which published
+                            sentences went stale and how
   SCOPING-AND-SPIKE-PLAN.md ← scope calls + Phase 0 gates + Phase 1 trigger
   PRIOR-ART.md            ← TLA+ & Tamarin learning resources + comparable models
 spec-data/v0.8.2/          ← VENDORED specs (byte-for-byte) = the modeling ground truth
@@ -258,10 +264,16 @@ tools/ledgercount.py      ← the assumption-ledger shape check behind `make led
 tools/trackcheck.py       ← the proof-track membership gate behind `make trackcheck`
 ```
 
-`tla/`, `spin/` and `tamarin/` are organized **by engine**, not by track: today every model
-in them is on the `core` track, and `TRACKS.toml` is what says so. Per-track subdirectories
-are a deliberate later step — safe to take only now that a model file falling out of a gate's
-view is a build failure rather than a silent green.
+`tla/`, `spin/` and `tamarin/` are organized **by engine**, not by track — a model file's
+track is a property of `TRACKS.toml`, never of its directory, and `make trackcheck` is what
+enforces that. Per-track subdirectories are a deliberate later step, safe to take only now
+that a model file falling out of a gate's view is a build failure rather than a silent green.
+
+*This paragraph read "today every model in them is on the `core` track" from the day it was
+written until 2026-09-17, and it was false from the moment the first extension track was
+promoted — a bare universal quantifier over our own artifacts, in the most-read file here,
+with every gate green. No gate reads prose like that; the entry in `docs/DISCIPLINE-CHARTER.md`
+(D14, sixth instance) is what it earned.*
 
 ## Where the spec lives
 

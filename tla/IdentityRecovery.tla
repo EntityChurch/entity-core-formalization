@@ -8,7 +8,7 @@
 \* EXCLUDED from every track's coverage set.
 \*
 \* ── WHY THIS MODULE WAS SPECIFIED BEFORE THE TRACK EXISTED ──────────────────────────────────
-\* `TRACKS.toml`'s identity note and docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md §3.3
+\* `TRACKS.toml`'s identity note and docs/archive/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md §3.3
 \* both name this section, before a line was modeled, as the one thing to be careful about:
 \*
 \*   "the cross-peer recovery rule is a NEGATIVE REACHABILITY claim ('fail-closed if no

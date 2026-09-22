@@ -237,7 +237,7 @@ mechanisms close it, on both provers. **(3)** `ResolutionDiscardBug` is the cont
 in words and nobody had run: mechanism (b) with item 1 skipped at **one of five** ingresses is
 falsified by the same attack, one level down, and is **wire-indistinguishable** from its green
 twin. Routed as
-`docs/status/ROUTING-2026-09-16-a-*` — the two mechanisms are not equally robust to partial
+`docs/outbox/ROUTING-2026-09-16-a-*` — the two mechanisms are not equally robust to partial
 adoption, and the §1.8 ruling `entity-core-go` asked arch for has a third answer.
 
 ⛔ **What this does NOT extend to the rows above it. One subject of thirteen carries the
@@ -406,7 +406,7 @@ Reproduce: `make -C tamarin green`; 17 ProVerif + 17 Tamarin bug controls each f
      what these reports claim. What was wrong was the gate's ability to notice if they ever
      stopped matching.
 
-     *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
+     *The full grader inventory, so the class is closed rather than sampled* (docs/DISCIPLINE-CHARTER.md D14 —
      the finding is what made that discipline necessary). Seventeen targets decide the 687 runs.
 
      **This table carries no run counts, deliberately — corrected 2026-09-07.** It used to,

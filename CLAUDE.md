@@ -1,7 +1,6 @@
 @AGENTS.md
 @AGENTS-STANDARD.md
 
-> Agent guidance for this repo lives in two sibling files, imported above for
-> Claude and readable as plain files by any agent:
-> **`AGENTS.md`** — this repo's specifics; **`AGENTS-STANDARD.md`** — the
-> ecosystem-wide conventions (read it first). ADR-0016.
+> A shim. Both files are read by any agent as plain files; they are imported here so
+> Claude loads both, which is what the standard requires of `AGENTS-STANDARD.md`.
+> No guidance lives in this file. ADR-0016.

@@ -149,7 +149,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   correctly against what ships. *The residual is smaller than stated in the specified system and
   exactly as stated in the implemented one* — which is the seam this whole ledger exists to keep
   visible, arriving inside a single row. The row moves when K1 does.
-  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §4.
+  `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §4.
 
 ### L2 · The verdict is computable before handler entry
 
@@ -236,7 +236,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   relation, and the function proved about is not that relation on two of four dimensions.
   **Verdict stays CLOSED — the row is about composition and composition holds — and the "strongest
   single link" claim now carries a named boundary rather than none.** Routed as K1,
-  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
+  `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
 - **And K2 reaches this row through the same function, 2026-09-10.** `scopeSubset_trans` →
   `matchesSeg_trans` is the chain that discharges Tamarin's `no_escalation` condition, and
   `matchesSeg` is **not** §5.4's matcher (L6, K2). So the condition is discharged for a matcher
@@ -247,7 +247,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   theorems *about*.
 - **⛔ T5a IS CONDITIONAL NOW, 2026-09-15, AND THE VERDICT MOVES WITH IT.** Keystone landed
   this repo's `K-6` and `K-7` at `fee2e422` and **told us the cost in the same packet**
-  (`entity-core-keystone/docs/status/ROUTING-2026-09-15-b-…`, §3a). `scopeSubset` is now typed
+  (`entity-core-keystone/docs/outbox/ROUTING-2026-09-15-b-…`, §3a). `scopeSubset` is now typed
   by `ScopeKind`; its `.id` branch compares with §3.6's literal `matchesIdPattern`, and the
   transitivity of *that* matcher is carried as an explicit undischarged hypothesis:
 
@@ -276,7 +276,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   `A-3` answer — *"not worth the mathlib dependency for one decidable check"* — is now
   **load-bearing on whether this stays a hypothesis**, which it was not when we gave it.
   Routed back in
-  `docs/status/ROUTING-2026-09-15-b-entity-core-keystone-t5a-is-conditional-the-capstone-carries-three-hypotheses-and-we-are-not-picking-the-discharge-for-you.md`;
+  `docs/outbox/ROUTING-2026-09-15-b-entity-core-keystone-t5a-is-conditional-the-capstone-carries-three-hypotheses-and-we-are-not-picking-the-discharge-for-you.md`;
   the row stays CLOSED-MODULO-H until one of the three lands.
 - **Verdict: CLOSED-MODULO-H.** **H = `IdPatternTrans`** — transitivity of §3.6's id-scope
   literal matcher, undischarged in either tree. Scope of H, because it is narrow and the row
@@ -334,7 +334,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   not an internal escalation.)* **Verdict held at CLOSED pending keystone's
   ruling (K-4a), because which side is wrong is a spec question as much as a code one — but this
   row should be read as OPEN-in-effect until it is answered.** Routed:
-  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §10.
+  `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §10.
 - **The divergence is now BOUNDED from both sides, 2026-09-10 — and the bound is where this row's
   own models live.** `make leanlemma` (`lean/lemmas/StarFree.lean`) proves
   `matchesSeg_starFree`: on a **star-free** pattern `matchesSeg` *is* list equality, at any
@@ -363,7 +363,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   never requires an unusual child (0/147) — so a peer that issues no interior-`*` grant pattern is
   unexposed, today, without K-4a. Full result and its stated limits (bounded target set, absolute
   patterns only, includes only):
-  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §15.
+  `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §15.
 - **Scope note, 2026-09-09 — every theorem here is about the §5.2 side (K1).** This row has
   carried *"0.8.1 F40 makes the two matchers distinct"* since the ledger was written, and all
   five cited theorems are about `matchesScope` / `matchesIdPattern` — the **dispatch** check.
@@ -375,7 +375,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   distinct" suggests, and that is worth having written down where the phrase is.
   **Recorded plainly: this row named the distinction and nobody here followed it into §5.6 for
   three days, eleven lines away in a file we had read for another reason.** K1 —
-  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
+  `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
 - **⭐ K1 IS CLOSED, 2026-09-15 — ADOPTED, AND THE SENTENCE ABOVE IS NOW FALSE OF THE LIVE
   TREE.** *"`scopeSubset` takes no `ScopeKind`"* was the finding; at keystone's `fee2e422` it
   takes one, dispatching `.id` for `operations`/`peers` and `.path` for `handlers`/`resources`,
@@ -700,7 +700,7 @@ and O22), 2 CLOSED — ASSUMPTION ISOLATED (O6, O20), 1 CLOSED — ASSUMPTION IS
 > absolution"* (O9's lesson) has a prior: **an undeclared one is not even a to-do list.** The
 > instrument that now looks for this class is `make obligations`, whose denominator is the
 > pin's normative surface rather than our citations.
-**O20 is the row a new rule went looking for**, not one a model produced: `AGENTS.md` D15's
+**O20 is the row a new rule went looking for**, not one a model produced: `docs/DISCIPLINE-CHARTER.md` D15's
 tenth shape says a model's unconditional `Init` restriction is a claim and must be a constant
 with a control or an OPEN row here. Enumerating that class across all nine extension models
 found exactly one unbooked site, and it is `QuorumSignerSet`'s — the identical assumption to the
@@ -777,7 +777,7 @@ nothing tied this. It asserts the counts and the row structure; it does **not** 
 any verdict is correct.
 
 The prior scoping, including the prediction that `Core` may not be a refinement at all, is in
-`docs/status/CHECKPOINT-2026-09-06-WORKLIST-T4-NEXT.md` §4 — it was right.
+`docs/archive/status/CHECKPOINT-2026-09-06-WORKLIST-T4-NEXT.md` §4 — it was right.
 
 ---
 
@@ -1101,7 +1101,7 @@ above; every prose citation must have a line here.
 >   `matchesSeg` raw. Measured, not inferred: on `("../x", "/*")` the L1/L2 route answers
 >   **false** and the L3/L4 route answers **true**. `scopeSubset` also still runs the id-scope
 >   dimensions through the path matcher, which `0.8.2.22` now forbids in the imperative at
->   **both** matchers. Routed — `docs/status/ROUTING-2026-09-14-KEYSTONE-SCOPESUBSET-HALF-ADOPTED.md`.
+>   **both** matchers. Routed — `docs/outbox/ROUTING-2026-09-14-KEYSTONE-SCOPESUBSET-HALF-ADOPTED.md`.
 > - **The `0.8.1 F40` typed matcher we routed as K1 is now IN this file** (`ScopeKind`,
 >   `matchesIdPattern`, `coveredId`) with an attribution comment naming this repo. That half of
 >   K1 is adopted; the `scopeSubset` half is not.
@@ -1138,7 +1138,7 @@ above; every prose citation must have a line here.
 >   `lean/lemmas/IdScope.lean`, gated by `make leanlemma`. R11's witness constructed at
 >   `97bf1a05` and is dead twice over at `c3356b43` — by `0c4a537b`'s `*/` sentinel arm and by
 >   `fee2e422`'s `.id` dispatch, independently, neither of them the argument A-4 made. Routed:
->   `docs/status/ROUTING-2026-09-16-b-entity-core-keystone-a4-dissolves-…`.
+>   `docs/outbox/ROUTING-2026-09-16-b-entity-core-keystone-a4-dissolves-…`.
 > - ⚠ **Keystone's tree moved again after the re-pin (`7c9f0dfc` `C-2`, `c3356b43` HEAD) and
 >   both pinned digests are UNCHANGED**, verified out of their tree 2026-09-16 rather than
 >   taken from their commit message, which says the same thing. `Host.lean` is not pinned here.

@@ -39,6 +39,58 @@ module — with per-container resource caps so a runaway check dies at the cap i
 of taking the host down.
 """
 
+# ── What each directory IS ──────────────────────────────────────────────────
+# Declared because the default rules cannot know a repo's layout, and a check that is
+# wrong about a correctly-organised tree is worse than no check. Each area states its
+# KIND and whether it publishes; nothing else about it is inferred.
+
+[[area]]
+path      = "docs/status"
+kind      = "status"        # dated, episodic, ages out. Written for the next session.
+publishes = false
+
+[[area]]
+path      = "docs/outbox"
+kind      = "outbox"        # routing packets we have SENT. Never published — publishing
+publishes = false           # the routing corpus is the expensive mistake.
+
+[[area]]
+path      = "docs/archive"
+kind      = "archive"       # dated BY DESIGN; does not age out. `docs/archive/outbox/`
+publishes = false           # holds packets whose recipients have acknowledged them.
+
+[[area]]
+path      = "docs/agents/memory"
+kind      = "memory"        # durable, indexed, entered through INDEX.md. Published: it
+publishes = true            # is the hard-won context a reader of the models wants.
+
+[[area]]
+path      = "spec-data"
+kind      = "vendor"        # frozen, SHA-pinned spec snapshots. Not prose, never edited
+publishes = true            # in place, and the thing every published result is about.
+
+# Durable files that are edited in place rather than dated — and, where `internal`,
+# must never publish. A tracker is durable AND internal; before this declaration existed
+# the only way to stop the nag was to declare it canonical, which publishes it.
+[[living]]
+glob     = "docs/status/TRACKER-*.md"
+internal = true
+
+[[living]]
+path     = "docs/status/FINDINGS-INDEX.md"
+internal = true
+
+[[living]]
+path     = "docs/status/CONFORMANCE-DIVERGENCE-REGISTER.md"
+internal = true
+
+[[living]]
+path     = "docs/status/INBOUND.md"
+internal = true
+
+[[living]]
+path = "docs/STATUS.md"
+
 # ── Overview ────────────────────────────────────────────────────────────────
 [[doc]]
 path  = "README.md"
@@ -201,3 +253,67 @@ path  = "CLAUDE.md"
 title = "CLAUDE.md"
 blurb = "A one-line shim to AGENTS.md (ADR-0016)."
 group = "Working here"
+
+[[doc]]
+path  = "docs/DISCIPLINE-CHARTER.md"
+title = "Discipline charter — the rules this repo earned, and on what evidence"
+blurb = "This repo's own disciplines, D13–D20, each with the bug that earned it and the gate that enforces it. D1–D12 are the ecosystem's and live in METHODOLOGY.md; these start at D13 and were earned on our own defects — every one of which was in the VERIFICATION, not in the protocol. Read it once at cold start; it is not loaded by default."
+group = "Working here"
+
+# ── Memory ──────────────────────────────────────────────────────────────────
+# Durable, topic-scoped notes, entered through INDEX.md and opened by symptom rather
+# than read through. Published deliberately: a reader who wants to trust a model needs
+# the failures that produced its shape, and those do not fit in a results table.
+[[doc]]
+path  = "docs/agents/memory/INDEX.md"
+title = "Memory index"
+blurb = "The entry point. One line per file naming the symptom that should bring you to it, and the rule that bounds the directory: an entry that could become a check should become one, and is then deleted from here."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/MODEL-CONVENTIONS.md"
+title = "Model conventions — citations, globs, and the track registry"
+blurb = "Why a bare §N.M means your own track's spec, why the cross-track sigil comes first, and why moving model files into a subdirectory could hide them from two gates that stayed green. Each rule is a gate that once asserted less than it said."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/APALACHE-ENCODING.md"
+title = "Apalache encoding — what the SMT backend will and will not take"
+blurb = "No RECURSIVE, so fuel-bounded recursion becomes a ladder — and every ladder depth is then a claim. Build the ladder from state variables, not nested operators. Learned by OOM-killing the 2 GB cap, not by reading documentation."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/TOOLCHAIN-AND-CONTAINERS.md"
+title = "Toolchain and containers — the failures that read like model failures"
+blurb = "The bind-mount relabel flag, the resource caps, the pinned rewriting backend, and the non-terminating theory that is excluded by design. Every entry is a tool failure that presents as a model failure."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/EXTENSION-TRACKS.md"
+title = "Extension tracks — attestation, quorum, identity"
+blurb = "Per track: what was modeled, what it refuted, and what the cross-implementation census said. Includes the cases where the cohort agreed with the text and the text was wrong, and the case where three implementations disagreed with each other."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/SPEC-PIN-AND-DRIFT.md"
+title = "The spec pin, and what the distance from it costs"
+blurb = "Section by section: what moved, whether it contradicts a model, and why 'the section did not move' and 'the sentence we model did not move' are different claims. Also which repo owns which spec, and the retracted answer to that question."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/GATES-AND-DERIVED-NUMBERS.md"
+title = "Gates, and the numbers they do and do not read"
+blurb = "The individual published sentences that went stale with every gate green, and the mechanism in each case — an unread facet, a paraphrase, a denominator that was ours. The record behind D15 and D20."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/FINDINGS-AND-REGISTERS.md"
+title = "Findings and registers — which one a result belongs in"
+blurb = "Four categories of finding and the register each goes to, including the implementation-divergence register, which is not a bug report about an implementation but a measurement of where the specification failed to converge three independent authors."
+group = "Memory"
+
+[[doc]]
+path  = "docs/agents/memory/COUNTERPARTS-AND-ROUTING.md"
+title = "Counterparts — who is out there, and how anything reaches them"
+blurb = "The seats this repo exchanges findings with, what each one's instrument can and cannot decide, and why a conservative default about another seat's state is still a claim."
+group = "Memory"

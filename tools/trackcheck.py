@@ -51,7 +51,7 @@ no other". Modelling `§4.11` -- a section that does not exist at the core pin -
 sentence false the moment the file lands, and the obvious remedy is a paragraph in the module
 header saying which snapshot it targets.
 
-**That remedy is a disclaimer, and `AGENTS.md` D15's eleventh shape is that a disclaimer is
+**That remedy is a disclaimer, and `docs/DISCIPLINE-CHARTER.md` D15's eleventh shape is that a disclaimer is
 not a gate** -- it is where a stale figure survives longest, because it reads as a site
 someone has already thought about. So the override is a machine-read fact with a tripwire on
 each side:

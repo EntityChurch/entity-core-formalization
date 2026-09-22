@@ -227,7 +227,7 @@ models = [
 # WHY THE MECHANISM EXISTS AT ALL. `spec-data/MODELING-PIN` says every published result is a
 # statement about that snapshot "and no other". Modelling §4.11 — a section that does not
 # exist at `v0.8.2` — makes that sentence false the moment the file lands. The obvious remedy
-# is a paragraph in the module header saying which snapshot it targets, and AGENTS.md D15's
+# is a paragraph in the module header saying which snapshot it targets, and docs/DISCIPLINE-CHARTER.md D15's
 # eleventh shape is exactly that a disclaimer is not a gate: a self-aware caveat is where a
 # stale figure survives longest, because it reads as a site someone has already thought about.
 #
@@ -289,7 +289,7 @@ models = [
 # pin independently, which is what the per-track `pin_file` field is for. Left in place rather
 # than deleted because a retracted reason survives longest where it reads as background.)*
 #
-# Scoping and the ranked targets: docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md.
+# Scoping and the ranked targets: docs/archive/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md.
 # Start at attestation's substrate, not identity's 1,617 lines.
 # ════════════════════════════════════════════════════════════════════════════════════════
 
@@ -329,7 +329,7 @@ AttestLive is NOT — it is an exhaustive enumeration over every supersedes grap
 nodes, because §4.3/§5.2/§5.3 are pure functions of one graph and the question is whether the
 algorithm computes its own contract, not whether an interleaving can break it. Two of its
 rows are findings against the spec rather than results about the protocol; they live in the
-TLC_FINDING gate table and are routed in docs/status/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md.
+TLC_FINDING gate table and are routed in docs/outbox/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md.
 
 SECOND ENGINE, 2026-09-08 — partial, and the partiality is the point. AttestIndexApalache and
 AttestLiveApalache carry two of this track's three modules to Apalache. AttestRevoke has none,
@@ -400,7 +400,7 @@ the interesting half).
       a model with no not_before and does not cover this; that is O9 firing again on the
       module written to close it.
 
-Six findings routed: docs/status/ROUTING-2026-09-07-QUORUM.md.
+Six findings routed: docs/outbox/ROUTING-2026-09-07-QUORUM.md.
 
 SECOND ENGINE, 2026-09-08 — TWO of three modules. tla/QuorumKofNApalache.tla carries §4.1 to
 Apalache. It went first because §4.1 has no recursion (the cheapest port on this track) and
@@ -412,7 +412,7 @@ either. (QuorumTrust was still TLC-only when this was written; it gained Apalach
 
 tla/QuorumSignerSetApalache.tla (2026-09-09) is the second, and it was written to run ONE
 EXPERIMENT rather than to add corroboration -- LEAN-SEAM O20, which is a row a RULE went looking
-for (AGENTS.md D15's tenth shape) rather than one a model produced. QuorumSignerSet.tla's `Init`
+for (docs/DISCIPLINE-CHARTER.md D15's tenth shape) rather than one a model produced. QuorumSignerSet.tla's `Init`
 restricts the supersedes pointer to lower indices UNCONDITIONALLY, the identical shape that on
 tla/AttestRevoke.tla hid a requirement stronger than the prose drawn from it (F5/O10). Lifting
 it here as a constant answers the question that file could not ask, and the answer is NOT
@@ -451,7 +451,7 @@ amends Q5: the closure we published as the remedy is READ-side, and with unbinds
 while the cache still goes stale, because non-trigger 2 forbids invalidating on the write that
 removed the entry. What §4.2 needs is WRITE-side — the readable set changes only through
 validate-accept. LEAN-SEAM O11 restated, still OPEN; routed in
-docs/status/ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md, whose §5 DECLARES that the cohort
+docs/outbox/ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md, whose §5 DECLARES that the cohort
 census for the two new directions was not taken. All three quorum modules now carry two engines;
 there is still no Spin encoding and NO PROVER (LEAN-SEAM O14).
 """
@@ -560,7 +560,7 @@ So all three modules carry two engines and no Spin encoding and NO PROVER exist 
 checkers over the same transcription by the same author, and what the last two ports bought was
 findings from a lifted DOMAIN, not a second opinion on a question already asked.
 
-Seven findings routed: docs/status/ROUTING-2026-09-07-IDENTITY.md. Two of them are CROSS-SPEC
+Seven findings routed: docs/outbox/ROUTING-2026-09-07-IDENTITY.md. Two of them are CROSS-SPEC
 and one of those exists only in a PAIR of documents — §ATTEST:TV-A8 delegates the rejection of
 an invalid-signature revocation to "identity's `identity_verify_cert` ... at topology-dispatch
 step", and §3.6 rejects every `kind="revocation"` before topology dispatch is reached. Neither

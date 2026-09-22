@@ -11,7 +11,7 @@
 \* Fifth consecutive application: **point the second engine at the first one's DOMAIN.** And on
 \* this module the domain restriction is one the D18 sweep looked straight at and cleared.
 \*
-\* `AGENTS.md`'s D18 table carries the row *"`QuorumTrust.tla` — `~cached[q]` on `Walk` · action
+\* `docs/DISCIPLINE-CHARTER.md`'s D18 table carries the row *"`QuorumTrust.tla` — `~cached[q]` on `Walk` · action
 \* guard · not in the class: §4.2.1's 'recompute on next call' IS a cache-miss guard, so the
 \* guard is the algorithm rather than a restriction on it."* **That reading is correct and it was
 \* the wrong question.** D18's own words are *what legal state can this model not represent*, and
@@ -37,7 +37,7 @@
 \* (base + step + strengthening closure) rather than bounded-exhaustively.
 \*
 \* ── WHAT (a) COSTS: A PUBLISHED CLAIM WAS OVER TWO THIRDS OF ITS OWN SUBJECT ──────────────────
-\* `docs/status/ROUTING-2026-09-07-QUORUM.md` §"What is *not* wrong" publishes this, and it is the
+\* `docs/outbox/ROUTING-2026-09-07-QUORUM.md` §"What is *not* wrong" publishes this, and it is the
 \* half of that note we thought was the useful half:
 \*
 \*   > "`tla/QuorumTrust.tla`'s green run says the §4.2.1 contract is **exactly sufficient** given

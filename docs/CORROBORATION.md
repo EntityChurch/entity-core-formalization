@@ -2,7 +2,7 @@
 
 **This file is the declaration; `make enginecount` (`tools/enginecount.py`) is the gate, and
 the GREEN gate tables in the three engine Makefiles are the evidence.** It is the enforcement
-point for **AGENTS.md D16**: *a claim this repo publishes is carried by at least two
+point for **docs/DISCIPLINE-CHARTER.md D16**: *a claim this repo publishes is carried by at least two
 structurally different engines, and a claim that is not says so here.*
 
 Read `docs/COVERAGE-MATRIX.md` for **which sections** are modeled and `docs/PROPERTIES.md` for
@@ -180,7 +180,7 @@ the gate stay green did. **Sixth consecutive session in which a new gate's first
 and only running it found out** — and this one is the D15 mechanism inside a D15 tool: the input
 set was a claim, and nobody checked it.
 
-<!-- enginecount-site: AGENTS.md :: extension subjects rest on two engines -->
+<!-- enginecount-site: docs/agents/memory/EXTENSION-TRACKS.md :: extension subjects rest on two engines -->
 <!-- enginecount-site: README.md :: subjects carry a green on two engines -->
 <!-- enginecount-site: docs/COVERAGE-MATRIX.md :: have a second engine -->
 <!-- enginecount-site: docs/ASSURANCE-MAP.md :: subjects carry even a second model checker -->
@@ -189,7 +189,7 @@ set was a claim, and nobody checked it.
 <!-- enginecount-site: docs/STATUS.md :: subjects overall and -->
 <!-- enginecount-site: docs/PROPERTIES.md :: extension subjects have a second engine -->
 <!-- enginecount-site: docs/status/FINDINGS-INDEX.md :: Extension MODULES with a second engine -->
-<!-- enginecount-site: AGENTS.md :: subjects overall and -->
+<!-- enginecount-site: docs/DISCIPLINE-CHARTER.md :: subjects overall and -->
 <!-- enginecount-site: docs/PROPERTIES.md :: subjects carry two or more -->
 <!-- enginecount-site: CHANGELOG.md :: subjects on two or more -->
 

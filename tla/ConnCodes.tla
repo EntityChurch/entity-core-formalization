@@ -21,7 +21,7 @@
 \* module REMOVED §4.7 and §5.2a from the published `N of M`, because after it nothing
 \* verifies those sections as the PIN states them. That drop is the honest reading and it is
 \* the reason the override is a registry fact rather than a paragraph here: a header sentence
-\* would have left the coverage number untouched and the claim false. AGENTS.md D15's
+\* would have left the coverage number untouched and the claim false. docs/DISCIPLINE-CHARTER.md D15's
 \* eleventh shape — a disclaimer is not a gate.
 \* ══════════════════════════════════════════════════════════════════════════════════════
 \*

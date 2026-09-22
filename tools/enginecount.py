@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """enginecount — is every published claim carried by the number of ENGINES we say it is?
 
-`make enginecount`. The enforcement point for AGENTS.md **D16** (two independent engines per
+`make enginecount`. The enforcement point for docs/DISCIPLINE-CHARTER.md **D16** (two independent engines per
 claim, and a one-engine claim declares itself).
 
 WHY THIS EXISTS, and it is D15's mechanism in an eleventh medium: a derived number is a claim.

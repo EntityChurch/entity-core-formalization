@@ -10,7 +10,7 @@
 \*
 \* ═══ WHY THIS MODULE EXISTS: IT IS O20, AND O20 IS A RULE'S FIRST HARVEST ══════════════════
 \* `docs/LEAN-SEAM.md` O20 is not a row a model produced. It is a row a RULE went looking for:
-\* AGENTS.md D15's tenth shape — *a model's domain restriction is a claim; make it a constant
+\* docs/DISCIPLINE-CHARTER.md D15's tenth shape — *a model's domain restriction is a claim; make it a constant
 \* with a control row or book what it excludes* — was written after `AttestRevoke.tla`'s
 \* unconditional `Init` restriction turned out to hide a requirement STRONGER than the prose
 \* drawn from it (F5/O10). Enumerating that class across all nine extension models found exactly

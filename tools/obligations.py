@@ -9,7 +9,7 @@ On 2026-09-14 `entity-core-protocol` 0.8.2.23 closed a **capability/identity for
 authority lookup resolved an entity by a wire-supplied `included` map key that nothing verified.
 The enabling text was **in this repo's pin**. `spec-data/v0.8.2` §3.1 says *"The content_hash
 MUST match the map key"* -- a MUST with no enforcing operation and no vector, which is exactly
-the shape `AGENTS.md` **D17** was ratified to report as a finding in its own right. D17 had never
+the shape `docs/DISCIPLINE-CHARTER.md` **D17** was ratified to report as a finding in its own right. D17 had never
 been pointed at the core track. Meanwhile `docs/PROPERTIES.md` and
 `docs/FINAL-ASSURANCE-SUMMARY.md` both published that the pinned design admits no *"forgery,
 escalation, replay ... under an active attacker, at the modeled bound."*

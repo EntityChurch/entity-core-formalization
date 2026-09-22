@@ -18,6 +18,43 @@ copy, so between a spec release and a re-validation this repository is *behind o
 
 ## [Unreleased]
 
+### Changed — the documentation is reorganised so that what a newcomer needs is separable from what a session accumulated (2026-09-17)
+
+**No model, no result and no published claim changes.** Every edit to a model file in this
+change is inside a comment.
+
+The repository's agent-facing guidance had grown to a single 158 KB file that mixed four
+different kinds of thing: how to build and run the gates, the disciplines this project has
+earned, the per-subsystem knowledge behind them, and the current status. Those are now four
+artifacts with four lifecycles.
+
+- **`docs/DISCIPLINE-CHARTER.md` is new** and is the interesting one for an outside reader: the
+  eight disciplines this project earned, each with the defect that earned it and the gate that
+  enforces it. Every one came from a failure in the **verification**, not in the protocol.
+- **`docs/agents/memory/` is new** — eight topic files entered through `INDEX.md` and opened by
+  symptom rather than read through: what the SMT backend will and will not accept, which
+  container failures present as model failures, what each extension track refuted, and which
+  published sentences went stale and by what mechanism.
+- **`AGENTS.md` is 16,887 bytes**, down from 158,868, by moving rather than deleting.
+- Routing packets moved to `docs/outbox/`; aged dated snapshots to `docs/archive/status/` with
+  an index. Neither directory publishes.
+
+**One thing worth recording because it is a result rather than a rearrangement.** The
+retraction tripwire — which greps every live document for claims this project has publicly
+withdrawn — excluded the status directory wholesale, and its own header had recorded, and
+declined to fix, the consequence: an outbound routing packet is not dated history, and a
+withdrawn claim sitting in one was unreachable. Moving packets to their own directory closed
+that without touching the tool. The header predicted every packet would fire; four of
+twenty-three did, all four quoting a withdrawn claim in order to correct it, **and none
+asserting one**.
+
+**And one correction to this repository's own published text.** `README.md` stated that every
+model file belonged to the `core` track. That was true when written and false from the day the
+first extension track was promoted — through three further promotions and nine extension
+modules, in the most-read file here. A model file's track is a property of `TRACKS.toml`, which
+`make trackcheck` enforces; the sentence is replaced by that statement rather than by a
+corrected count.
+
 ### Added — §6.8's authority-selection MUST is modeled, and the ceiling turns out to be what makes a discriminator error fail-closed (2026-09-16)
 
 A new `core` subject, **`authority-select`** — `tla/AuthoritySelect.tla` and
@@ -41,7 +78,7 @@ this round that cannot be checked by anything that exists."* `WitnessSilentSubst
 precisely that state — correct reading and propagated-field reading both ALLOW, different
 authorities consulted.
 
-**Two findings routed** (`docs/status/ROUTING-2026-09-16-f-…`, `P-9`/`P-10`):
+**Two findings routed** (`docs/outbox/ROUTING-2026-09-16-f-…`, `P-9`/`P-10`):
 
 - **`P-9`** — row 1 is a `[MUST]` over **two** authorities and §6.3's
   `check_path_permission(operation, path, authority, …)` takes **one**; `filter_listing`, whose own
@@ -1098,7 +1135,7 @@ three fresh phantoms of exactly the same kind (`§1.2`, `§1.5`, `§2.11`, all i
 notes), taking the count 28 → 31 while genuine coverage went 26 → 28. Knowing the rule and
 violating it in the same session is the normal case, which is the argument for the gate.
 
-**AGENTS.md D15** — *a derived number is a claim; derive it from claims, and gate it.* D13
+**docs/DISCIPLINE-CHARTER.md D15** — *a derived number is a claim; derive it from claims, and gate it.* D13
 asked of a metric rather than a grader.
 
 ### Fixed — Spin's negative controls were graded by a criterion a deadlock satisfies
@@ -1148,7 +1185,7 @@ target alone.
 The pass below hardened three of the repo's ten grading targets and closed the finding. A
 subsequent audit asked the same question of the other seven and found **62 of the 203 runs**
 still graded by a criterion blind to the outcome claimed. Same shape, same session's lesson,
-not applied to its own class — which is what earned **AGENTS.md D14**.
+not applied to its own class — which is what earned **docs/DISCIPLINE-CHARTER.md D14**.
 
 - **`proverif-green` had no verdict gate at all** (15 runs). It ran `proverif $t.pv || exit 1`,
   grading on the exit status — while **ProVerif exits 0 even when a query is false**, a fact

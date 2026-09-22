@@ -20,7 +20,7 @@ program rather than the word "grep":
 
     "A withdrawn claim has a shape, and the shape is its PHRASING, not its subject --
      grep the retracted words, because the row name appears in every site including the
-     corrected ones and finds nothing."          (AGENTS.md, D14, earned 2026-08-30)
+     corrected ones and finds nothing."          (docs/DISCIPLINE-CHARTER.md, D14, earned 2026-08-30)
 
 D13 -- what does this assert, and what else satisfies it?
 ---------------------------------------------------------
@@ -72,24 +72,33 @@ MIN_ROWS = 9
 # What counts as a LIVE document. Everything else in the tree is either dated history, a
 # frozen pin, or generated.
 #
-#   docs/status/**   dated snapshots and routing notes -- immutable once written, and the
-#                    place a retracted claim SHOULD survive verbatim so the record of the
-#                    error is not erased. Also where most `witness` rows point.
+#   docs/status/**   dated snapshots -- immutable once written, and the place a retracted
+#                    claim SHOULD survive verbatim so the record of the error is not erased.
 #
-#                    KNOWN GAP, found 2026-09-10 and deliberately not patched here.
-#                    This prefix conflates two different kinds of document. A dated
-#                    CHECKPOINT/HANDOFF really is immutable history and belongs outside the
-#                    live set. A **ROUTING note is neither dated-immutable nor internal** --
-#                    it is an ACTIVE OUTBOUND PACKET, edited across a session and read by a
-#                    counterpart repo. R11's withdrawn reachability bound sat in a routing
-#                    note's own HEADER TABLE, as a live claim, and this scan is structurally
-#                    incapable of seeing it; the re-read caught it, the gate could not.
-#                    A blanket un-exclude does NOT work: routing notes legitimately quote
-#                    their own retracted phrasings in correction sections, so every one
-#                    would fire. What is needed is a distinction the registry can express
-#                    (quoted-as-history vs asserted), and inventing one at the end of a
-#                    session is how a gate's first draft ends up wrong for the fifth time.
-#                    Named in docs/RETRACTIONS.toml R11 and on the work-list instead.
+#                    THE KNOWN GAP HERE IS CLOSED, 2026-09-17, AND NOT BY THIS FILE.
+#                    What this comment used to say: the prefix conflates two kinds of
+#                    document -- a dated CHECKPOINT/HANDOFF really is immutable history,
+#                    but a **ROUTING note is neither dated-immutable nor internal**, it is
+#                    an ACTIVE OUTBOUND PACKET read by a counterpart repo. R11's withdrawn
+#                    reachability bound sat in a routing note's own HEADER TABLE, as a live
+#                    claim, and this scan was "structurally incapable of seeing it".
+#                    It was fixed by MOVING THE PACKETS, not by editing the exclusion: the
+#                    doc standard puts sent packets in `docs/outbox/`, which is not excluded,
+#                    so 23 of them entered the live set in one commit. D15's own mechanism
+#                    running forward for once -- a gate's input set is a claim, and this one
+#                    WIDENED by an ordinary reorganisation elsewhere.
+#                    The result is worth recording because the prediction was exactly right
+#                    and the magnitude was not: this comment said "routing notes legitimately
+#                    quote their own retracted phrasings in correction sections, so EVERY ONE
+#                    would fire." Four of twenty-three fired, all four genuinely
+#                    quoted-as-history, and **none asserts a retracted claim**. The
+#                    distinction the comment asked for -- quoted-as-history vs asserted --
+#                    did not need inventing: `allow` is per-(row, file) and already expresses
+#                    it. What it needed was the reason written at each entry, which is how
+#                    docs/RETRACTIONS.toml's four new allows are written, including the one
+#                    (R8) that is an assertion rather than a quote and says so.
+#                    A packet is immutable once delivered: editing one rewrites what a
+#                    counterpart already read. So an allow, not a correction, is right here.
 #   docs/archive/**  same, by the archive-do-not-delete rule.
 #   spec-data/**     vendored, SHA-pinned, never edited.
 LIVE_SUFFIXES = (".md", ".toml", ".tla", ".pml", ".spthy", ".pv", ".mk", "Makefile")
@@ -224,7 +233,7 @@ def main() -> int:
         for p in problems:
             print(f"  - {p}")
         print("\nA withdrawn claim has a shape, and the shape is its PHRASING, not its")
-        print("subject (AGENTS.md D14). Correct the sentence — do NOT add an `allow` entry")
+        print("subject (docs/DISCIPLINE-CHARTER.md D14). Correct the sentence — do NOT add an `allow` entry")
         print("unless the site is a genuinely dated historical statement, and say so there.")
         return 1
 

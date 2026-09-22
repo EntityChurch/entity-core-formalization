@@ -60,7 +60,7 @@
 \* the solver pick either and reports nothing.
 \*
 \* ═══ F5, MACHINE-CHECKED — AND THE READING-STAGE VERSION WAS TOO KIND ═════════════════════
-\* F5 (docs/status/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md) is filed as a READING:
+\* F5 (docs/outbox/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md) is filed as a READING:
 \* §4.3's `has_live_transitive_descendant` is explicitly cycle-safe and says so ("cycle-safe via
 \* a visited-set on content_hash"), while the revocation recursion four lines above it —
 \* `is_attestation_live(rev, ctx, as_of=now)` — carries no visited set and no depth bound. Its

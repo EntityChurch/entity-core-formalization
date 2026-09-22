@@ -29,7 +29,7 @@
 \* subject left. The constant is a plain boolean defect switch now.
 \*
 \* *That is a gate losing its subject by an upstream fix rather than by a local edit, which is
-\* AGENTS.md D15's seventh shape — the `scoped` track gate going empty. Recorded at the site,
+\* docs/DISCIPLINE-CHARTER.md D15's seventh shape — the `scoped` track gate going empty. Recorded at the site,
 \* because the thing that makes it invisible is that everything stays green.*
 \*
 \* WHAT IT STILL BUYS: the invariants are proved INDUCTIVE rather than bounded. TLC checks the

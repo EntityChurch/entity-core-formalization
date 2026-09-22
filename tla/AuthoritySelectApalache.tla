@@ -21,7 +21,7 @@
 \*
 \* DOES NOT BUY: independence from the transcription. This is the same author's reading of the
 \* same §6.8 text as the TLC module, so a misreading survives both (`docs/CORROBORATION.md`,
-\* AGENTS.md D16's counter-clause). It also does not buy a second READER, and it cannot reach
+\* docs/DISCIPLINE-CHARTER.md D16's counter-clause). It also does not buy a second READER, and it cannot reach
 \* the 5th wall — whether the three rows as transcribed are what the section means.
 \*
 \* ⭐ AND D16'S OWN ADVICE WAS FOLLOWED AND CAME BACK EMPTY, WHICH IS WORTH RECORDING RATHER

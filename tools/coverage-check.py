@@ -299,7 +299,7 @@ def main() -> int:
         # cites them -- the published `N of M` goes DOWN. That is the honest reading: nothing
         # now verifies those sections AS THE PIN STATES THEM. A header-sentence override would
         # have left the number untouched and the claim false, which is why the override is a
-        # registry fact with a gate rather than prose (AGENTS.md D15's eleventh shape).
+        # registry fact with a gate rather than prose (docs/DISCIPLINE-CHARTER.md D15's eleventh shape).
         overrides: dict[str, str] = t.get("model_pins", {}) or {}
         ospec: dict[str, set[str]] = {}
         for snap in sorted(set(overrides.values())):

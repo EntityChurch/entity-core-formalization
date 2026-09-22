@@ -52,9 +52,9 @@ eval|[/peerL/*/b]lean=true,spec=false [/peerL/x/*/z]lean=true,spec=false
 #
 # NOT COMPLETE, and nothing can make it so -- no tool derives the set of documents that
 # quote a number. Adding a site is a hand edit, exactly as in runcount/enginecount.
-site|docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| pairs compared | **3276** |
-site|docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| **star-free** patterns (no `*` anywhere) | 1521 | **0** |
-site|docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| `*` only in the **first** segment or only as the whole **last** segment | 2652 | **0** |
+site|docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| pairs compared | **3276** |
+site|docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| **star-free** patterns (no `*` anywhere) | 1521 | **0** |
+site|docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| `*` only in the **first** segment or only as the whole **last** segment | 2652 | **0** |
 site|docs/status/TRACKER-entity-system-architecture.md|**3276 pairs, 108 disagreements, all one-directional (Lean over-grants, zero under-grants)**
 site|docs/status/TRACKER-entity-system-architecture.md|on **star-free patterns, 1521 of 1521 agree**
 

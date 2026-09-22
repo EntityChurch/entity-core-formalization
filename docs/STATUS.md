@@ -104,6 +104,65 @@ it. See §Next item 4 and `docs/LEAN-SEAM.md` §7.
 
 ## Where we left off
 
+**2026-09-17 (b) — THE DOC STANDARD IS ADOPTED, AND MOVING THE PACKETS CLOSED A GATE GAP THAT
+HAD BEEN DECLARED UNREACHABLE FOR A WEEK.** No new modelling; a documentation and routing pass,
+run against the ecosystem's 2026-09 doc/memory/routing standard. Every model file change in it
+is inside a comment.
+
+- **`AGENTS.md` 158,868 → 16,887 bytes**, by moving rather than deleting. This repo's own
+  disciplines **D13–D20 are now `docs/DISCIPLINE-CHARTER.md`** — which `AGENTS-STANDARD.md`'s
+  own tier table already named as a tier-1 artifact, read once at cold start rather than loaded
+  every session — and ~49 KB of context moved to **eight `docs/agents/memory/` files, entered by
+  SYMPTOM** through `INDEX.md`. Nothing was dropped; the gates prove it (below).
+- ⭐ **The gates caught the move, which is what they are for.** `make enginecount` failed on two
+  declared sites that had gone silent and `make retractcheck` on four witnesses whose phrasing
+  had moved out from under them. Both were repointed rather than relaxed. **One class no gate
+  could see** — ordinary prose cross-references — was fixed mechanically: ~70 `AGENTS.md D<n>`
+  citations, 56 packet paths, 15 archive paths. **Dated `docs/status/` snapshots were
+  deliberately NOT repointed**: a snapshot is history, and a statement in one was true where it
+  stood.
+- ⛔ **That mechanical sweep touched `AGENTS-STANDARD.md`**, an injected overlay that must be
+  byte-identical across every repo in the ecosystem, and **nothing in this tree would have
+  caught it** — the sibling conformance linter did, on byte-identity. Restored. **A tree-wide
+  edit's file set is an input set, and the files this repo does not own are what must be
+  excluded from it** (D14, eighth instance).
+- ⭐ **`make retractcheck` reached a document its own header called structurally unreachable.**
+  It excluded `docs/status/**` wholesale; the standard moves sent packets to `docs/outbox/`,
+  which is not excluded, so **23 packets entered the live set in one commit** (165 → 188 tracked
+  files). The header predicted *"every one would fire"*; **four of twenty-three did, all four
+  quoting a retracted claim in a correction section, and none asserting one.** The distinction
+  it said needed inventing — quoted-as-history vs asserted — already existed as the per-(row,
+  file) `allow` field; what it lacked was a reason written at each entry. **D15's seventeenth
+  shape, and the first where the input set widened rather than narrowed.**
+- ⛔ **The mirror image landed on us at the same time, from outside.**
+  `entity-system-conformance` measured that an **inbound** scanner keyed to
+  `docs/status/ROUTING-*` prints `inbox: 0 packet(s)` the day a counterpart moves, byte-
+  identically to a clean scan. **True of `docs/status/INBOUND.md` when they wrote it:**
+  `entity-core-keystone` had already moved **47 packets, four addressed to us**, and two of those
+  four had no tracker row — including **a decision on an open ask with a deadline attached**
+  (`K-10`, below). The sweep now globs both homes, names `NO PACKET HOME` and `UNREACHABLE`
+  rather than folding either into a clean count, and carries the coordination tree explicitly
+  because it sits outside the sibling parent directory and was unreachable by construction.
+  Watermarks added to all four trackers.
+- ⛔ **NEW OPEN ASK ON US, and it is the only one:** keystone takes route (1) on `K-10` — **we
+  prove `IdPatternTrans` and route it as a patch**, mathlib-free, landing in their `proofs/` as
+  theirs, **deadline their next oracle re-pin**. It unblocks `docs/LEAN-SEAM.md` **L5**
+  (`CLOSED-MODULO-H`). They also reproduced our `widened=1` correction on their own definitions
+  and **generalised it**: 576 pairs, `widenedOther=0`, every widened pair under a universal
+  parent — so the widening is safe by construction rather than per-row. And they named a
+  load-bearing half of our transcription we had not stated: our `Pre` reconstruction *borrows*
+  `splitSegs` and `matchesSeg` from the current tree, so it is a faithful "before" only because
+  those two are byte-identical across the two commits. **They checked that; we had not.**
+- **The README carried a bare universal quantifier that had been false since the first extension
+  track was promoted** — *"today every model in them is on the `core` track"* — in the most-read
+  published file here, through three promotions and nine extension modules, with every gate
+  green. The 2026-09-07 sweep for that exact shape ran and read past it, because a quantifier
+  inside a **layout description** does not scan as a claim (D14, seventh instance).
+- Also: 22 aged status docs archived under `docs/archive/status/` with a breadcrumb index;
+  `[[area]]` and `[[living]] internal = true` declared in `CANONICAL-DOCS.toml`; every packet
+  stamped with `To:` / `From:` / `Tip:`. **`conform-audit`: 2 ERROR → 0 ERROR.** All eight claim
+  gates green.
+
 **2026-09-17 — RELEASE BOUNDARY. The drift gate fired on a facet the count could not see, a
 two-day-old correction had reached two documents and stopped, and the item we had ranked
 last-because-blocked is now first because the blocker was granted upstream.** No new modelling;
@@ -159,6 +218,16 @@ this was the pass that gets the tree to a clean, quotable state.
   request"*, but the new MUST is conditional on a **concurrency predicate** over a shared
   connection, which is `tla/Reentry.tla`'s subject exactly. **Fourth time an inherited blocker was
   already resolved in someone else's tree** — read the source before pressing an ask.
+- ✅ **THE RELEASE GATE IS GREEN ON ONE CLEAN, UNCONTENDED, SERIAL RUN.** `make matrix` — all
+  **687** runs, every property, every negative control, every non-vacuity witness — reports its
+  **positive completion line**, *"FULL matrix complete — properties held, controls caught,
+  witnesses fired"*, rather than merely exiting 0, which is the only form of this claim the repo
+  accepts. The eight claim gates and `make driftclaim` are green beside it, **re-run after** the
+  documentation edits rather than before them. ⭐ *This discharges the previous session's open
+  caveat, and the caveat was right for a reason worth keeping: its two `make check` runs were
+  started concurrently against this repo's own serial-toolchain rule and both went green, so
+  nothing was ever wrong — but **a green produced under a condition the rules forbid is not a
+  green you can quote**, and no gate can tell the two apart.*
 - 📋 **`§Next` gained a derived live worklist at its head** — 13 open rows, each naming the block
   that carries the detail. Nothing renumbered and nothing deleted: three other documents
   cross-reference those ids, and the closed blocks are kept in place because several of them
@@ -327,7 +396,7 @@ two of our own claim gates were reporting green over stale numbers they could no
   framed as boundary-vs-resolve-time has no place to put a mechanism-(b) peer, and a check set
   asserting refusal of an unreferenced mis-keyed entry is asserting mechanism (a) while §1.8
   says (b) is conformant. Routed:
-  `docs/status/ROUTING-2026-09-16-a-entity-system-architecture-the-1-8-enforcement-point-question-has-a-third-answer-and-it-is-mechanism-b.md`.
+  `docs/outbox/ROUTING-2026-09-16-a-entity-system-architecture-the-1-8-enforcement-point-question-has-a-third-answer-and-it-is-mechanism-b.md`.
 - ⛔ **O23 STAYS OPEN and the verdict did not move.** One of thirteen prover subjects carries the
   indirection; twelve still abstract it, and §5.5's multi-sig arms — whose per-constituent
   `included[candidate]` lookups are in the same class — are modeled nowhere. The row is RESTATED,
@@ -342,7 +411,7 @@ two of our own claim gates were reporting green over stale numbers they could no
   longer states the per-track split"* — a true message naming the wrong defect — because its
   README pattern was anchored on the literal `95 model files`, four words below its own comment
   forbidding exactly that.
-- ⭐ **Both are now `AGENTS.md` D20, ratified on a third bite in a third shape** (the first was
+- ⭐ **Both are now `docs/DISCIPLINE-CHARTER.md` D20, ratified on a third bite in a third shape** (the first was
   `ledgercount`'s `**40 rows**`, 2026-09-14): *a gate recognises a claim through a MATCHER, and
   the matcher must not depend on the claim's own value.* Matchers classify by an invariant noun
   now, with the value-keyed arm underneath as a fallback that states its own blind spot.
@@ -388,7 +457,7 @@ signed off on the design the same day; nothing in this repo blocks anyone.
   it, and for a day the only artifact behind *3276 pairs, 108 disagreements* was the table
   quoting them. Now `make leanlemma`'s `eval` rows carry every figure one-to-one, five controls
   each fail for their own reason, and declared prose sites fail the build when they state a
-  number the sweep no longer produces. **`AGENTS.md` D15, fourteenth shape: a number derived by a
+  number the sweep no longer produces. **`docs/DISCIPLINE-CHARTER.md` D15, fourteenth shape: a number derived by a
   program that is not in the tree is a recollection with a decimal point on it.** Gating it also
   produced the complement measurement (`interior=624/108`), which bounds *"exactly the interior-`*`
   class"* from both sides where the published version bounded it from one.
@@ -482,7 +551,7 @@ one to read.
   The reading that satisfies both — copy to the new key, keep the old — is a **green row plus a
   witness**, not a suggestion, because the one remedy this repo published without measuring is
   the one that came back corrected.
-  Routed: `docs/status/ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md`. Ledger rows **O21**
+  Routed: `docs/outbox/ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md`. Ledger rows **O21**
   (closed, assumption false) and **O22** (closed the same day — see below).
 - **`IdentityProcess` got the last second engine on the extension tracks —
   `tla/IdentityProcessApalache.tla`, 40 runs — and O22 closed by being measured, like O10 and
@@ -510,7 +579,7 @@ one to read.
   **And N2's class, enumerated (D14): all SEVEN handler names in §6.3's dispatch table occur
   exactly once in the whole document — in the table.** None is defined anywhere, which is why both
   of N4's repairs are statements about text that does not exist.
-  Routed: `docs/status/ROUTING-2026-09-09-IDENTITY-ARRIVAL-PATH-STATE.md`.
+  Routed: `docs/outbox/ROUTING-2026-09-09-IDENTITY-ARRIVAL-PATH-STATE.md`.
 - **`QuorumTrust` got the last second engine anywhere on the extension tracks —
   `tla/QuorumTrustApalache.tla`, 35 runs — and it corrected a claim rather than finding a defect.**
   §4.2.1's cache-invalidation contract has **three** invalidation triggers.
@@ -532,7 +601,7 @@ one to read.
   stale**, because non-trigger 2 forbids invalidating on the write that removed the entry. What
   §4.2 needs is **write-side**: the readable set changes only through validate-accept. Routed as
   an amendment to Q5, not a new number
-  (`docs/status/ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md`); **O11 restated and still
+  (`docs/outbox/ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md`); **O11 restated and still
   OPEN**, which is a fourth ledger outcome — measured, proposition survived, strength wrong.
   That note's §5 **declares the cohort census for the two new directions was not taken**, because
   naming a census is not taking one.
@@ -589,7 +658,7 @@ Three things to carry:
   existence-and-uniqueness one, and neither failure prints anything. `LadderIsFixedPoint*` and
   `FixedPointUnique*` are green rows for that reason. `AGENTS.md` carries it as a fourth
   encoder fact.
-- **`docs/status/SEVERITY-2026-09-08-FINDINGS-TRIAGE.md` is new** and grades all 21 spec
+- **`docs/archive/status/SEVERITY-2026-09-08-FINDINGS-TRIAGE.md` is new** and grades all 21 spec
   findings: **6 structural (in 4 clusters), 6 high, 7 moderate, 2 editorial.** Its §4 is the part worth reading
   — **nine of the twenty-one share one shape**, a normative obligation stated in one place whose
   enforcement is assumed to happen somewhere that does not do it. One of the four structural
@@ -1036,12 +1105,20 @@ inductive invariants, `P-9`/`P-10`.
       paid**: it said *transcribe from `spec-data/`, never from this worklist*, and the worklist's
       superseded discriminator is now a negative control (`AuthoritySelectDerivationBug`) with a
       witness proving the 0.8.2.21 → .22 correction was semantic rather than editorial.
-      ⛔ **One thing this session did not finish: `make check` was left running.** Two runs were
-      started concurrently by mistake — against this repo's own *run the toolchains serially* rule
-      — and process-killing is blocked by fleet policy on this box, so they were left to complete.
-      **Re-run `make check` from clean before trusting a green**, and `make matrix` has not been
-      run at all since the new rows landed. The eight claim gates were each run individually and
-      are green.
+      ~~⛔ **One thing this session did not finish: `make check` was left running.**~~ ✅
+      **DISCHARGED 2026-09-17.** *Original: two runs were started concurrently by mistake —
+      against this repo's own* run the toolchains serially *rule — and process-killing is blocked
+      by fleet policy on this box, so they were left to complete. **Re-run `make check` from clean
+      before trusting a green**, and `make matrix` has not been run at all since the new rows
+      landed.* **`make matrix` has now been run once, serially, from a clean tree with nothing
+      else contending**, and reports its positive completion line — *"FULL matrix complete —
+      properties held, controls caught, witnesses fired"* — across all **687** runs, with the
+      eight claim gates and `driftclaim` green beside it. ⭐ **The caveat is worth keeping in the
+      record rather than deleting**: the two concurrent runs both went green, so nothing here was
+      ever wrong — what was wrong was that **a green produced under a condition the repo's own
+      rules forbid is not a green you can quote**, and no gate can tell the difference. D13's
+      question asked of a *run* rather than of a grader: *what does this green assert, and what
+      else produces it?*
 
       *Original item:* ⭐⭐ **Model §6.8's authority-selection MUST in `tla/Authority.tla`.**
 
@@ -1482,7 +1559,7 @@ inductive invariants, `P-9`/`P-10`.
    **K1** with the cohort census (all three ground-up implementations dispatch on type; keystone
    is the outlier), reachability explicitly **not** claimed and now bounded to id-scope values
    carrying path syntax:
-   `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`. Register row **D24** — the
+   `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`. Register row **D24** — the
    first C1 this repo can mark **RATIFIED**, because the spec adopted the cohort's reading on its
    own. Ledger scope notes on **L1, L5, L6**; no verdict changed. Second finding to a second seat:
    **P-2**, §3.6's own `id-scope` type definition still ends `; Both use matches_pattern (§5.4).`
@@ -1491,7 +1568,7 @@ inductive invariants, `P-9`/`P-10`.
    2026-09-06** with `make leanseam` green, because the gate parses the pin block and the table is
    a second copy of the same fact in a notation nothing reads — created by the very commit that
    correctly updated the pin block. `tools/lean-seam.py` step 5 now fails on any sha256 outside
-   the pin block that the pin block does not declare. `AGENTS.md` D15 thirteenth shape; the
+   the pin block that the pin block does not declare. `docs/DISCIPLINE-CHARTER.md` D15 thirteenth shape; the
    `make lean`-green-and-K1-real coexistence is D13's tenth instance.
 
 0. **~~`make specdrift` is a one-of-four gate.~~ Done 2026-09-09** — and it found three more
@@ -1500,7 +1577,7 @@ inductive invariants, `P-9`/`P-10`.
    §0), a `check_live_version` assertion after nine sites said **0.8.2.11** while it was **0.8.2.15**
    with `driftclaim` green, the `## 4. Connections` trailing-dot bug that kept `§4` and `EXTENSION-QUORUM`
    §1/§2/§7/§8 out of the denominator, and unresolvable citations promoted from a silent drop to a
-   build failure. Core's published pair is **9 of 31**. `AGENTS.md` D15 twelfth shape.
+   build failure. Core's published pair is **9 of 31**. `docs/DISCIPLINE-CHARTER.md` D15 twelfth shape.
 
 0a. **~~One anchor per file is not enough.~~ Diagnosed wrong, then fixed properly, 2026-09-09.**
    The obvious reading of the two stale engine-position sites was "each gate anchors one site per
@@ -1665,7 +1742,7 @@ inductive invariants, `P-9`/`P-10`.
        grades exact axiom sets, and that review stays hand-checkable only while the trusted
        base is small. Revisit if a row ever needs real mathematics rather than string plumbing.
 
-     Packet: `docs/status/ROUTING-2026-09-06-KEYSTONE-THREE-ANSWERS.md`. It also carries three
+     Packet: `docs/outbox/ROUTING-2026-09-06-KEYSTONE-THREE-ANSWERS.md`. It also carries three
      corrections **to us** that they earned: the declined ask was built on our own unmeasured
      "genuinely mechanical" claim, our `String.Slice` blocker note was wrong, and our L1 row
      described their code incorrectly in a published document.
@@ -1715,7 +1792,7 @@ inductive invariants, `P-9`/`P-10`.
      2 N/A-device, 3 BY-DESIGN, and **16 OPEN** (O5, O7–O9 from the attestation track,
      O11–O15 from quorum, O16–O19 from identity — all added 2026-09-07 with
      those tracks' first nine modules). **O20 was added 2026-09-08 by a rule rather than by a
-     model** (`AGENTS.md` D15 tenth shape) and closed the next day by the experiment it asked
+     model** (`docs/DISCIPLINE-CHARTER.md` D15 tenth shape) and closed the next day by the experiment it asked
      for. **O22 did the same one day later**: added 2026-09-09 by the D18 sweep, closed
      2026-09-09 by `tla/IdentityProcessApalache.tla`, the port the row itself named. **Four rows
      have now closed by being measured and THREE had to be restated to close** — O10 said
@@ -2079,7 +2156,7 @@ inductive invariants, `P-9`/`P-10`.
     mean the composition is verified.
 
     Routed to `entity-system-architecture`:
-    `docs/status/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md`. Three findings — the §5.3
+    `docs/outbox/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md`. Three findings — the §5.3
     traversal defect, a §5.2 type error against §4.0's own accessor contract (a hash passed to
     the path-keyed getter), and `EXTENSION-QUORUM` §4's normative MUST resting on an `as_of`
     parameter §5.3 does not define. **The cohort was measured before any of it was written**:
@@ -2174,7 +2251,7 @@ inductive invariants, `P-9`/`P-10`.
     declared-prose-site discipline now applies to the coverage pair too, teeth-tested both ways
     (a stale number; a site that stops making the claim).
 
-    **Scoped 2026-09-06: `docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md`.** Identity
+    **Scoped 2026-09-06: `docs/archive/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md`.** Identity
     + attestation + quorum is the next phase, and it is a better target than core was: a
     signed graph with **mutable membership, cached trust, and a temporal query**. Four shapes
     map onto machinery this repo already has — K-of-N onto `MultisigKN`, chain-walk
@@ -2197,7 +2274,7 @@ inductive invariants, `P-9`/`P-10`.
     The `scoped` gate worked exactly as designed: the three model files could not be declared
     in `TRACKS.toml` until the pin file existed, so promotion happened in the intended order
     rather than being worked around. Routed:
-    `docs/status/ROUTING-2026-09-07-QUORUM.md`; indexed with the attestation note in
+    `docs/outbox/ROUTING-2026-09-07-QUORUM.md`; indexed with the attestation note in
     `docs/status/FINDINGS-INDEX.md`, which is the per-track index the previous checkpoint
     deferred until there was more than one note to index.
 
@@ -2269,12 +2346,12 @@ inductive invariants, `P-9`/`P-10`.
     (byte-identical to live when checked). The `scoped` gate forced the pin before the model
     files could be declared, for the second time in one day — and with this promotion **no
     scoped track remains**, so that half of the gate now has no subject in the live registry.
-    Routed: `docs/status/ROUTING-2026-09-07-IDENTITY.md`; indexed in
+    Routed: `docs/outbox/ROUTING-2026-09-07-IDENTITY.md`; indexed in
     `docs/status/FINDINGS-INDEX.md`, now 22 findings across three notes, 20 machine-checked.
 
     **The finding worth reading first is I2, and its shape is a green.** §9.4's fail-closed rule
     for compromise recovery is a NEGATIVE REACHABILITY claim, and `TRACKS.toml` plus
-    `docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md` §3.3 both said so before a line was
+    `docs/archive/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md` §3.3 both said so before a line was
     modeled: *"a peer that does nothing satisfies it ... write the witness before the
     prohibition."* Followed literally. `RecoveryFailClosed` — the prohibition — is **GREEN**.
     `RecoveryAttainable` — the witness, stated as a positive claim so a machine can check it —
@@ -2346,13 +2423,13 @@ inductive invariants, `P-9`/`P-10`.
     **an implementation divergence is a measurement of where the specification failed to
     converge three independent authors**, and every one of ours was buried inside a spec
     finding's Impact section rather than tracked in its own right. Three things fell out, routed
-    together in `docs/status/ROUTING-2026-09-08-VALIDATION-SURFACE.md`:
+    together in `docs/outbox/ROUTING-2026-09-08-VALIDATION-SURFACE.md`:
 
     > **V1 WAS WRONG AND WAS REWRITTEN THE SAME DAY, before anything was filed.** It said the
     > matrix "has never existed." **It exists** — pre-split archive, 377 lines, **136 TV IDs**,
     > including the three vector IDs V1 called "defined nowhere" — and architecture had already
     > found and ruled on the problem on **2026-08-11**. Every search command was correct; the
-    > **input set was one repository**. `AGENTS.md` **D15 ninth shape** carries the process
+    > **input set was one repository**. `docs/DISCIPLINE-CHARTER.md` **D15 ninth shape** carries the process
     > lesson and the checklist. The corrected finding is *stranded, not absent*, and is stronger.
 
     - **V1. A 136-vector cross-impl matrix is stranded in the pre-split archive.** Cited **20
@@ -2521,7 +2598,7 @@ inductive invariants, `P-9`/`P-10`.
       states, the cohort splits three ways across exactly that gap, and the reading that
       satisfies both is a green row rather than a suggestion. That is what promoted D15's tenth
       shape from a candidate to **D18**. Routed:
-      `docs/status/ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md`.
+      `docs/outbox/ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md`.
     - **`QuorumTrust`** — §4.2/§4.2.1's arrival-time trust model, carrying Q5–Q7. Also a real
       transition system with a cache; also the inductive shape.
     - **`IdentityProcess`** — §6.3's kind-dispatch table, a pure function. Should port close to

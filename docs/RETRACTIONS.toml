@@ -50,7 +50,7 @@ absolute branch. Assembled from a grep hit that agreed with a hypothesis already
 survived in three canonical documents after being corrected in two, which is what earned D14's
 grep-the-phrasing rule."""
 pattern = "shared? (an? )?undischarged assumption"
-witness = "AGENTS.md"
+witness = "docs/DISCIPLINE-CHARTER.md"
 allow   = ["CHANGELOG.md", "docs/STATUS.md", "docs/LEAN-SEAM.md"]
 
 [[retraction]]
@@ -64,8 +64,12 @@ worst of them a copy-pasteable reproduce command in `CROSSCHECK-RESULTS.md` hand
 `-v "$PWD":/work:Z` on the exact directory and image the bug involved. Serial execution remains
 the rule, for resource-cap reasons."""
 pattern = "concurrent `?:Z`? relabels? (race|cause)"
-witness = "AGENTS.md"
-allow   = ["docs/STATUS.md", "CHANGELOG.md"]
+witness = "docs/agents/memory/TOOLCHAIN-AND-CONTAINERS.md"
+# Added 2026-09-17: D13-D20 moved out of AGENTS.md into docs/DISCIPLINE-CHARTER.md, and the
+# charter is where each discipline QUOTES the withdrawn phrasing that earned it. Same
+# disposition the AGENTS.md entry carried -- the site records the error, it does not assert it.
+allow   = ["docs/STATUS.md", "CHANGELOG.md",
+           "docs/DISCIPLINE-CHARTER.md"]
 
 # ── 2026-09-07 ─────────────────────────────────────────────────────────────────────────────
 
@@ -80,7 +84,11 @@ summary sentence quantifying over a set someone else grew. A bare universal over
 artifacts is a claim about an input set."""
 pattern = "[Ee]very module is covered by all three engines"
 witness = "docs/COVERAGE-MATRIX.md"
-allow   = ["docs/FINAL-ASSURANCE-SUMMARY.md", "README.md", "AGENTS.md"]
+# Added 2026-09-17: D13-D20 moved out of AGENTS.md into docs/DISCIPLINE-CHARTER.md, and the
+# charter is where each discipline QUOTES the withdrawn phrasing that earned it. Same
+# disposition the AGENTS.md entry carried -- the site records the error, it does not assert it.
+allow   = ["docs/FINAL-ASSURANCE-SUMMARY.md", "README.md", "AGENTS.md",
+           "docs/DISCIPLINE-CHARTER.md"]
 
 # ── 2026-09-08 ─────────────────────────────────────────────────────────────────────────────
 
@@ -93,8 +101,18 @@ repository. The file is in the pre-split archive, 377 lines, 136 TV IDs — incl
 vector IDs the note asserted were defined nowhere — and architecture had already found and ruled
 the problem on 2026-08-11. The corrected finding is `stranded, not absent`, and it is stronger."""
 pattern = "(matrix|file|document) (that )?has never existed"
-witness = "AGENTS.md"
-allow   = ["docs/STATUS.md"]
+witness = "docs/DISCIPLINE-CHARTER.md"
+
+# ── Allows added 2026-09-17, when the routing packets moved from `docs/status/` to
+# `docs/outbox/` and entered this scan's live set for the first time. The gap was KNOWN and
+# declared unreachable in tools/retractcheck.py's own header; the move closed it by
+# widening the input set. 23 previously-invisible packets were scanned and NONE asserts a
+# retracted claim. Four quote one, which is the exact failure mode that header predicted.
+# R4: A CORRECTION NARRATIVE: the packet quotes the withdrawn words in order to record
+# the error ("after publishing 'the file has never existed' about a file that existed").
+# That is the one place they must survive verbatim.
+allow   = ["docs/STATUS.md",
+           "docs/outbox/ROUTING-2026-09-16-d-entity-system-architecture-both-frame-items-you-called-weakest-are-answered-and-the-pseudocode-implements-the-bug-the-prose-forbids.md"]
 
 [[retraction]]
 id      = "R5"
@@ -108,7 +126,11 @@ assumption: the recursion alternates between the supersedes and revocation relat
 where BOTH graphs are acyclic. What it needs is a joint order over both."""
 pattern = "rests on the revocation graph being acyclic"
 witness = "tla/AttestRevoke.tla"
-allow   = ["AGENTS.md", "docs/status/FINDINGS-INDEX.md"]
+# Added 2026-09-17: D13-D20 moved out of AGENTS.md into docs/DISCIPLINE-CHARTER.md, and the
+# charter is where each discipline QUOTES the withdrawn phrasing that earned it. Same
+# disposition the AGENTS.md entry carried -- the site records the error, it does not assert it.
+allow   = ["AGENTS.md", "docs/status/FINDINGS-INDEX.md",
+           "docs/DISCIPLINE-CHARTER.md"]
 
 # ── 2026-09-09 ─────────────────────────────────────────────────────────────────────────────
 
@@ -175,7 +197,21 @@ witness = "docs/status/FINDINGS-INDEX.md"
 # true on that date, the same class `runcount` deliberately leaves ungated ("a number this repo
 # publishes about its own PAST is deliberately not checked"). The live claim lives in
 # docs/SPEC-DRIFT-ASSESSMENT.md §0 and is gated by `make driftclaim`, per track.
-allow   = ["docs/STATUS.md"]
+
+# ── Allows added 2026-09-17, when the routing packets moved from `docs/status/` to
+# `docs/outbox/` and entered this scan's live set for the first time. The gap was KNOWN and
+# declared unreachable in tools/retractcheck.py's own header; the move closed it by
+# widening the input set. 23 previously-invisible packets were scanned and NONE asserts a
+# retracted claim. Four quote one, which is the exact failure mode that header predicted.
+# R8: A DELIVERED, DATED PACKET, and this one ASSERTS rather than quotes -- so it is the
+# weakest of these four allows and is written out rather than waved through. The site is the
+# note's header table and it carries its own qualifier, "byte-identical to live WHEN CHECKED
+# ON 2026-09-07", which was true on that date; the packet now also carries a `Tip:` pinning
+# the commit its claims re-derive at. Same class `runcount` leaves ungated on purpose: a
+# statement this repo publishes about its own PAST. A packet is immutable once delivered --
+# editing it would rewrite what a counterpart read.
+allow   = ["docs/STATUS.md",
+           "docs/outbox/ROUTING-2026-09-07-IDENTITY.md"]
 
 [[retraction]]
 id      = "R9"
@@ -187,7 +223,7 @@ to wait on: this repo vendors its own snapshots, and the extension specs come fr
 sentence to vendor an extension finds nothing, and the absence reads as *the spec is not written
 yet* when it is written and landed."""
 pattern = "the architecture repo re-vendors"
-witness = "AGENTS.md"
+witness = "docs/agents/memory/SPEC-PIN-AND-DRIFT.md"
 allow   = ["CHANGELOG.md"]
 
 [[retraction]]
@@ -259,7 +295,17 @@ run against a conformant peer that already has the fix, which cannot separate th
 Full exchange: `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §9."""
 pattern = "require an id-scope value carrying"
 witness = "docs/RETRACTIONS.toml"
-allow   = []
+
+# ── Allows added 2026-09-17, when the routing packets moved from `docs/status/` to
+# `docs/outbox/` and entered this scan's live set for the first time. The gap was KNOWN and
+# declared unreachable in tools/retractcheck.py's own header; the move closed it by
+# widening the input set. 23 previously-invisible packets were scanned and NONE asserts a
+# retracted claim. Four quote one, which is the exact failure mode that header predicted.
+# R11: Correction narrative, in the packet's own section headed "Second sweep -- the
+# boundary above is WRONG": it quotes what the paragraph "originally read", then refutes it.
+# NOTE: this is the very site tools/retractcheck.py names as the one the scan was
+# "structurally incapable of seeing". It can see it now, and the verdict is quoted-as-history.
+allow   = ["docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md"]
 
 # ── 2026-09-10 ─────────────────────────────────────────────────────────────────────────────
 
@@ -291,7 +337,14 @@ link), and the exposure is bounded to parent patterns carrying an INTERIOR `*`, 
 Full result: `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §15."""
 pattern = "admits child patterns a parent never authorized"
 witness = "docs/RETRACTIONS.toml"
-allow   = []
+
+# ── Allows added 2026-09-17, when the routing packets moved from `docs/status/` to
+# `docs/outbox/` and entered this scan's live set for the first time. The gap was KNOWN and
+# declared unreachable in tools/retractcheck.py's own header; the move closed it by
+# widening the input set. 23 previously-invisible packets were scanned and NONE asserts a
+# retracted claim. Four quote one, which is the exact failure mode that header predicted.
+# R12: Correction narrative: "This corrects one of our own sentences ... registered as R12."
+allow   = ["docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md"]
 
 [[retraction]]
 id      = "R13"

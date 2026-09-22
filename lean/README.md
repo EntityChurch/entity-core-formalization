@@ -43,7 +43,7 @@ So the seam had a gate on the *text* and none on the *content*.
 
 ## What the gate asserts — and what else would satisfy it
 
-The house rule (`AGENTS.md` D13) is that a gate must assert the outcome it claims, not a
+The house rule (`docs/DISCIPLINE-CHARTER.md` D13) is that a gate must assert the outcome it claims, not a
 symptom of it, and that the question *"what else satisfies this?"* is answered by
 **building the alternatives**, not by reasoning about them. All four were built:
 

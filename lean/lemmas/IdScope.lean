@@ -39,6 +39,25 @@
   read out of `git show`, not reconstructed from this repo's notes about them. A reconstructed
   "before" would make the whole differential a claim about our memory of their tree.
 
+  ⛔ AND THE LOAD-BEARING HALF IS THE ONE WE DID NOT STATE, NAMED BY KEYSTONE AND NOT BY US.
+  The two functions above are transcribed. The two they CALL are not: `canonSegsPre` and
+  `scopeSubsetPre` BORROW `splitSegs` and `matchesSeg` from the CURRENT tree. So `Pre` is a
+  genuine "before" only if those two did not move between the commits, and that is a premise,
+  not a transcription. Keystone checked it and we had not
+  (ROUTING-2026-09-16-d-entity-core-formalization-k10-decided-..., §3):
+
+      splitSegs    97bf1a05=3daa1bef718d  c3356b43=3daa1bef718d  SAME
+      matchesSeg   97bf1a05=8c374edb1c12  c3356b43=8c374edb1c12  SAME
+      canonSegs    97bf1a05=091cca63db4f  c3356b43=449af4eee2ee  MOVED
+      scopeSubset  97bf1a05=b82689567f2f  c3356b43=c90c4d14a96e  MOVED
+
+  The premise holds, so every result below stands unchanged. Recorded at the site because a
+  reader checking the two TRANSCRIBED functions will not think to ask about the two that are
+  not, and because this is D18's shape one level out: a differential's domain is a claim, and
+  so is everything the domain is built out of. Re-check the two digests before retargeting
+  this file at a newer keystone commit -- if either MOVES, `Pre` becomes a hybrid and the
+  sweep stops being a before/after.
+
   ── WHY THE CONTROLS ARE THE POINT ────────────────────────────────────────────────────────
 
   Every headline row here is a **false** — the witness does not construct, three ways. A sweep

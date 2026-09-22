@@ -10,7 +10,7 @@ a published file FOUR times:
   1. "eleven CLOSED rows of the ledger rested on a build nobody ran", in five files. Class L
      was eleven rows: nine CLOSED, two CLOSED-MODULO-H. The conclusion survived; the figure
      was recalled rather than counted.
-  2. The Class-L verdicts in docs/status/AUDIT-2026-08-30-LEAN-TIER.md, same session.
+  2. The Class-L verdicts in docs/archive/status/AUDIT-2026-08-30-LEAN-TIER.md, same session.
   3. "21 of 23 rows are CLOSED and the two open ones (L1, L7) are both §5.5a granter-framing"
      -- every number wrong AND the attribution wrong: L1/L7 were CLOSED-MODULO-H, a different
      verdict, and the genuinely OPEN rows were T4 and O4.

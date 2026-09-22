@@ -60,7 +60,7 @@ Pred(p)     == IF p = 1 THEN N ELSE p - 1
 MaxLiveKeys == 2      \* V7 §4.8/§4.9(b): store bounded by live keys
 
 \* ===================================================================================
-\* THE PEER BOUND (docs/status/SCOPING-2026-08-30-PEERS-BOUND.md)
+\* THE PEER BOUND (docs/archive/status/SCOPING-2026-08-30-PEERS-BOUND.md)
 \* ===================================================================================
 \* This module read `Peers == {"A","B"}` and `Other(p) == IF p = "A" THEN "B" ELSE "A"`
 \* through 0.8.2. `Other` is not a bound that was set low — it is the ASSERTION that every

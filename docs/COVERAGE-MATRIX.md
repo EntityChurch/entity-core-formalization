@@ -267,7 +267,7 @@ That is not a hypothetical. On 2026-09-14 `entity-core-protocol` 0.8.2.23 closed
 and identity forgery**: every authority lookup resolved an entity through a wire-supplied
 `included` map key that nothing verified. The enabling text is **in our pin** —
 `spec-data/v0.8.2` §3.1: *"The content_hash MUST match the map key"* — a MUST with **no
-enforcing operation and no vector**, which is exactly what `AGENTS.md` **D17** was ratified to
+enforcing operation and no vector**, which is exactly what `docs/DISCIPLINE-CHARTER.md` **D17** was ratified to
 report as a finding in its own right. §3.1 and §1.8, the two sections that carry it, are cited
 by **zero** core models; §5.5, where the precondition now lands, is cited by **39**. Every gate
 in this repo was green throughout, and `make coverage` was among them, correctly: the cited set

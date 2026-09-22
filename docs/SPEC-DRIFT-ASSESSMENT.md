@@ -273,7 +273,7 @@ whose `matchesScope` (the §5.2 dispatch check) *is* typed by scope kind and who
 (the §5.6 attenuation check) is **not** — so the F40 fix reached one of the two sites in that
 file and not the other, which is the same asymmetry the spec has just closed. Rows L1, L5 and
 L6 all touch it. Routed as **K1**, machine-checked and with the cohort census, in
-`docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
+`docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
 
 **And here the drift framing has to be corrected, in the document whose whole job is that
 framing.** It is tempting — this section's first draft did it — to say *"0.8.2.16 moved and a
@@ -449,7 +449,7 @@ This one cannot, for three separate reasons, each verified rather than argued:
    match the map key.**"* Vendored here 2026-08-27.
 2. **It had no enforcing operation and no vector, in the pin.** Every `hash_mismatch`
    occurrence in the pinned text is `system/tree:put` CAS semantics. That absence is precisely
-   what `AGENTS.md` **D17** was ratified to report *as a finding of the same weight as a
+   what `docs/DISCIPLINE-CHARTER.md` **D17** was ratified to report *as a finding of the same weight as a
    contradiction* — and D17 had only ever been run on the three extension tracks.
 3. **The pin's own conformance index names it.** §9.1 *MUST Implement* lists *"Content hash
    validation on receipt (§1.8, §7.2)"* and *"Envelope structure with per-entity hash

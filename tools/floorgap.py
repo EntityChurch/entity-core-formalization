@@ -15,7 +15,7 @@ never select where to stop."* This tool answers the general form of their questi
 whole document, because it is the same measurement `tools/obligations.py` already makes with
 a different divisor -- there, sections no MODEL cites; here, sections no FLOOR ROW cites.
 
-It is also the reconciliation `AGENTS.md` D15 demands of the pair. Two seats now derive a
+It is also the reconciliation `docs/DISCIPLINE-CHARTER.md` D15 demands of the pair. Two seats now derive a
 normative-surface count from one byte-identical snapshot and get different numbers: **365**
 MUST/MUST NOT by our regex, **98** floor-row ids by their positional allocation. *"When two
 tools derive a number from the same input, make them disagree out loud or make them share the

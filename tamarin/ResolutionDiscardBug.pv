@@ -29,7 +29,7 @@
  * cannot be partially adopted; (b) is a check at N sites and can be adopted at N-1 of them,
  * with no verdict, no error and no conformance vector separating the two. That asymmetry
  * between the two "MUST implement at least one" arms is not stated in the section, and it is
- * what `docs/status/ROUTING-2026-09-16-*` is about. This control is its evidence.
+ * what `docs/outbox/ROUTING-2026-09-16-*` is about. This control is its evidence.
  *)
 
 set traceDisplay = long.

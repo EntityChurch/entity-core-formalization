@@ -23,7 +23,7 @@
 
 # WIDENED 2026-09-16 from two sites to five. The other three were live canonical claims that
 # no gate read -- `docs/PROPERTIES.md`, `docs/FINAL-ASSURANCE-SUMMARY.md` and
-# `docs/status/FINDINGS-INDEX.md`, the last of which is the very table AGENTS.md D15's eleventh
+# `docs/status/FINDINGS-INDEX.md`, the last of which is the very table docs/DISCIPLINE-CHARTER.md D15's eleventh
 # shape names as the place a stale figure survives longest because its own header says not to
 # quote it. All three were found by grepping the NUMBER, which is the half of D14's rule that
 # catches a stale claim rather than a withdrawn one. The two dated 2026-09-14 documents (the
