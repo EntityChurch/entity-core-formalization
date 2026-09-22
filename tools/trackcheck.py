@@ -248,6 +248,17 @@ def main() -> int:
             print(f"  ok          {name:12s} {kind} ({len(t.get('models', []))} files, no §-claim)")
             continue
 
+        # `vendored` is a DIFFERENT fact from `pin_file` and the gate keeps them apart:
+        # a snapshot existing says nothing about whether any model transcribes it. Checked for
+        # every track, both statuses, because a scoped track vendoring a snapshot is the normal
+        # first step and must not be mistaken for pinning one.
+        vend = t.get("vendored", "")
+        if vend and not os.path.isdir(os.path.join(root, "spec-data", vend)):
+            problems.append(
+                f"track {name}: vendored = {vend!r} but spec-data/{vend}/ does not exist"
+            )
+            print(f"  NOSNAPSHOT  {name}: {vend}")
+
         if status == "scoped":
             scoped += 1
             before = len(problems)
@@ -267,7 +278,8 @@ def main() -> int:
                 problems.append(f"track {name}: no primary_spec named")
                 print(f"  NOSPEC      {name}")
             if len(problems) == before:
-                print(f"  ok          {name:12s} scoped   (no models, no pin, spec named)")
+                v = f", vendored {vend}" if vend else ", nothing vendored"
+                print(f"  ok          {name:12s} scoped   (no models, no pin{v})")
         elif status == "modeled":
             modeled += 1
             pin = pin_dir(root, t.get("pin_file", ""))

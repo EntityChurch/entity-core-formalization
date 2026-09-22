@@ -62,7 +62,27 @@ remain valid against this snapshot.
 
 ## Re-vendor discipline
 
-Architecture authors spec-data; the formal team does NOT edit it. When the spec advances:
+> **Superseded 2026-09-07 — do not follow the procedure below.** The current procedure is
+> `tools/vendor-spec.py vendor --track <track> --date YYYY-MM-DD`, documented in
+> `spec-data/v0.8.2/MANIFEST.md` §"Re-vendor discipline" and in each extension snapshot's
+> manifest. Two things in the paragraph below are wrong as written:
+>
+> - *"Architecture authors spec-data; the formal team does NOT edit it."* **This repo vendors
+>   its own snapshots** — the source is public and every step is hash-verifiable, so there is
+>   no external owner to wait on. The sentence named `entity-core-architecture`, which no
+>   longer exists; `AGENTS.md` was corrected and this copy was missed. Vendor each spec from
+>   the repo that **owns** it: the three core specs from `entity-core-protocol`, the 26
+>   extension specs from `entity-system-architecture`.
+> - *"Recompute SHA-256, update the table"* reads as licence to re-hash **this** snapshot.
+>   It is not. A snapshot is written once and frozen; a moved spec gets a **new** directory
+>   beside this one. `make specfreeze` now enforces that, and `vendor` refuses to write into
+>   an existing snapshot.
+>
+> Kept rather than deleted because this file is a point-in-time record of what was done in
+> August 2026, and rewriting it to look current would make it a worse artifact than a
+> corrected one.
+
+*(Historical, superseded — see above.)* Architecture authors spec-data; the formal team does NOT edit it. When the spec advances:
 1. Re-copy the three files byte-for-byte into a new `vX.Y.Z/`.
 2. Recompute SHA-256, update the table + provenance.
 3. Note in a new MANIFEST §"what changed" whether any spiked/modeled section moved (if so, the affected model needs a re-check). Keep prior snapshots in place as point-in-time pins.

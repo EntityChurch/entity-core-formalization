@@ -33,7 +33,7 @@ MAKE ?= make
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
         check-provers crosscheck matrix specdrift specdrift-gate driftclaim leanseam \
         lean lean-image lean-smoke leanproof leanproof-neg \
-        coverage runcount ledgercount trackcheck clean caps
+        coverage runcount ledgercount trackcheck specfreeze clean caps
 
 # Where the live spec lives, for `make specdrift`. Override per-host:
 #   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
@@ -58,6 +58,8 @@ help:
 	@echo "    make leanseam    has the cited Lean TEXT moved? (host python3 only)"
 	@echo "    make leanproof   do the cited PROOFS still hold? (needs entity-lean)"
 	@echo "    make lean-image  build the entity-lean toolchain image (network)"
+	@echo "  make specfreeze are the vendored spec snapshots still byte-identical"
+	@echo "                  to their own MANIFEST digests? (a pin that can move is not a pin)"
 	@echo "  make trackcheck which proof track does each model file belong to?"
 	@echo "                  (core / attestation / quorum / identity -- TRACKS.toml)"
 	@echo "  make coverage   does COVERAGE-MATRIX.md match what the models actually cite?"
@@ -116,7 +118,7 @@ smoke:
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: trackcheck coverage runcount ledgercount check-tla check-spin check-provers
+check: specfreeze trackcheck coverage runcount ledgercount check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -131,7 +133,7 @@ check: trackcheck coverage runcount ledgercount check-tla check-spin check-prove
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix: trackcheck coverage runcount ledgercount
+matrix: specfreeze trackcheck coverage runcount ledgercount
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
@@ -346,6 +348,36 @@ ledgercount:
 # change-triggered gate is sufficient in kind. Host python3 + git only.
 trackcheck:
 	@python3 tools/trackcheck.py
+
+# --- specfreeze: is every vendored snapshot still the bytes it claims to be? -------------
+# `AGENTS.md`: "An existing spec-data/vX/ snapshot is FROZEN ... a pin whose bytes can change
+# is not a pin, and every result here is quoted against one." `v0.8.2/MANIFEST.md` says the
+# same in the same words and offers `Verify: sha256sum spec-data/v0.8.2/*.md` -- an instruction
+# to a human. NOTHING re-hashed a snapshot. The most strongly stated rule in this repo had no
+# enforcement point at all, which by AGENTS-STANDARD's own rule means it did not count.
+#
+# It is not a small hole: every published result is a statement about those bytes, `specdrift`
+# measures FROM them and `coverage` counts its denominator IN them, so a drifted snapshot moves
+# all three at once and reads as a MODEL error rather than a data error. (Checked by hand
+# before the tool existed -- all six matched. The point is that nobody could have known.)
+#
+# D13 -- what does it assert? Per snapshot: every .md that is not MANIFEST/README has a SHA-256
+# row and hashes to it, AND every row has a file. Both directions, because an UNPINNED file in
+# a pinned directory is as broken as one whose bytes moved. What else satisfies it? Not an
+# empty snapshot and not a MANIFEST with no digest rows -- both FAIL rather than passing
+# vacuously. What it does NOT assert: that a snapshot faithfully copies its upstream. That is
+# checked once, at vendor time, against the source blob, and is unknowable afterwards from
+# inside this repo -- because upstream moves and a pin must not.
+#
+# Teeth-tested five ways by breaking it: mutated file, unpinned file added, pinned file
+# removed, manifest byte-count wrong with a right digest, manifest with no rows.
+#
+# In `check` and `matrix`: it reads only this repo. Host python3 only.
+#   Vendor a new snapshot:  tools/vendor-spec.py vendor --track <t> --date YYYY-MM-DD
+#   (refuses to write into an existing snapshot -- that is the freeze, at the only
+#    moment it can be enforced)
+specfreeze:
+	@python3 tools/vendor-spec.py verify
 
 clean:
 	$(MAKE) -C tla     clean
