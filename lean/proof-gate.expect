@@ -1,0 +1,110 @@
+# ============================================================================================
+# DECLARED VERDICTS for the Lean proof gate — `tools/lean-proof.py`, `make leanproof`.
+#
+# One row per `#print axioms` honesty gate in the keystone peer's proof track, stating the
+# axiom set that declaration MUST report. The run must produce EXACTLY this set of rows —
+# no more, no less — which is the same rule the prover tables carry (`PV_EXPECT`,
+# `TM_EXPECT`): an undeclared gate is an ungraded gate, and a declared gate that stops
+# printing is a proof that stopped being checked.
+#
+# WHY A TABLE AND NOT `grep -c sorryAx`. Asked D13's question — what does this assert, and
+# what else satisfies it? — a grep over the build log is satisfied by a build that printed
+# no axiom lines at all, which is exactly what deleting a `#print axioms` line produces.
+# That is negative control `neg-ungate`, and it is why the names are declared here rather
+# than counted from the output.
+#
+# THE TRUSTED SET is Lean's three standard axioms: `propext`, `Classical.choice`,
+# `Quot.sound`. Nothing else may appear in a row — `tools/lean-proof.py` rejects the FILE
+# at parse time if it does. `sorryAx` (an unfinished proof) and any hand-written `axiom`
+# are holes, and a gate you can declare your way out of is not a gate. If a proof genuinely
+# needs a new axiom, that is a change to `docs/LEAN-SEAM.md`'s verdicts first — the row
+# stops being CLOSED — and to this file second.
+#
+# HOW THIS WAS DERIVED (D15 — a derived number is a claim). The rows below are the output
+# of one clean `lake build EntityCoreProofs` against keystone's Lean tree at the revision
+# `docs/LEAN-SEAM.md` pins by digest, transcribed unedited. That is a starting point, not a
+# justification: the gate's content is that the numbers CANNOT MOVE WITHOUT A DIFF HERE.
+# Re-deriving this file to make a red run go green defeats it entirely — the failing run is
+# telling you a proof changed, and the ledger rows that cite it need re-reading first.
+#
+# 37 gates. 22 of them are cited by `docs/LEAN-SEAM.md` (21 discharging + 1 pinned as a
+# rejected correspondence); `tools/lean-proof.py` checks that tie separately and reports
+# LEDGER_UNCOVERED if a pinned theorem is not among the gates that reported. The other 15
+# are the proof track's own — the CBOR float-encoding and canonical-sort proofs, and five
+# CapabilityProofs helper lemmas — graded here because the peer gates them, not because
+# this repo's models rely on them.
+#
+# Format:
+#   gate|<file, relative to protocol-generator/lean>|<full Lean name>|<axioms, or `-`>
+#   warn|<substring a warning line must contain>|<why it is tolerated, and who owns it>
+# ============================================================================================
+
+# ── proofs/EntityCoreProofs/FloatProofs.lean — §3.2 CBOR float shortest-form encoding ──────
+# Not cited by the seam ledger; no model in this repo abstracts float encoding (ledger row
+# O2 declares content encoding BY-DESIGN unowned here). Graded because the peer gates it.
+gate|proofs/EntityCoreProofs/FloatProofs.lean|EntityCore.Codec.Float.Proofs.tryHalf_widens|propext,Quot.sound
+gate|proofs/EntityCoreProofs/FloatProofs.lean|EntityCore.Codec.Float.Proofs.trySingle_widens|propext,Quot.sound
+gate|proofs/EntityCoreProofs/FloatProofs.lean|EntityCore.Codec.Float.Proofs.encode_uses_half|propext,Quot.sound
+gate|proofs/EntityCoreProofs/FloatProofs.lean|EntityCore.Codec.Float.Proofs.encode_uses_single|propext,Quot.sound
+gate|proofs/EntityCoreProofs/FloatProofs.lean|EntityCore.Codec.Float.Proofs.encode_uses_double|propext,Quot.sound
+gate|proofs/EntityCoreProofs/FloatProofs.lean|EntityCore.Codec.Float.Proofs.encode_nan|propext,Quot.sound
+gate|proofs/EntityCoreProofs/FloatProofs.lean|EntityCore.Codec.Float.Proofs.encode_inf|propext,Quot.sound
+
+# ── proofs/EntityCoreProofs/SortProofs.lean — canonical map-key ordering ────────────────────
+gate|proofs/EntityCoreProofs/SortProofs.lean|EntityCore.Codec.Proofs.lexCmp_self|propext,Quot.sound
+gate|proofs/EntityCoreProofs/SortProofs.lean|EntityCore.Codec.Proofs.keyCmp_self|propext,Quot.sound
+gate|proofs/EntityCoreProofs/SortProofs.lean|EntityCore.Codec.Proofs.keyLe_refl|propext,Quot.sound
+
+# ── proofs/EntityCoreProofs/CapabilityProofs.lean — the authority interior ─────────────────
+# This is the file the seam ledger lives on. Ledger rows in brackets below; a name with no
+# bracket is a helper the peer gates and no model here cites.
+#
+# [L5,L6] attenuation composes along a chain — the row that makes Tamarin's `no_escalation`
+# a statement about the protocol rather than about a free unary function symbol.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesSeg_trans|propext
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.scopeSubset_trans|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.grantSubset_trans|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.isAttenuated_trans|propext,Classical.choice,Quot.sound
+# [L1] the chain verdict is a function of the chain, not of the evaluation time.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.walk_time_stable|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.verifyChain_time_stable|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.verifyChain_time_independent|propext,Classical.choice,Quot.sound
+# [L1,L9] a foreign-rooted single-sig chain is denied outright.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.verifyChain_foreign_root|propext,Classical.choice,Quot.sound
+# [L4] the §4.10(b) depth brake is pure structure.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.chainExceedsDepth_iff|propext
+# [L8] a satisfied multi-sig root means a real quorum, including this peer.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.multiSigRootOk_quorum|propext
+# [L11] the walk actually applies the per-edge check — L5 composes the step, L11 takes it.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.walk_allow_cons|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.walk_allow_leaf_attenuated|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.walk_allow_head|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.walk_allow_link_facts|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.edgeOk_atten|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.edgeOk_caveats|propext,Classical.choice,Quot.sound
+# [L6] the §5.4 matcher: reflexive, transitive, deny-override, and the 0.8.1 F40 split.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesSeg_refl|propext
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesScope_excl_override|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesScope_id_excl_override|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesIdPattern_literal|propext,Classical.choice,Quot.sound
+# [L3] an authority holding no grants covers nothing — deny-by-default at the §5.2 gate.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.checkPermission_no_grants_deny|propext,Classical.choice,Quot.sound
+# [L7] §5.5a namespace isolation — CLOSED-MODULO-H, and H (`hframed`) scopes it to the
+# peer-relative pattern fragment. The gate proves the theorem holds; it says nothing about
+# the absolute form having no theorem at all. That is the ledger's job and it says so.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.grantPattern_namespace_isolation|propext,Classical.choice,Quot.sound
+# [L3, pinned REJECTED] considered and discharges nothing here — see LEAN-SEAM.md §4.2.
+# Still required to be proved: a stale rejection misleads exactly as a stale citation does.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.checkResourceScope_no_targets_deny|propext,Classical.choice,Quot.sound
+# Helpers the peer gates; no ledger row cites them.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.isAttenuated_refl|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.allowed_chain_leaf_atten_root|propext,Classical.choice,Quot.sound
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesSeg_head_lit|propext
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.head?_some_cons|propext
+
+# ── DECLARED WARNINGS ──────────────────────────────────────────────────────────────────────
+# D13: a tool warning is a build failure. Lean reports `sorry` AS a warning, so this gate
+# cannot be indifferent to them — but it also cannot go red on day one for a warning that
+# belongs to another repo. So: every warning is a failure UNLESS declared here, by exact
+# substring, with an owner. One is declared, and it is routed rather than tolerated.
+warn|`String.dropRight` has been deprecated|keystone's SHIPPING peer, src/EntityCore/Capability.lean — a deprecated stdlib call in the pinned text the seam ledger cites, whose replacement returns a different type (String.Slice). Not ours to fix: routed to entity-core-keystone. Delete this row when they land it, and the gate goes clean.

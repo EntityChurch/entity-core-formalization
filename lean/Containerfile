@@ -1,0 +1,78 @@
+# ============================================================================
+# entity-lean — the Lean 4 toolchain image for the SEAM PROOF GATE.
+#
+# WHAT THIS IS FOR, AND WHAT IT IS NOT.
+# This repo does not own any Lean source. `docs/LEAN-SEAM.md` is an assumption
+# ledger: per abstraction in our TLA+/Spin/Tamarin models, the proposition the
+# model relies on and the Lean theorem (in the sibling `entity-core-keystone`
+# peer) that discharges it. `make leanseam` checks that the cited TEXT has not
+# moved. It does not check that the cited PROOFS still hold — and until this
+# image existed, nothing anywhere did: `lake build EntityCoreProofs` is described
+# as "the proof check" in the keystone lakefile and three of its status docs and
+# is invoked by no Makefile, script or workflow in that tree (searched
+# 2026-08-30). So this image builds the sibling's proofs, from a read-only copy,
+# and grades the result. See lean/README.md.
+#
+# WE DO NOT VENDOR THE LEAN SOURCE. A fork would make our ledger a claim about
+# our copy rather than about the peer that ships; the seam's whole value is that
+# the theorems are about the same executable code the conformance suite runs.
+# The source is mounted read-only from the sibling checkout at run time and
+# copied into a scratch tree, so a gate run can never write into keystone.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# PIN PROVENANCE. The elan release + sha256, the Lean version and the fedora
+# base digest below are taken deliberately from
+# `entity-core-keystone/containers/lean-toolchain/Containerfile` (build-verified
+# there 2026-06-14, base digest resolved 2026-08-27). This is not laziness: the
+# gate is only meaningful if it type-checks the proofs with the SAME compiler the
+# peer's own toolchain names. `make -C lean green` asserts that agreement at run
+# time — it reads keystone's `lean-toolchain` file and fails if the version this
+# image resolves is not the one the peer pins. A copied pin that silently drifts
+# would verify a different Lean than the one that ships.
+#
+#   elan v4.2.3   the Lean toolchain manager. Pinned by exact GitHub release
+#                 asset + sha256, fail-closed. Fedora ships no Lean rpm.
+#   Lean 4.29.1   fetched by elan per the pin; must equal keystone's
+#                 protocol-generator/lean/lean-toolchain.
+#
+# NETWORK: build time only (elan tarball + toolchain download). Every gate run
+# is `--network=none`; a proof check that needs the network is not reproducible.
+# The proofs are core-Lean — Init/Std only, no mathlib, no Lake git deps — so
+# there is nothing to resolve at run time. Verified: a full clean
+# `lake build EntityCoreProofs` completes offline in ~6s under the 2 GB cap.
+#
+# Build:  make -C lean image     (or: podman build -t entity-lean -f Containerfile .)
+# ============================================================================
+FROM registry.fedoraproject.org/fedora@sha256:6e1245e9a4a72ec879b9d681ebb464a6e9fd93eea36b4506d438aceb95a7da0b
+
+# gcc/binutils: leanc drives the C compiler/linker (the proofs target needs no
+# native link, but Lake's package setup expects the toolchain to be complete).
+# gmp: Lean's arbitrary-precision Nat/Int. libuv: Lean's IO/task runtime.
+# curl/ca-certificates/tar/gzip: fetch + unpack the pinned elan release.
+RUN dnf install -y \
+        curl ca-certificates tar gzip \
+        git findutils which \
+        gcc binutils \
+        gmp gmp-devel \
+        libuv libuv-devel \
+    && dnf clean all
+
+ARG ELAN_VERSION=v4.2.3
+ARG ELAN_SHA256=df0b2b3a439961ffcbb3985214365ffe40f49bc871df04dff268c7d8e21ca8b2
+ARG LEAN_VERSION=4.29.1
+ENV ELAN_HOME=/opt/elan
+ENV PATH=/opt/elan/bin:$PATH
+
+RUN set -eux; \
+    url="https://github.com/leanprover/elan/releases/download/${ELAN_VERSION}/elan-x86_64-unknown-linux-gnu.tar.gz"; \
+    curl -sSL "$url" -o /tmp/elan.tgz; \
+    echo "${ELAN_SHA256}  /tmp/elan.tgz" | sha256sum -c -; \
+    tar xzf /tmp/elan.tgz -C /tmp; \
+    /tmp/elan-init -y --no-modify-path --default-toolchain "${LEAN_VERSION}"; \
+    rm -f /tmp/elan.tgz /tmp/elan-init; \
+    lean --version; \
+    lake --version
+
+WORKDIR /work
+
+CMD ["bash"]

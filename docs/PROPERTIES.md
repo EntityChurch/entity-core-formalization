@@ -154,7 +154,7 @@ Tamarin proves 14). Unbounded in sessions/attacker behaviour; crypto is ideal.
 > `no_replay` was a green lemma the reports quote with **no control running anywhere in the
 > matrix**. The control was fine when run (wellformedness clean; `binding` still verified, so
 > the defect is replay-specific; `no_replay` falsified; reachability intact). It is now in
-> `TM_NEG`, which took the matrix to **204 runs** at the time (238 now — see the inventory
+> `TM_NEG`, which took the matrix to **204 runs** at the time (258 now — see the inventory
 > below and `docs/STATUS.md`).
 
 | Lemma | Property | V8 basis |
@@ -287,24 +287,47 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Ten targets decide the 238 runs:
+     the finding is what made that discipline necessary). Eleven targets decide the 258 runs.
+     **The counts below are re-derived from the gate tables in `tla/`, `spin/` and
+     `tamarin/Makefile`, not carried forward:** this table read "Ten targets decide the 238
+     runs" until 2026-08-30, two matrix growths after the fact, which is item 9 of
+     `docs/STATUS.md` §Next demonstrating itself.
 
      | Target | Runs | Grades on |
      |---|---|---|
-     | `tlc-green` | 12 | TLC exit status — fail-safe: a tool error also fails the build |
-     | `tlc-neg` | 36 | declared verdict line per row |
-     | `tlc-witness` | 11 | declared violation line per row |
-     | `apalache-green` | 46 | Apalache exit status — fail-safe, same reason |
-     | `apalache-neg` | 21 | `EXITCODE: ERROR (12)`, not merely non-zero |
-     | `spin green` | 18 | explicit `errors: 0` |
-     | `spin neg` | 35 | **now** the declared pan failure signature, matched against the `pan:N:` error line — a positive `errors: N` alone cannot tell a caught assertion from a deadlock |
+     | `tlc-green` | 14 | TLC's **completion line** *and* a cfg that declares at least one `INVARIANT`/`PROPERTY` — exit status alone is satisfied by a cfg that checks nothing, which TLC reports with the same success text |
+     | `tlc-neg` | 39 | declared verdict line per row |
+     | `tlc-witness` | 13 | declared violation line per row |
+     | `apalache-green` | 50 | Apalache exit status (25 rows × base + inductive step) — fail-safe: a green slice wants success, so a tool error correctly fails the build |
+     | `apalache-neg` | 23 | `EXITCODE: ERROR (12)`, not merely non-zero |
+     | `spin green` | 22 | explicit `errors: 0` |
+     | `spin neg` | 38 | the declared pan failure signature, matched against the `pan:N:` error line — a positive `errors: N` alone cannot tell a caught assertion from a deadlock |
      | `proverif-green` | 15 | `PV_EXPECT`, per query |
      | `proverif-neg` | 15 | `PV_NEG_EXPECT`, per query |
      | `tamarin-green` / `-neg` | 14 / 15 | `TM_EXPECT` / `TM_NEG_EXPECT`, per lemma, + wellformedness |
 
-     An eleventh target now grades a **number** rather than a run: `make coverage` checks the
-     coverage claim in `COVERAGE-MATRIX.md` against the models' own `§`-citations (AGENTS.md
-     D15). It is not counted in the 238 because it verifies no model.
+     Three targets grade a **number or a claim** rather than a run, and are not counted in the
+     258 because they verify no model: `make coverage` checks the coverage claim in
+     `COVERAGE-MATRIX.md` against the models' own `§`-citations (AGENTS.md D15); **`make
+     runcount`** derives this table's own totals from the gate tables and fails if any
+     declared prose site disagrees — the number you are reading is now checked rather than
+     transcribed; and `make leanseam` checks that the Lean text `LEAN-SEAM.md` cites has not
+     moved.
+
+     *A twelfth and thirteenth target, in a tier of their own* — `make lean`, **6 runs**,
+     excluded from the 258 because they need an `entity-core-keystone` checkout that a bare
+     clone does not have (`docs/LEAN-SEAM.md` §7):
+
+     | Target | Runs | Grades on |
+     |---|---|---|
+     | `leanproof` | 1 | the **axiom set** of all 37 `#print axioms` gates against `lean/proof-gate.expect`, in both directions, + every ledger-pinned theorem present + no undeclared warning + the image's Lean == keystone's `lean-toolchain` pin |
+     | `leanproof-neg` | 5 | the declared reason codes per control **and the declarations each names** — `SORRY_AX`, `UNTRUSTED_AXIOM`, `MISSING_GATE` (declaration-level and file-level), `BUILD_ERROR` pinned to its error kind. Graded on counts alone in its first draft; that is below the standard `TM_NEG_EXPECT` set, and the session audit corrected it |
+
+     Why not `lake build`'s exit status, which is what keystone's own documentation calls the
+     proof check: **it exits 0 with a `sorry` in the proof** (a `sorry` is a warning in Lean,
+     and lake still prints `Build completed successfully`), and exits 0 with a hand-written
+     `axiom` substituted for a proof, with no warning at all. Only a proof that fails to
+     type-check exits non-zero. All three were built and observed.
 
      The two "fail-safe" rows are the ones where grading on exit status is *sound*: a green
      slice wants the run to succeed, so any failure — verification or tool — correctly fails
@@ -411,7 +434,8 @@ Per repo discipline any defect is a proposal/review-note in the sibling protocol
    appears nowhere in the spec). Nothing caught it because `validate-peer` has **no probe
    that sends `authenticate` before `hello`**, and cites §4.7 nowhere in `connectivity`:
    §4.7 declares ten MUST-emit rows and roughly one is gated. Full census, per-peer
-   attribution and the routing packet: `docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`.
+   attribution and the hand-off checklist are carried in an internal routing packet; the
+   finding, the evidence and the suggested resolution are stated in full here.
 
    Two conformant readings, so the models check **both** rather than picking one: the row
    assignment for a pre-hello `authenticate` is a constant (`PreHelloAuthRow` /

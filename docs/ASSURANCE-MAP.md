@@ -48,16 +48,30 @@ validate the protocol design itself.
   > moves. Writing it produced two results a spot-check could not: `verifyChain` takes
   > `localPeer` as an argument, so the structural verdict is **not** peer-independent and
   > `Revoke.tla`'s cross-peer abstraction is closed only modulo a frame assumption it does
-  > not state (L1); and §5.5a namespace isolation is "covered" by ProVerif/Tamarin *and*
-  > Lean while **both** rest on the same unproved canonicalization-framing proposition —
-  > Lean as the hypothesis `hframed`, ProVerif as the rewrite `canon(star, fr) = awild(fr)`
-  > (L7, §4.1). Two engines, one shared assumption: redundancy counted by engine cannot see
-  > that, which is the argument for counting by assumption instead.
+  > not state (L1); and §5.5a namespace isolation is "covered" by ProVerif/Tamarin *and* by
+  > Lean while the two **cover different parts of it** — §5.5a admits three pattern forms,
+  > our symbolic models carry all three as three `canon` equations, and Lean's isolation
+  > theorem holds only for the peer-relative one, scoped there by its hypothesis `hframed`.
+  > The **absolute named form** — the one §5.5a *requires* for cross-peer authority — has no
+  > Lean theorem (L7, §4.1). Coverage counted by engine cannot see that, which is the
+  > argument for counting by assumption instead.
+  >
+  > *(This paragraph said until 2026-08-30 that the two engines rest on the **same** unproved
+  > proposition, ProVerif asserting `hframed` as a rewrite rule. Both halves were wrong —
+  > there are three `canon` equations and the second is `hframed`'s negation — and the error
+  > is recorded rather than quietly deleted in `LEAN-SEAM.md` §4.1. Nothing is wrong on the
+  > ProVerif/Tamarin side and there is no ask there.)*
   >
   > **The ledger does not machine-check any correspondence** — every verdict in it is a
   > human reading of two texts, and `make leanseam` only detects that one of the texts
-  > changed. Differential trace checking (replaying Apalache `.itf.json` counterexamples
-  > through the Lean executable model) is what would put a machine on this half of the wall;
+  > changed. What `make leanproof` adds (2026-08-30) is the other half of the Lean side: the
+  > cited theorems are actually **proved**, from Lean's three standard axioms and nothing
+  > else, by the compiler the peer pins. That check did not exist anywhere — the keystone
+  > peer documents `lake build EntityCoreProofs` as its proof gate and invokes it from
+  > nothing, and a `sorry` would not have failed it anyway (Lean reports one as a *warning*;
+  > lake exits 0). Still unchecked by any machine: whether the theorem proved is the
+  > proposition the model assumes. Differential trace checking (replaying Apalache
+  > `.itf.json` counterexamples through the Lean executable model) is what would reach that;
   > it is on the work-list, not done.
 - **validate-peer** owns "implementations match the spec" (row 2).
 - **Fuzzing + adversarial-authz** own hostile-input rejection in the real code (row

@@ -224,8 +224,8 @@ hypothetical:** a source read of the 46-peer keystone cohort plus the three grou
 implementations finds four distinct wire behaviours for that one frame, two of them outside
 the spec's own answer set, none of them caught — the conformance oracle has no probe that
 sends `authenticate` before `hello`. Full statement and suggested resolution:
-`docs/PROPERTIES.md` §D.1; census and hand-off:
-`docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`. Per repo discipline it is a
+`docs/PROPERTIES.md` §D.1. The per-peer census and hand-off checklist are an internal
+working document, not part of this publication. Per repo discipline it is a
 proposal in the sibling protocol repo, never a spec edit here.
 
 **Otherwise none new.** The models *re-derived* the known Class-G reentry deadlock (already
@@ -274,7 +274,8 @@ bound.
    decidable EPR fragment, `mypyvy`, or TLAPS), which proves an inductive invariant for all
    N. Revocation propagation (§5.10) and cross-peer chain topology (§5.8) are where N > 2
    is most plausible. `docs/STATUS.md` §Next item 5.
-7. **The Lean↔model seam is written down but not machine-checked.**
+7. **The Lean↔model seam is written down, the Lean side is now gated, and the
+   correspondence itself is still a human reading.**
    `docs/ASSURANCE-MAP.md` divides labour: Lean owns the authority-logic interior, TLA+ and
    Tamarin abstract it to a predicate / function symbol. That division is sound only if the
    property each model **assumes** of the abstraction is the property Lean **proves**, and
@@ -287,15 +288,25 @@ bound.
    the walk, so the structural verdict is not peer-independent and `Revoke.tla`'s cross-peer
    abstraction holds only where the two peers' frames agree — a restriction the model does not
    state. **L7:** §5.5a namespace isolation is covered by ProVerif/Tamarin *and* by Lean, and
-   **both rest on the same unproved proposition** — that canonicalization roots a relative
-   pattern at the granter's namespace. Lean takes it as the hypothesis `hframed` and declines
-   to prove it; ProVerif asserts it as a rewrite rule. Redundancy counted by *engine* cannot
-   see that.
+   the two cover **different parts** of it. §5.5a admits three pattern forms; our symbolic
+   models carry all three, and Lean's isolation theorem is scoped by its hypothesis `hframed`
+   to the *peer-relative* one. The **absolute named form**, which §5.5a makes the required way
+   to express cross-peer authority, has no Lean theorem at all. Coverage counted by *engine*
+   cannot see that. *(Until 2026-08-30 this item read "both rest on the same unproved
+   proposition… ProVerif asserts it as a rewrite rule". Both halves were wrong; the error and
+   its shape are kept on the record in `docs/LEAN-SEAM.md` §4.1 rather than deleted.)*
 
-   **The residual risk is that the ledger is a human reading of two texts.** The gate detects
-   that one of them changed; it cannot tell you the reading was right. Replaying Apalache
-   `.itf.json` counterexamples through the Lean executable model is the only proposed closure
-   that puts a machine on this half of the wall. `docs/STATUS.md` §Next item 4.
+   **The Lean side is now gated; the correspondence is not.** `make leanproof` (2026-08-30)
+   builds the peer's proof track and asserts the axiom set of all 37 `#print axioms` gates,
+   so a cited theorem cannot quietly acquire a `sorry` or an extra axiom. It had to be built
+   here because nothing ran the proofs anywhere: the keystone peer documents
+   `lake build EntityCoreProofs` as its proof check in four places and invokes it from none —
+   and a `sorry` would not have failed it in any case, since Lean reports one as a *warning*
+   and lake exits 0. **What remains a human reading is whether the theorem proved is the
+   proposition the model assumes** — the gate detects that a text moved, not that a reading
+   was right, and §4.1 is the record of one that was not. Replaying Apalache `.itf.json`
+   counterexamples through the Lean executable model is the only proposed closure that puts a
+   machine on that half of the wall. `docs/STATUS.md` §Next item 4.
 8. **~~Two weak controls and two single-engine section rows.~~ Both closed, and neither was
    what it looked like.** All *three* controls that falsified their own reachability lemma —
    `ChainTopologyBug` as well as `DeepChainBug`/`DeepChainNBug` — now carry a §5.5a

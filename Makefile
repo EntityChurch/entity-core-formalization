@@ -32,7 +32,8 @@ MAKE ?= make
 
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
         check-provers crosscheck matrix specdrift specdrift-gate leanseam \
-        coverage clean caps
+        lean lean-image lean-smoke leanproof leanproof-neg \
+        coverage runcount clean caps
 
 # Where the live spec lives, for `make specdrift`. Override per-host:
 #   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
@@ -47,9 +48,14 @@ help:
 	@echo "  make matrix   green + negative controls + non-vacuity witnesses (full gate)"
 	@echo "  make test     alias of check — the proof matrix IS this repo's suite"
 	@echo "  make specdrift  has the spec moved under the pin? (host python3 only)"
-	@echo "  make leanseam   has Lean moved under the assumption ledger? (needs the"
-	@echo "                  keystone sibling; NOT in matrix — see docs/LEAN-SEAM.md §5)"
+	@echo "  make lean       the LEAN SEAM TIER: leanseam + leanproof + controls."
+	@echo "                  Needs the keystone sibling, so it is NOT in matrix —"
+	@echo "                  see docs/LEAN-SEAM.md §5/§7 for why a skip would be worse."
+	@echo "    make leanseam    has the cited Lean TEXT moved? (host python3 only)"
+	@echo "    make leanproof   do the cited PROOFS still hold? (needs entity-lean)"
+	@echo "    make lean-image  build the entity-lean toolchain image (network)"
 	@echo "  make coverage   does COVERAGE-MATRIX.md match what the models actually cite?"
+	@echo "  make runcount   is the published run total still what the gate tables produce?"
 	@echo "  make clean    remove generated model-checker artifacts"
 	@echo "  make caps     print the active resource caps"
 	@echo
@@ -69,6 +75,10 @@ build:
 	$(MAKE) -C tamarin image          # builds BOTH ProVerif + Tamarin
 
 images: build
+
+# The 6th image, `entity-lean`, is deliberately NOT built here. `build` provisions exactly
+# what `make matrix` needs on a bare clone; entity-lean serves only `make lean`, which needs
+# a keystone sibling a bare clone does not have. Build it with `make lean-image`.
 
 # --- ADR-0019 Tier-1 verbs (class-4 formal-verification repo) ----------------
 # test = the GREEN proof matrix (alias of check): for a verification repo the
@@ -100,7 +110,7 @@ smoke:
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: coverage check-tla check-spin check-provers
+check: coverage runcount check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -115,13 +125,15 @@ check: coverage check-tla check-spin check-provers
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix: coverage
+matrix: coverage runcount
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
 	$(MAKE) -C tamarin matrix
 	@echo
 	@echo "FULL matrix complete — properties held, controls caught, witnesses fired."
+	@echo "NOT covered by this target: the Lean seam tier ('make lean'), which needs a"
+	@echo "keystone sibling checkout. It is excluded rather than skipped — see the target."
 
 check-tla:
 	$(MAKE) -C tla green
@@ -171,6 +183,43 @@ KEYSTONE ?= ../entity-core-keystone
 leanseam:
 	@python3 tools/lean-seam.py --keystone "$(KEYSTONE)"
 
+# --- lean: the SEAM TIER — the text has not moved AND the proofs still hold --------------
+# `leanseam` answers "is the ledger still about the current Lean text?". It cannot answer
+# "does that text still prove what the ledger says it proves", and until this tier existed
+# nothing did: `lake build EntityCoreProofs` is called "the proof check" in the keystone
+# lakefile and three of its status docs, and is invoked by no Makefile, script or workflow
+# in that tree. Ten rows of our ledger cite a Lean theorem by name and rested on a build
+# nobody ran (Class L is eleven rows — nine CLOSED, two CLOSED-MODULO-H, and L2 closed by
+# construction with no theorem to run; "eleven CLOSED" was a recalled figure, see D15).
+#
+# D13 — what does `leanproof` assert, and what else satisfies it? NOT lake's exit status,
+# which is satisfied by a proof containing `sorry` (a WARNING in Lean; lake prints "Build
+# completed successfully" and exits 0) and by a hand-written `axiom` standing in for a proof
+# (no warning at all). Both were built and observed, not reasoned about — docs/LEAN-SEAM.md
+# §7. It asserts the DECLARED AXIOM SET of every `#print axioms` gate, in both directions,
+# plus the tie to the ledger's own pin block. `leanproof-neg` is those two cases plus a
+# deleted gate line and a broken proof, each required to fail for its own stated reason.
+#
+# Why not in `matrix`: the root matrix must run on a bare clone with make + podman alone,
+# and this needs the keystone sibling. A gate that silently skips its input asserts nothing.
+lean: leanseam leanproof leanproof-neg
+	@echo
+	@echo "LEAN SEAM TIER complete — cited text unmoved, cited proofs hold, controls caught."
+	@echo "NOTE: this asserts the Lean side is SOUND, never that the correspondences in"
+	@echo "docs/LEAN-SEAM.md §1 are the RIGHT ones. That reading is still a human's."
+
+lean-image:
+	$(MAKE) -C lean image
+
+lean-smoke:
+	$(MAKE) -C lean smoke KEYSTONE=$(KEYSTONE)
+
+leanproof:
+	$(MAKE) -C lean green KEYSTONE=$(KEYSTONE)
+
+leanproof-neg:
+	$(MAKE) -C lean neg KEYSTONE=$(KEYSTONE)
+
 # --- coverage: does the coverage CLAIM match what the models actually cite? ---
 # Matrix A in docs/COVERAGE-MATRIX.md is DERIVED from the models' own §-citations so the
 # number cannot be one someone chose. Deriving is not checking: the derivation was done by
@@ -187,10 +236,30 @@ leanseam:
 coverage:
 	@python3 tools/coverage-check.py
 
+# --- runcount: is the published run TOTAL still what the gate tables produce? ------------
+# The companion to `coverage`, and the other half of STATUS §Next item 9. The matrix run
+# total was hand-derived and hand-copied into six places; it moved 238 -> 242 -> 258 in one
+# week and two sites were missed, one of them the blurb that decides what a public reader
+# sees (it sat at 203). D15: a derived number is a claim, and a claim needs a gate.
+#
+# Asserts: the per-target counts derived from TLC_*/APALACHE_*/SPIN_*/PV_*/TM_* in the three
+# engine Makefiles, their total, that each declared prose site states that total, and that
+# docs/STATUS.md's per-slice table agrees row by row. Does NOT assert the runs pass (that is
+# `matrix`), nor that every run is in a table — a run in no gate table is invisible to this
+# and to the matrix alike, which is exactly how `BindingReplayBug` went unrun for a release.
+#
+# It grades ANCHORED sites, not "any number near the word runs": the first draft did the
+# latter and falsely flagged three files whose 203/204/238 are true statements about the
+# past. A gate that cannot tell a live claim from a historical one would have had us delete
+# accurate history to go green. Host python3 only, so it is safe in `check`.
+runcount:
+	@python3 tools/runcount.py
+
 clean:
 	$(MAKE) -C tla     clean
 	$(MAKE) -C spin    clean
 	$(MAKE) -C tamarin clean
+	$(MAKE) -C lean    clean
 
 # Print the resolved caps so a downloader can see what ceiling is in force.
 caps:

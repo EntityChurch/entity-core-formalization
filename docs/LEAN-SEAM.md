@@ -63,6 +63,12 @@ Both are core-Lean (no mathlib), toolchain `leanprover/lean4:v4.29.1`, and every
 cited below sits under a `#print axioms` honesty gate in its own file — so a `sorry` would
 be visible rather than silent. `make leanseam` re-checks that gate per cited name.
 
+**Visible to whom, though.** Until 2026-08-30 that sentence was doing more work than it had
+earned: the gate makes a hole visible *in the output of a build*, and nothing in either repo
+ran that build. `make leanproof` now does, and asserts the axiom set each gate reports —
+§7. Read the two together: `leanseam` says the cited text has not moved, `leanproof` says
+what it says is proved without a hole. Neither says the correspondence is the right one.
+
 ---
 
 ## 1. Class L — the Lean-facing seam
@@ -200,8 +206,9 @@ be visible rather than silent. `make leanseam` re-checks that gate per cited nam
 - **Verdict: CLOSED-MODULO-H, where H is now named precisely** — H is "every pattern in
   `pats` is peer-relative," not "canonicalization frames patterns." The residual is
   §5.5a's **absolute named form** (`/{q}/…` reaches exactly `q`), which our symbolic models
-  represent and no Lean theorem covers. Routed:
-  `docs/status/PROPOSAL-DRAFT-2026-08-30-KEYSTONE-HFRAMED.md`.
+  represent and no Lean theorem covers. **Routed to `entity-core-keystone`** as a proposal:
+  prove the relative half from a syntactic side-condition, and add the companion theorem for
+  the absolute form.
 - **Superseded claim, kept visible rather than deleted.** This row previously read: *"the
   ProVerif/Tamarin side does not independently establish `hframed` either. It assumes the
   same thing by equation — `canon(star, fr) = awild(fr)` is `hframed`, written as a rewrite
@@ -351,8 +358,8 @@ theorem coverage on one of them.
 **Disposition:** route to `entity-core-keystone` — but the ask is now (a) discharge the
 relative half from a syntactic side-condition, (b) add the companion theorem for the absolute
 form, and (c) correct the source comment that calls `hframed` "mechanical stdlib plumbing,"
-which is true of the relative branch and cannot be true of the absolute one. Packet:
-`docs/status/PROPOSAL-DRAFT-2026-08-30-KEYSTONE-HFRAMED.md`. **No ask on the ProVerif/Tamarin
+which is true of the relative branch and cannot be true of the absolute one. Routed to
+`entity-core-keystone` as a proposal. **No ask on the ProVerif/Tamarin
 side; there was never anything wrong with it.**
 
 ### 4.2 A correspondence that does not exist
@@ -415,7 +422,7 @@ counts as a failure here. So it is a separate top-level target that **fails loud
 the sibling is missing, rather than a conditional one that passes quietly.
 
 ```
-make leanseam                      # sibling at ../../entity-core-keystone
+make leanseam                      # sibling at ../entity-core-keystone
 make leanseam KEYSTONE=/path/to/entity-core-keystone
 ```
 
@@ -478,5 +485,135 @@ rejected checkResourceScope_no_targets_deny proofs/EntityCoreProofs/CapabilityPr
   in `docs/COVERAGE-MATRIX.md` and `docs/PROPERTIES.md`.
 - **It is not a claim that the Lean proof is correct.** It is a claim about which Lean
   theorem *would* discharge each assumption. Lean's own honesty gates (`#print axioms`, no
-  `sorry`) are that proof's business, and the keystone peer's report is where they are
-  stated.
+  `sorry`) are that proof's business — but **whether anyone runs them is now ours**, and
+  since 2026-08-30 `make leanproof` does: §7. What that adds is narrow and worth stating
+  precisely. It establishes that each cited theorem is proved from Lean's three standard
+  axioms and nothing else. It does not establish that the theorem *says* what the row above
+  claims it says, and no gate in either repo does.
+
+---
+
+## 7. The second gate — `make leanproof`, and the build nobody ran
+
+§5's gate detects that the cited Lean **text** moved. This one checks that the text still
+**proves what it claims**. It was added on 2026-08-30, after the obvious question — *who
+runs the proofs?* — turned out to have the answer *nobody*.
+
+### 7.1 What the search found
+
+`lake build EntityCoreProofs` is described as the proof check in **five** places in the
+keystone peer:
+
+- `protocol-generator/lean/lakefile.lean`, on the `EntityCoreProofs` target: *"the build IS
+  the proof check (a `sorry` or failed proof fails the build)"*;
+- `proofs/EntityCoreProofs.lean`, the library root, in the same words;
+- `protocol-generator/lean/profile.toml`, in the peer's `[testing]` contract: *"Track B
+  proofs are their own gate … `#print axioms` guards against accidental sorry"* — which names
+  exactly the right mechanism, and is the site worth reading twice: the gate it points at is
+  real and nothing reads its output;
+- `status/PHASE-S2.md` and `status/PHASE-S3.md`, which report the track as green on it.
+
+It is invoked by **no Makefile, script, or CI workflow in that repository** — searched
+exhaustively over the tree on 2026-08-30 (`EntityCoreProofs`, `lake build`, `lake env`,
+`elan` across every Makefile, `*.mk`, `*.sh`, `*.yml`, `*.py` and Containerfile; the only
+`lake build` invocation anywhere is `run-s4.sh`'s `lake build host`, the peer binary).
+Keystone's Lean container image exists and is pinned; nothing points it at the proofs.
+
+**Ten rows of §1 cite a Lean theorem by name** and rest on those proofs — Class L is eleven
+rows, nine CLOSED and two CLOSED-MODULO-H, with L2 closed by construction (Lean's
+termination checker) and therefore the one row with no theorem to run. *(An earlier draft of
+this section, and of four other files, said "eleven CLOSED rows". Nine are CLOSED; the count
+that matters for this gate is the ten that name a theorem. Corrected in the session audit —
+a gate justified by a miscounted number is the shape D15 exists for, even when the
+conclusion survives.)* They were checked when they were written
+and by nothing since — including through the `hframed` re-reading in §4.1, which changed
+what this ledger claims about them.
+
+### 7.2 The claim in the lakefile is false, and that is the interesting part
+
+*"A `sorry` or failed proof fails the build."* Half of that is true. Each case was **built**
+rather than reasoned about (the D15 corollary — teeth-test a gate, do not argue about it):
+
+| injected into a cited theorem | `lake build EntityCoreProofs` |
+|---|---|
+| a `sorry` | **exit 0**, prints `Build completed successfully`; one `warning: declaration uses 'sorry'` |
+| an `axiom` standing in for the proof | **exit 0**, `Build completed successfully`, **no warning at all** |
+| a proof that does not type-check | exit 1, `error: build failed` |
+
+**A `sorry` is a warning in Lean, not an error.** So a gate on `lake build`'s exit status —
+had one existed — would have caught one failure mode in three, and missed precisely the two
+a proof check exists to catch. This is D13 in a new medium: not a grader in this repo, but
+*a grader claimed by a sibling repo and never wired up*, whose claim does not hold even if
+it had been.
+
+A third observation, from the same runs: the `sorry` propagated **two hops** —
+`matchesSeg_refl` → `EntityCore.Capability.Proofs.isAttenuated_refl` →
+`EntityCore.Capability.Proofs.allowed_chain_leaf_atten_root` — so three declarations reported
+`sorryAx`, not one. The axiom check therefore catches transitive contamination, which a
+per-theorem review of the edited file would not.
+
+*(Those two are written fully qualified on purpose. They are not ledger citations — no row
+relies on them — and §5's sync check correctly rejects a bare backticked theorem name that
+is neither pinned nor rejected. It caught this paragraph on its first run, which is the
+check doing its job on the document that describes it.)*
+
+### 7.3 What `make leanproof` asserts
+
+The assertion is made against the **axiom sets**, because that is the only place the two
+invisible failures show up. `lean/proof-gate.expect` declares all **37** `#print axioms`
+gates in the peer's proof track with the axiom set each must report, and the run must
+produce exactly that set — no more, no less, both directions:
+
+1. **Toolchain** — the Lean version the image resolves equals keystone's own
+   `lean-toolchain` pin. Proving with a different compiler than the peer ships is not
+   proving the peer.
+2. **Build** — exit 0, no `error:` line, and the positive completion line present.
+3. **Axiom sets** — every gated declaration reports a subset of Lean's three standard
+   axioms (`propext`, `Classical.choice`, `Quot.sound`) *and* exactly its declared set. A
+   row of `proof-gate.expect` may not declare an untrusted axiom: the file is rejected at
+   parse time if it does, because a hole you can declare away is not a hole that was caught.
+4. **The ledger tie** — all 22 theorems pinned in §5's block (21 discharging + the one
+   pinned as **rejected**) are among the declarations that reported. This is what makes the
+   gate about *this ledger* rather than about "some proofs built".
+5. **Warnings** — a Lean warning fails the build unless declared with an owner. One is
+   declared: a deprecated `String.dropRight` call in the shipping peer's
+   `src/EntityCore/Capability.lean` — inside the text this ledger pins by digest — whose
+   replacement returns a different type. Not ours to fix; **routed** to keystone rather than
+   tolerated, and the row disappears when they land it.
+
+Five negative controls, each required to fail for its **own** declared reason, **on the
+declarations it names**:
+
+| control | injects | must produce |
+|---|---|---|
+| `neg-sorry` | `sorry` in `matchesSeg_refl` (row L6) | `SORRY_WARNING`×1, `SORRY_AX`×3 |
+| `neg-axiom` | an `axiom` replacing that proof | `UNTRUSTED_AXIOM`×3 |
+| `neg-ungate` | deletes the `#print axioms` line | `MISSING_GATE` + `LEDGER_UNCOVERED`, both naming `matchesSeg_refl` |
+| `neg-dropfile` | drops `import EntityCoreProofs.SortProofs` from the library root | `MISSING_GATE` naming all three `SortProofs` declarations — and **no** `LEDGER_UNCOVERED`, since no ledger row cites them |
+| `neg-broken` | a proof that does not type-check | `BUILD_ERROR` pinned to the file **and** `Type mismatch`, + `NO_COMPLETION` |
+
+`neg-ungate` is the one worth pausing on: it is the move that would silence a grader built
+on `grep -c sorryAx` over the build log — no gate line, no `sorryAx` to find, green. It
+fails here because the *names* are declared, which is the same rule the prover tables carry.
+And the two `×3` counts above were **declared as 2 and measured as 3** on the first run;
+they are in the table because a count that is asserted is a count that cannot drift.
+
+The green gate was itself teeth-tested three ways, by breaking it: removing the declared
+warning row (→ `UNDECLARED_WARNING`, red), declaring `sorryAx` for a theorem (→ the expect
+file is rejected at parse), and pointing it at a tree whose `lean-toolchain` names a
+different Lean (→ toolchain mismatch, red).
+
+### 7.4 The boundary, stated as sharply as the rows are
+
+`make leanproof` green means: **the Lean side is sound** — the cited theorems are proved,
+from Lean's standard axioms, by the compiler the peer pins, with no `sorry` and no added
+axiom anywhere in the track. It does **not** mean the seam is closed. §1's verdicts are a
+human's reading of two texts in two languages, and that reading is exactly what was found
+wrong in §4.1. Nothing here checks it. **Differential trace checking** — replaying Apalache
+`.itf.json` counterexamples through the Lean executable model — is still the only proposal
+on the table that would put a machine on that half, and it is still on the work-list rather
+than done.
+
+Six runs (1 green + 5 controls), not counted in `make matrix`'s 258 for the reason §5
+gives: they need a sibling checkout, and every published number here has to be reproducible
+from a bare clone.

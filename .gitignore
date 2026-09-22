@@ -39,3 +39,10 @@ caps.local.mk
 *~
 .idea/
 .vscode/
+
+# Lean seam tier — scratch worktrees copied from the keystone sibling (never committed;
+# the Lean source belongs to that repo and is only ever read from it)
+lean/_work/
+
+# Python bytecode from tools/
+__pycache__/

@@ -51,7 +51,7 @@ group = "Overview"
 [[doc]]
 path  = "docs/FINAL-ASSURANCE-SUMMARY.md"
 title = "Final Assurance Summary (capstone)"
-blurb = "What was proved, how far it goes, what it deliberately does not say; the 203-run re-verification matrix."
+blurb = "What was proved, how far it goes, what it deliberately does not say; the 258-run re-verification matrix."
 group = "Assurance"
 
 [[doc]]
@@ -75,7 +75,13 @@ group = "Assurance"
 [[doc]]
 path  = "docs/LEAN-SEAM.md"
 title = "The assumption ledger — what the models take on faith, and who discharges it"
-blurb = "Per abstraction in the models: the proposition relied on, and what discharges it — the Lean authority proof in the keystone peer, another engine here, or nothing. Turns the division of labour between tools from prose into a checkable artifact. Check it with `make leanseam`."
+blurb = "Per abstraction in the models: the proposition relied on, and what discharges it — the Lean authority proof in the keystone peer, another engine here, or nothing. Turns the division of labour between tools from prose into a checkable artifact. Two gates: `make leanseam` (has the cited text moved?) and `make leanproof` (do the cited proofs still hold?)."
+group = "Assurance"
+
+[[doc]]
+path  = "lean/README.md"
+title = "Lean seam tier — checking the proofs the models lean on"
+blurb = "The gate that builds the keystone peer's Lean proof track and grades its axiom sets. Why exit status is not the check: a `sorry` is a warning in Lean and lake exits 0. Holds no Lean source — the peer's tree is read-only input."
 group = "Assurance"
 
 [[doc]]

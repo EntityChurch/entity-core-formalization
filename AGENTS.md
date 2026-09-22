@@ -49,7 +49,11 @@ So what binds here is the honesty half of the framework:
 - `make` is the door: the root `Makefile` carries `smoke` / `check`
   (= `check-tla` + `check-spin` + `check-provers`) / `crosscheck` / `caps` / `clean`; each
   per-engine dir (`tla/`, `spin/`, `tamarin/`) has its own `image` (build the podman image)
-  + `green` (green-sweep). Maude 3.4 — Tamarin's required rewriting backend — is pinned via
+  + `green` (green-sweep). **`lean/` is a fourth workspace with no models in it** — it holds
+  the gate that builds the *sibling keystone peer's* Lean proof track (`entity-lean` image,
+  `make lean-image`) and grades its axiom sets. `make lean` = `leanseam` + `leanproof` +
+  `leanproof-neg`; it needs the keystone checkout, so it is **excluded from `make matrix`**
+  rather than skipped inside it, and its 6 runs are counted separately from the 258. Maude 3.4 — Tamarin's required rewriting backend — is pinned via
   a Tamarin-blessed prebuilt binary in `tamarin/Containerfile.tamarin` (apt's 3.2 is too old).
 - Resource caps live in `caps.mk` (included by root + sub-Makefiles); `CAP_MEM=2g`,
   no swap (`CAP_SWAP == CAP_MEM` → the container is OOM-killed cleanly at the cap instead of
@@ -87,16 +91,22 @@ No inductive invariant is deferred; no control is known-weak.
 Two things are new and change how you read the rest. **`docs/LEAN-SEAM.md`** is the
 assumption ledger — per abstraction in the models, the proposition relied on and the Lean
 theorem (or sibling engine, or nothing) that discharges it, cited by content digest and
-gated by `make leanseam`. It is where the complementarity claim stops being prose.
+gated by **two** targets: `make leanseam` (has the cited *text* moved?) and `make leanproof`
+(do the cited *proofs* still hold? — §7, 6 runs, needs the keystone sibling). It is where
+the complementarity claim stops being prose.
 **`make coverage`** checks the coverage *claim* against the models' own `§`-citations,
-because two rows of the grid turned out to be phantoms. **One protocol finding is open** —
+because two rows of the grid turned out to be phantoms, and **`make runcount`** derives the
+matrix run total from the gate tables and fails when a published site disagrees, because
+that number went stale three times in one week. **One protocol finding is open** —
 §4.6 step 1 vs §4.7's table, `docs/PROPERTIES.md` §D.1 — routed to `entity-core-protocol`.
 `docs/COVERAGE-MATRIX.md` is the section×engine map and the limits; `docs/STATUS.md` §Next is
 the work-list; `docs/FINAL-ASSURANCE-SUMMARY.md` is the capstone.
 
 **The failure mode this repo actually has is in the verification, not the protocol** — every
-defect found by the last three audits was one, and they have earned three ratified
-disciplines. (The one exception is now `docs/PROPERTIES.md` §D.1 — a real contradiction in
+defect found by the last four audits was one, and they have earned three ratified
+disciplines. The fourth (`docs/status/AUDIT-2026-08-30-LEAN-TIER.md`) added no discipline and
+is the more useful for it: five hypotheses, five confirmed, every one an instance of D13,
+D14 or D15 — applied to work built the same session **under their own banner**. (The one exception is now `docs/PROPERTIES.md` §D.1 — a real contradiction in
 the spec text, surfaced by modeling a section the coverage grid wrongly claimed was covered.)
 
 ### D13 — a gate must assert the outcome it claims, not merely a symptom of it
@@ -119,6 +129,35 @@ requires `EXITCODE: ERROR (12)`; `spin/neg` requires the declared **pan failure 
 `invalid end state` in every run) and `spin/green` an explicit `errors: 0`. Adding a run
 without adding its expected verdict fails the build — the graders reject a theory that
 declares nothing.
+
+*Fourth instance, 2026-08-30 — a grader another repo CLAIMED, that nobody ran, whose claim
+was also false.* Ten rows of `docs/LEAN-SEAM.md` rest on named Lean theorems in the
+keystone peer (Class L is eleven rows; nine CLOSED, two CLOSED-MODULO-H, and L2 is closed
+by construction with no theorem to run). `lake build EntityCoreProofs` is called "the proof check — a `sorry` or
+failed proof fails the build" in five places in that peer — the lakefile, the proof-library
+root, `profile.toml`'s testing contract and two status docs — and **is invoked by no
+Makefile, script or workflow in that tree**, which has no CI directory at all. Asked D13's
+question of it and answered by building all three cases: **a `sorry` is a *warning* in Lean,
+so lake prints `Build completed successfully` and exits 0**; a hand-written `axiom`
+replacing a proof exits 0 with no warning at all; only a proof that fails to type-check
+exits non-zero. Exit status catches one failure mode in three, and misses the two a proof
+check exists for. `make leanproof` grades the **axiom set** of all 37 `#print axioms` gates
+against `lean/proof-gate.expect` in both directions, ties them to the ledger's own pin
+block, and fails on any undeclared warning. Two transferable pieces: **a gate a sibling repo
+says it has is a gate you have not checked**, and *a `sorry` reported as a warning* is the
+same shape as ProVerif exiting 0 on a false query — the tool is telling you, quietly, in a
+channel the grader does not read.
+
+*Fifth instance, same day, on the fix for the fourth — the new tier's GREEN gate met D13 and
+its own CONTROLS did not.* Each of the four controls declared a reason-code **count**
+(`SORRY_AX: 3`). Asked "what else satisfies it?" and answered by running it: any three
+contaminated declarations do. That is the `TM_NEG_EXPECT` lesson — three Tamarin controls
+that falsified their own reachability lemma — reproduced in a table written the same day it
+was cited. **A count is a symptom of the outcome; the identities are the outcome.** All five
+controls now declare which declarations must carry each code, matched one-to-one with extras
+rejected, and `neg-broken` pins the file *and* the error kind. The transferable line:
+**a control that passes is exactly as unexamined as a green that passes** — teeth-test the
+controls in the same pass, not after they go green. `docs/status/AUDIT-2026-08-30-LEAN-TIER.md`.
 
 *Third instance, 2026-08-30 — the TLA+ GREEN sweep was the one grader nobody had asked the
 question of.* `tlc-green` ran `tlc2.TLC … || exit 1`: pure exit status, the criterion D13 was
@@ -152,6 +191,15 @@ tool behaviour) must list every site of that mechanism and its disposition in
 `docs/PROPERTIES.md` §C or `docs/STATUS.md`. `grep -n 'dev/null' */Makefile` is the specific
 tripwire for this family: discarded output is the tell.
 
+*It applies to retractions too, learned 2026-08-30.* The L7 correction — that ProVerif and
+Lean do **not** share an undischarged `hframed` — was written into `LEAN-SEAM.md` and
+`STATUS.md` and left standing in `ASSURANCE-MAP.md`, `FINAL-ASSURANCE-SUMMARY.md` and the
+`CHANGELOG`: three canonical documents telling a public reader a claim about a sibling
+repo's proofs that we had already established was wrong in both halves. **A withdrawn claim
+has a shape, and the shape is its phrasing, not its subject** — grep the retracted words
+("shared undischarged assumption"), because the row name appears in every site including the
+corrected ones and finds nothing.
+
 ### D15 — a derived number is a claim; derive it from claims, and gate it
 
 D13 applies to **metrics**, not only to graders. Ask of any number this repo publishes: *what
@@ -173,14 +221,31 @@ scope notes) — which is the argument for the gate over the discipline alone.
 asserts the cited `§N.M` set equals Matrix A's rows **in both directions**, that the stated
 numerator and denominator match, and that neither citation-hygiene tripwire fires. It states
 in the file what it does **not** assert — the engine columns — rather than letting a reader
-assume the whole grid is machine-checked. The residue is named in `docs/STATUS.md` §Next
-item 9: the run-count totals quoted in prose are still hand-derived from the gate tables.
+assume the whole grid is machine-checked.
+
+*Second enforcement point, 2026-08-30 — `make runcount` (`tools/runcount.py`), also in
+`check` and `matrix`.* The run total was the residue D15 named and it went stale three times
+in one week (238 → 242 → 258, six sites hand-edited, two missed — one of them the blurb a
+public reader gets). It now derives the per-target counts from the gate tables themselves and
+fails if any declared prose site disagrees, or if a site stops making the claim at all.
+**Its own first draft failed D13**: it matched any three-digit number near the word "runs"
+and so flagged three files whose 203/204/238 are true statements about the past — a gate that
+makes you delete accurate history to go green. The live claim is now declared per site by
+anchor. *A number this repo publishes is checked; a number it publishes about its own past
+is deliberately not, and the tool says so.*
 
 *Corollary, learned by getting it wrong twice in one session:* **teeth-test a gate rather
 than reasoning about it.** The first draft of the Spin failure-signature check matched
 `invalid end state` against pan's whole output — where that string appears in the
 *search-options header of every run* — so the two rows that legitimately expect a deadlock
 asserted nothing. Reading the code did not catch it; deliberately breaking a control did.
+
+*A number that justifies a gate is still a number, 2026-08-30.* The Lean tier was argued for
+in five files by "eleven CLOSED rows of the ledger rested on a build nobody ran." Class L is
+eleven rows: **nine CLOSED, two CLOSED-MODULO-H**, ten citing a theorem. The conclusion
+survived — ten rows did rest on that build — but the figure was *recalled*, not derived, and
+it was published five times before anyone counted the verdicts. Ask it of the number that
+makes the case for the work, not only of the numbers in the results table.
 
 *Second medium, same mechanism — D15 is not only about numbers.* `LEAN-SEAM.md` L7 claimed
 ProVerif and Lean shared one undischarged assumption, on the strength of the single equation
@@ -219,6 +284,13 @@ rows say so.
 - **Ratified / superseded phase reports are historical record.** The phase outcomes are
   lineage; `docs/FINAL-ASSURANCE-SUMMARY.md` is the single live capstone pointer — don't
   rewrite closed reports to look current.
+- **The keystone peer's Lean tree is read-only input — never vendored, never edited.**
+  `lean/` builds it from a *copy* (`lean/_work/`, gitignored) with the sibling mounted
+  read-only, and the negative controls mutate only that copy. A local fork would make the
+  assumption ledger a claim about our copy, which nothing gates, rather than about the peer
+  that ships and that the conformance suite runs — the whole value of the seam. Findings on
+  the Lean side are **routed to `entity-core-keystone`**, like spec findings are routed to
+  the protocol repo.
 - **Don't change the spec here.** A model that surfaces a design defect is a **finding
   routed to the sibling `entity-core-protocol` repo** (a proposal in *their*
   `docs/proposals/`), never a spec edit here. Don't re-model what Lean proved —
