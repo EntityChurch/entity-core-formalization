@@ -374,25 +374,44 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
 Per repo discipline any defect is a proposal/review-note in the sibling protocol repo,
 **never a spec edit here.**
 
-1. **§4.6 step 1 and §4.7's table give contradictory normative answers for the same input.**
+1. **§4.7's error-code table contradicts itself — and §4.6 step 1 — on the same input.**
    *This is the first finding here that is a genuine defect in the spec text rather than a
    boundary worth stating, and it is the only one machine-exhibited by all three TLA+-track
    engines.* An `authenticate` frame arriving before any hello nonce has been issued is named
-   explicitly by both clauses, which disagree on the code **and** the status class:
+   explicitly by **four** normative sites, which disagree on the code **and** the status class:
 
-   | Clause | Says | Code | Status |
+   | Site | Says | Code | Status |
    |---|---|---|---|
    | §4.6 step 1 (Nonce-echo, normative) | "A mismatch — **or an `authenticate` received before any hello nonce was issued** — MUST be rejected with status 401 `invalid_nonce`." | `invalid_nonce` | **401** |
-   | §4.7 table row 10 (normative MUST-emit contract) | "Out-of-order operation (**e.g., authenticate before hello**)" | `connection_sequence_error` | **400** |
+   | §4.7 table **row 6** | "Nonce mismatch / absent / **pre-hello** (§4.6 step 1)" | `invalid_nonce` | **401** |
+   | §4.7 table **row 10** | "Out-of-order operation (**e.g., authenticate before hello**)" | `connection_sequence_error` | **400** |
+   | §5.2a verdict-to-status enumeration | "Connect-time (§4.6) \| Nonce mismatch" — **drops "absent / pre-hello" entirely** | `invalid_nonce` | **401** |
 
-   Both are MUSTs. §4.7's preamble then forbids the divergence it creates: the table is "a
+   The two conflicting rows are **in the same table**, so "follow §4.7" is not a well-defined
+   position: an implementer reading it top-to-bottom hits row 6, then row 10 four rows later.
+   *(This entry previously framed the defect as §4.6 vs §4.7 row 10. That is true but weaker,
+   and it points at the wrong fix — row 6 already defers to §4.6 by citation and the
+   contradiction survives anyway. The defect is row 10's parenthetical in isolation, which
+   makes the remedy four words rather than a two-section reconciliation.)*
+
+   All are MUSTs. §4.7's preamble then forbids the divergence it creates: the table is "a
    normative MUST-emit contract ... an impl that collapses several of these to one code, **or
-   returns a different status**, is non-conformant". So whichever clause an implementation
+   returns a different status**, is non-conformant". So whichever row an implementation
    follows, the other one calls it non-conformant — and the disagreement lands on
    `result.data.code`, the exact field §4.7 says "clients key error handling off". 401 and
    400 are also different *classes*: one is the authentication boundary (§4.6), the other is
    a client-correctable structural error. A client that retries on 400 and re-authenticates
    on 401 behaves differently against two conformant peers.
+
+   **This is not hypothetical — the divergence is shipped.** A source read of the 46-peer
+   keystone cohort plus the three ground-up implementations (2026-08-30) finds **four**
+   distinct behaviours for that one frame: `401 invalid_nonce` (29 peers), `400
+   connection_sequence_error` (6), `409 connection_sequence_error` (`entity-core-go` — a
+   status in neither clause), and `400 handshake_failed` (`entity-core-rust` — a code that
+   appears nowhere in the spec). Nothing caught it because `validate-peer` has **no probe
+   that sends `authenticate` before `hello`**, and cites §4.7 nowhere in `connectivity`:
+   §4.7 declares ten MUST-emit rows and roughly one is gated. Full census, per-peer
+   attribution and the routing packet: `docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`.
 
    Two conformant readings, so the models check **both** rather than picking one: the row
    assignment for a pre-hello `authenticate` is a constant (`PreHelloAuthRow` /
@@ -403,10 +422,15 @@ Per repo discipline any defect is a proposal/review-note in the sibling protocol
    `make verify MODEL=conncodes DEFS=-DSEQREADING` (Spin).
 
    **Suggested resolution** (for the sibling repo to decide, not this one): §4.6 step 1 is
-   the more specific and more recently hardened clause, and the 401 classification matches
-   the other two step-failures (`authentication_failed`, `identity_mismatch`). Narrowing
-   §4.7 row 10's parenthetical to an example that is *not* the pre-hello authenticate — a
-   second `hello` after `hello_done`, say — removes the overlap without touching §4.6.
+   the more specific and more recently hardened clause, §4.7 row 6 already cites it, and the
+   401 classification matches the other two step-failures (`authentication_failed`,
+   `identity_mismatch`). Narrowing **row 10's parenthetical alone** to an example that is
+   *not* the pre-hello authenticate — a second `hello` after `hello_done`, say — removes the
+   overlap without touching §4.6, row 6, or row 10's code, status or meaning. The alternative
+   direction (make it 400) is the larger edit and lands on the harder text: §4.6 step 1's
+   sentence splits, row 6's `pre-hello` comes out, and §5.2a needs extending — three sites
+   against one. Separately, §5.2a's half-copy and the §3.3/§4.7/§5.2a precedence question are
+   flagged, not proposed, in the routing packet.
 
 2. **§5.9 recommended TTL/`chain_depth` ratio has zero margin at worst-case fan-out.**
    §5.9 requires the ratio be "chosen so the deterministic depth brake engages before the

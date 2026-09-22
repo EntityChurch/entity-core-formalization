@@ -144,9 +144,12 @@ ConstInitBugStatus ==
   /\ WrongStatus = TRUE
   /\ PreHelloAuthRow = "r6_nonce"
 
-\* THE FINDING, as a control: §4.7 table row 10's reading of a pre-hello `authenticate`,
-\* against §4.6 step 1 transcribed as PreHelloAuthIsInvalidNonce. Both are normative MUSTs
-\* naming the same input. Expected: counterexample. See ConnCodes.tla's header.
+\* THE FINDING, as a control: §4.7 table ROW 10's reading of a pre-hello `authenticate`,
+\* against §4.6 step 1 transcribed as PreHelloAuthIsInvalidNonce — which §4.7's own ROW 6
+\* restates verbatim ("Nonce mismatch / absent / pre-hello (§4.6 step 1) | invalid_nonce |
+\* 401"). Rows 6 and 10 are in the same table and both are normative MUSTs naming the same
+\* input, so the contradiction is INTERNAL to §4.7, not merely §4.6-vs-§4.7. Expected:
+\* counterexample. See ConnCodes.tla's header.
 ConstInitSeqReading ==
   /\ CollapseCodes = FALSE
   /\ WrongStatus = FALSE

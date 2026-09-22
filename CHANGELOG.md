@@ -41,26 +41,40 @@ again now, and checked.
 
 ### Added — the first genuine defect this repo has found in the spec text
 
-Modeling §4.7 surfaced a **normative contradiction**. An `authenticate` frame arriving before
-any hello nonce has been issued is named explicitly by two clauses that disagree on the
-reason code **and** the status class:
+Modeling §4.7 surfaced a **normative contradiction — inside one table**. An `authenticate`
+frame arriving before any hello nonce has been issued is named explicitly by four normative
+sites that disagree on the reason code **and** the status class:
 
 - **§4.6 step 1**: "A mismatch — or an `authenticate` received before any hello nonce was
   issued — MUST be rejected with status **401 `invalid_nonce`**."
+- **§4.7 table row 6**: "Nonce mismatch / absent / **pre-hello** (§4.6 step 1)" →
+  **`invalid_nonce`**, **401**.
 - **§4.7 table row 10**: "Out-of-order operation (e.g., **authenticate before hello**)" →
   **`connection_sequence_error`**, **400**.
+- **§5.2a**: re-lists the connect-time rows, carrying only "Nonce mismatch" — the pre-hello
+  case is dropped rather than answered.
 
-Both are MUSTs, and §4.7's own preamble — "an impl that collapses several of these to one
-code, **or returns a different status**, is non-conformant" — makes each reading
+Rows 6 and 10 are four rows apart in the same table, so *"follow §4.7"* is not a well-defined
+position. All are MUSTs, and §4.7's own preamble — "an impl that collapses several of these to
+one code, **or returns a different status**, is non-conformant" — makes each reading
 non-conformant by the other's lights. The disagreement lands on `result.data.code`, the field
 §4.7 exists to fix across implementations, so two conformant peers can hand a client
 different instructions for the same failure.
 
 The models check **both** readings rather than picking one: the row assignment for a
-pre-hello `authenticate` is a constant, and the §4.7 reading violates §4.6 step 1 transcribed
-as an invariant. Exhibited independently by TLC, Apalache and Spin — the only control in the
-repo whose "defect" is a conformant reading of the spec. Routed to `entity-core-protocol` as
-a proposal, with a suggested resolution; full statement in `docs/PROPERTIES.md` §D.1.
+pre-hello `authenticate` is a constant, and row 10's reading violates §4.6 step 1 / row 6
+transcribed as an invariant. Exhibited independently by TLC, Apalache and Spin — the only
+control in the repo whose "defect" is a conformant reading of the spec.
+
+**And the divergence is already shipped.** A source read of the 46-peer keystone cohort plus
+the three ground-up implementations found **four** distinct behaviours for that one frame:
+401 `invalid_nonce` (29 peers), 400 `connection_sequence_error` (6), 409
+`connection_sequence_error`, and 400 `handshake_failed` — the last a code that appears nowhere
+in the spec. Nothing caught it: the conformance oracle has no probe that sends `authenticate`
+before `hello`, and of §4.7's ten self-declared MUST-emit rows roughly one is gated. Routed to
+`entity-core-protocol` as a proposal, with a suggested resolution; full statement in
+`docs/PROPERTIES.md` §D.1, census and hand-off checklist in
+`docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`.
 
 ### Added — the assumption ledger, and a gate on it
 

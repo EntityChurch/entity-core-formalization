@@ -19,20 +19,35 @@
 \* ===================================================================================
 \* THE FINDING (routed to entity-core-protocol; see ../docs/status/ and PROPERTIES.md §D)
 \* ===================================================================================
-\* §4.6 step 1 and §4.7's table give DIFFERENT normative answers for the same input.
-\* An `authenticate` frame arriving before any hello nonce was issued:
+\* §4.7's table gives TWO DIFFERENT normative answers for one input, and a third and fourth
+\* site restate it inconsistently. An `authenticate` frame arriving before any hello nonce
+\* was issued:
 \*
 \*   §4.6 step 1 (normative, explicit): "A mismatch — or an `authenticate` received before
 \*     any hello nonce was issued — MUST be rejected with status 401 `invalid_nonce`."
-\*   §4.7 table row 10 (normative): "Out-of-order operation (e.g., authenticate before
+\*   §4.7 table ROW 6 (normative): "Nonce mismatch / absent / PRE-HELLO (§4.6 step 1) |
+\*     `invalid_nonce` | 401".
+\*   §4.7 table ROW 10 (normative): "Out-of-order operation (e.g., authenticate before
 \*     hello) | `connection_sequence_error` | 400".
+\*   §5.2a (normative enumeration): lists "Connect-time (§4.6) | Nonce mismatch | 401" and
+\*     drops "absent / pre-hello" altogether.
 \*
-\* Both are MUSTs, both name this exact input, and they disagree on BOTH the code and the
-\* status class (401 authentication boundary vs 400 client-correctable). §4.7's own preamble
-\* forbids the divergence it creates: an impl "returns a different status" is non-conformant,
-\* so whichever reading an implementation picks, the other clause calls it non-conformant.
-\* This is precisely the cross-impl divergence §4.7 exists to prevent, on the field clients
-\* are told to key off.
+\* Rows 6 and 10 are in the SAME TABLE, so "follow §4.7" is not a well-defined position —
+\* an implementer reading it top-to-bottom hits row 6, then row 10 four rows later. All are
+\* MUSTs, all name this exact input, and they disagree on BOTH the code and the status class
+\* (401 authentication boundary vs 400 client-correctable). §4.7's own preamble forbids the
+\* divergence it creates: an impl "returns a different status" is non-conformant, so
+\* whichever reading an implementation picks, another row calls it non-conformant. This is
+\* precisely the cross-impl divergence §4.7 exists to prevent, on the field clients are told
+\* to key off — and it HAS diverged: four distinct behaviours across the 46-peer keystone
+\* cohort and the three ground-up impls, two of them outside the spec's own answer set.
+\*
+\* NOTE ON THE FRAMING. Through 2026-08-30 this header, PROPERTIES.md §D.1 and the CHANGELOG
+\* all said "§4.6 step 1 vs §4.7 row 10" and did not notice row 6 — even though the row-6
+\* text, "pre-hello" included, is transcribed verbatim in ../spin/conncodes.pml's R6_NONCE
+\* comment. The weaker framing points at the wrong fix (reconcile two sections) when the
+\* defect is row 10's PARENTHETICAL alone; row 6 already defers to §4.6 by citation and the
+\* contradiction survives that. Narrowing four words is the whole remedy.
 \*
 \* The model checks BOTH readings rather than picking one: `PreHelloAuthRow` is the contested
 \* cell, and ConnCodesSeqReadingBug.cfg selects §4.7's reading. Its "defect" is not a bug we

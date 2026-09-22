@@ -204,20 +204,29 @@ load-bearing ones:
 
 ## 5. Findings and residual risk
 
-**One finding routed to `entity-core-protocol`: §4.6 step 1 and §4.7's table give
-contradictory normative answers for the same input.** An `authenticate` frame arriving
-before any hello nonce was issued is named explicitly by both, and they disagree on the
-reason code *and* the status class — §4.6 step 1 says **401 `invalid_nonce`**, §4.7 table
-row 10 says **400 `connection_sequence_error`**. Both are MUSTs, and §4.7's own preamble
-("an impl that collapses several of these to one code, **or returns a different status**, is
-non-conformant") makes each reading non-conformant by the other's lights. The disagreement
-lands on `result.data.code`, the field §4.7 says clients key error handling off, so two
-conformant peers can give a client different instructions for the same failure. Exhibited
-independently by **all three TLA+-track engines** (`ConnCodesSeqReadingBug.cfg` /
+**One finding routed to `entity-core-protocol`: §4.7's error-code table gives contradictory
+normative answers for the same input — and so does §4.6 step 1 against one of them.** An
+`authenticate` frame arriving before any hello nonce was issued is named explicitly by four
+normative sites, which disagree on the reason code *and* the status class. §4.6 step 1 says
+**401 `invalid_nonce`**; §4.7 **row 6** restates that verbatim ("Nonce mismatch / absent /
+pre-hello (§4.6 step 1)"); §4.7 **row 10** — four rows later, in the same table — says **400
+`connection_sequence_error`**; §5.2a re-lists the connect-time rows and drops the case
+entirely. All are MUSTs, and §4.7's own preamble ("an impl that collapses several of these to
+one code, **or returns a different status**, is non-conformant") makes each reading
+non-conformant by the other's lights — so *"follow §4.7"* is not a well-defined position. The
+disagreement lands on `result.data.code`, the field §4.7 says clients key error handling off,
+so two conformant peers can give a client different instructions for the same failure.
+
+Exhibited independently by **all three TLA+-track engines** (`ConnCodesSeqReadingBug.cfg` /
 `ConstInitSeqReading` / `DEFS=-DSEQREADING`) — the only control in this repo whose "defect"
-is a conformant reading of the spec rather than something injected. Full statement and a
-suggested resolution: `docs/PROPERTIES.md` §D.1. Per repo discipline it is a proposal in the
-sibling protocol repo, never a spec edit here.
+is a conformant reading of the spec rather than something injected. **And it is not
+hypothetical:** a source read of the 46-peer keystone cohort plus the three ground-up
+implementations finds four distinct wire behaviours for that one frame, two of them outside
+the spec's own answer set, none of them caught — the conformance oracle has no probe that
+sends `authenticate` before `hello`. Full statement and suggested resolution:
+`docs/PROPERTIES.md` §D.1; census and hand-off:
+`docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`. Per repo discipline it is a
+proposal in the sibling protocol repo, never a spec edit here.
 
 **Otherwise none new.** The models *re-derived* the known Class-G reentry deadlock (already
 fixed upstream) and otherwise confirmed the pinned design admits no deadlock, store race,

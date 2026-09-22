@@ -18,18 +18,27 @@
  *    different status, is non-conformant)."
  * Two ways to be wrong, both named by the spec, hence exactly two ordinary controls.
  *
- * THE FINDING (routed to entity-core-protocol; see ../docs/PROPERTIES.md §D). §4.6 step 1
- * and §4.7 table row 10 give DIFFERENT normative answers for the same input — an
- * `authenticate` arriving before any hello nonce was issued:
+ * THE FINDING (routed to entity-core-protocol; see ../docs/PROPERTIES.md §D). §4.7's table
+ * gives TWO DIFFERENT normative answers for the same input — an `authenticate` arriving
+ * before any hello nonce was issued:
  *   §4.6 step 1: "... or an `authenticate` received before any hello nonce was issued —
  *     MUST be rejected with status 401 `invalid_nonce`."
- *   §4.7 row 10: "Out-of-order operation (e.g., authenticate before hello) |
+ *   §4.7 ROW 6:  "Nonce mismatch / absent / pre-hello (§4.6 step 1) | `invalid_nonce` | 401"
+ *     — that is §4.6 step 1, restated inside the table. It is transcribed verbatim as the
+ *     R6_NONCE comment below.
+ *   §4.7 ROW 10: "Out-of-order operation (e.g., authenticate before hello) |
  *     `connection_sequence_error` | 400".
- * Both are MUSTs, they disagree on the code AND the status class, and §4.7's own preamble
- * makes each reading non-conformant by the other's lights. -DSEQREADING runs §4.7's reading;
- * the assertion it breaks is §4.6 step 1 transcribed. That "defect" is a conformant reading
- * of the spec, not something injected here — which is why it is called out separately from
- * the two real controls.
+ * Rows 6 and 10 are in the SAME TABLE. All are MUSTs, they disagree on the code AND the
+ * status class, and §4.7's own preamble makes each reading non-conformant by the other's
+ * lights — so "follow §4.7" is not a well-defined position. -DSEQREADING runs row 10's
+ * reading; the assertion it breaks is §4.6 step 1 / row 6 transcribed. That "defect" is a
+ * conformant reading of the spec, not something injected here — which is why it is called
+ * out separately from the two real controls.
+ *
+ * (Through 2026-08-30 this block said "§4.6 step 1 vs §4.7 row 10" and missed row 6 —
+ * whose text was sitting four lines below, on R6_NONCE. The weaker framing points at the
+ * wrong remedy: row 6 already defers to §4.6 by citation and the contradiction survives
+ * that, so the defect is row 10's parenthetical alone.)
  *
  * VARIANTS (select via -D<NAME>):
  *   (default)     §4.7 rows distinct, statuses per the table, §4.6 step 1 honored — all hold.

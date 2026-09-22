@@ -158,8 +158,9 @@ never a claim of coverage:
 
 Both are now genuinely modeled, by all three engines, in modules of their own —
 `ConnCodes` / `conncodes.pml` and `Bootstrap` / `bootstrap.pml`. Modeling §4.7 surfaced a
-**normative contradiction in the spec** (§4.6 step 1 vs §4.7 table row 10); see
-`docs/PROPERTIES.md` §D. So the grid's 28 is right today and was wrong before: it was 26.
+**normative contradiction in the spec** — §4.7 table row 6 vs row 10, with §4.6 step 1 and
+§5.2a as the third and fourth sites; see `docs/PROPERTIES.md` §D. So the grid's 28 is right
+today and was wrong before: it was 26.
 
 ### 3b. The class: what does a `§`-citation assert, and what else produces one?
 
