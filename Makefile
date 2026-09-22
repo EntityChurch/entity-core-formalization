@@ -33,7 +33,7 @@ MAKE ?= make
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
         check-provers crosscheck matrix specdrift specdrift-gate driftclaim leanseam \
         lean lean-image lean-smoke leanproof leanproof-neg \
-        coverage runcount ledgercount trackcheck specfreeze clean caps
+        coverage runcount ledgercount enginecount trackcheck specfreeze clean caps
 
 # Where the live spec lives, for `make specdrift`. Override per-host:
 #   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
@@ -64,6 +64,8 @@ help:
 	@echo "                  (core / attestation / quorum / identity -- TRACKS.toml)"
 	@echo "  make coverage   does COVERAGE-MATRIX.md match what the models actually cite?"
 	@echo "  make runcount   is the published run total still what the gate tables produce?"
+	@echo "  make enginecount how many ENGINES carry each subject, and which rest on one?"
+	@echo "                  (D16 -- docs/CORROBORATION.md is the declaration)"
 	@echo "  make clean    remove generated model-checker artifacts"
 	@echo "  make caps     print the active resource caps"
 	@echo
@@ -118,7 +120,7 @@ smoke:
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: specfreeze trackcheck coverage runcount ledgercount check-tla check-spin check-provers
+check: specfreeze trackcheck coverage runcount ledgercount enginecount check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -133,7 +135,7 @@ check: specfreeze trackcheck coverage runcount ledgercount check-tla check-spin 
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix: specfreeze trackcheck coverage runcount ledgercount
+matrix: specfreeze trackcheck coverage runcount ledgercount enginecount
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
@@ -316,6 +318,35 @@ runcount:
 # a change-triggered gate covers. Host python3 only.
 ledgercount:
 	@python3 tools/ledgercount.py
+
+# --- enginecount: how many ENGINES actually carry each subject? --------------------------
+# The enforcement point for D16 (two structurally different engines per published claim, and a
+# one-engine claim declares itself). `docs/CORROBORATION.md` is the declaration; the GREEN
+# tables in the three engine Makefiles are the evidence; this derives one from the other.
+#
+# WHY IT EXISTS: the corroboration figure lived only in a sentence. "Five of the nine extension
+# modules rest on two engines" went into `AGENTS.md` by hand on 2026-09-08, was true that day,
+# and was stale within a day — the run total's failure (three times in one week), the ledger
+# counts' failure (four times) and the coverage pair's failure, in a fourth artifact, with no
+# gate able to see it because there was no ledger to derive from.
+#
+# D13 — what does this assert? Membership of every model file in exactly one subject (both
+# directions vs TRACKS.toml); that each row's engine set EQUALS the one derived from the green
+# tables; that every subject under two engines is declared with a reason, both directions; and
+# that every declared prose site states the derived pair.
+#
+# What else satisfies it — the question that decided the derivation: A FILE EXISTING IS NOT AN
+# ENGINE CHECKING ANYTHING. `tamarin/BindingReplayBug.spthy` is on disk with no
+# `BindingReplay.spthy` beside it, so counting by extension would have published "two provers
+# carry the replay result" on the strength of a file whose whole job is to fail. An engine
+# counts only where its GREEN table names one of the subject's files.
+#
+# What it does NOT assert, said out loud: that two engines are independent of the
+# TRANSCRIPTION. They are not — one author, one reading, one 5th wall — and the tool prints so.
+#
+# In `check` and `matrix`: its inputs are entirely inside this repo. Host python3 only.
+enginecount:
+	@python3 tools/enginecount.py
 
 # --- trackcheck: which PROTOCOL is each model file about? --------------------------------
 # Until 2026-09-06 this repo had one subject and every artifact assumed it. Extension

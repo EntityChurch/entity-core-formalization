@@ -381,15 +381,15 @@ uncited half is uncited because nobody has modeled it, not because it was judged
 | § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
 |---|---|---|---|---|---|---|---|
 | 3.1 | `system/quorum` entity shape | `threshold` is typed `primitive/uint` and constrained nowhere — the input to the finding below | ● | ● | | | |
-| 3.2 | the `quorum-update` convention | the per-quorum supersedes chain, and that its single-chain shape is a convention no operation enforces | ● | | | | |
+| 3.2 | the `quorum-update` convention | the per-quorum supersedes chain, and that its single-chain shape is a convention no operation enforces — **and, from 2026-09-09, that its ACYCLICITY is a second such convention (Q8)** | ● | ● | | | |
 | 4.1 | `verify_k_of_n_signatures` | the defensive dedupe (one key cannot fill two slots); the `resolve_peer` null check; **threshold 0 authorizes with no signature — finding** | ● | ● | | | |
-| **4.2** | **`current_signer_set` + the §4.2.1 cache contract** | **the invalidation trigger/non-trigger set is exactly sufficient *given* validated-only reads; per-quorum scoping; and four findings — see below** | ● | | | | |
+| **4.2** | **`current_signer_set` + the §4.2.1 cache contract** | **the invalidation trigger/non-trigger set is exactly sufficient *given* validated-only reads; per-quorum scoping; and five findings — see below** | ● | ● | | | |
 | 5.1 | built-in `concrete` mode | resolution as the identity map — the case in which the dedupe and soundness greens are unconditional | ● | ● | | | |
 | 5.2 | resolver registration | a non-injective resolution collapses the effective N below the validated bound | ● | ● | | | |
 | 6.1 | `system/quorum:create` | states no structural validation — the other half of the threshold finding | ● | ● | | | |
-| 6.2 | `system/quorum:update` | validates `new_threshold >= 1` and `<= |new_signers|`, against the pre-resolution array length | ● | ● | | | |
+| 6.2 | `system/quorum:update` | validates `new_threshold >= 1` and `<= |new_signers|`, against the pre-resolution array length — and neither the chain shape nor its acyclicity | ● | ● | | | |
 
-### Six rows carry FINDINGS, not coverage — read them that way
+### Nine rows carry FINDINGS, not coverage — read them that way
 
 This track's first three modules produced more findings than results, and the grid cell is a
 poor place to say which is which.
@@ -416,8 +416,21 @@ poor place to say which is which.
   authoritative. `CacheMatchesValidated`, violated with §8's `tree:put` bypass switched **off**.
 - **§4.1 with `threshold = 0` returns true over an empty signature set**, and §6.1 — unlike
   §6.2 — writes no constraint excluding it. `KofNRequiresASignature`.
+- **On a `supersedes` cycle, §4.2 hands back the creation-time roster** — every probe returns
+  null because a node on a cycle is its own transitive descendant. `CohortNeverSilentlyReverts`
+  under `ConstInitSupUnordered`, added 2026-09-09 (Q8). Read it with the green beside it:
+  `CohortNeverSilentlyRevertsWhenAcyclic` holds on the same cinit, so the assumption §4.2 needs
+  is acyclicity and not the index order `QuorumSignerSet.tla`'s `Init` hard-codes. **The
+  configuration is not constructible under content addressing**, which is the argument no
+  sentence of either document makes.
 
 ### Two greens here are cohort results, not spec results
+
+*(And from 2026-09-09 a third kind sits beside them: five rows are green **on a weakened
+domain** — `ConstInitSupUnordered`, the index order lifted. They are not cohort results and not
+spec results; they are the measurement that says which of §4.2's properties depend on the
+ordering assumption and which do not. `tla/Makefile`'s `APALACHE_ENUM_GREEN` header names them
+and says why deleting them as redundant would delete the result.)*
 
 `CohortMatchesNormativeOnChain` and `CohortNeverSilentlyReverts` are checked under constants
 that describe what `entity-core-{go,rust,py}` each independently implemented, **not** what the
@@ -428,11 +441,15 @@ because a green whose constants are not the spec's would otherwise be read as on
 
 ### What is not covered
 
-**Two engines on ONE of three modules, as of 2026-09-08.** `tla/QuorumKofNApalache.tla` carries
-§4.1 to Apalache — chosen first because §4.1 has no recursion and is therefore the cheapest port
-on this track, and because it is the validator §2 calls "the only mechanism that distinguishes
-quorum from a regular peer node". **`QuorumSignerSet` and `QuorumTrust` remain TLC-only**, no
-module here has a Spin encoding, and **there is no prover** on this track.
+**Two engines on ALL THREE modules, as of 2026-09-09.** `tla/QuorumKofNApalache.tla` carried §4.1
+first — §4.1 has no recursion and is the cheapest port on this track, and it is the validator §2
+calls "the only mechanism that distinguishes quorum from a regular peer node".
+`tla/QuorumSignerSetApalache.tla` (§4.2, and the experiment behind Q8) and
+`tla/QuorumTrustApalache.tla` (§4.2/§4.2.1, which corrected a published sufficiency claim and
+amended Q5) followed. **No module here has a Spin encoding, and there is no prover** on this
+track. *(This paragraph said "`QuorumSignerSet` and `QuorumTrust` remain TLC-only" until
+2026-09-09, and the first half of that had already been false for a day — the D14 quantifier
+lesson landing on a sentence that names modules instead of counting them.)*
 
 That last gap is the one to weigh, because it is exactly where §4.1 lives: it is a K-of-N
 *signature* validator and its unforgeability is a Dolev–Yao question **neither** engine touches
@@ -490,13 +507,13 @@ quorum grid.
 | 5.3 | canonical storage path | the `public/` question only — whether a cert's mode puts it there | ● | ● | | | |
 | 6.0b | `:supersede_attestation` | the REBIND_KINDS split, as the other half of "nothing validates the handoff identity" | ● | | | | |
 | 6.0c | `:create_attestation` | validates (kind, function, mode) and the required properties fields — and not that identity | ● | ● | | | |
-| **6.3** | **`process_attestation`** | **phase 1 / phase 2a / phase 2 dispatch / phase 3 emission; three findings — see below** | ● | | | | |
+| **6.3** | **`process_attestation`** | **phase 1 / phase 2a / phase 2 dispatch / phase 3 emission; three findings — see below, plus N2 on a phase-2 handler the table names and no section defines** | ● | ● | | | |
 | 9.2 | operational-key confinement | the MUST, over exactly the cert shapes §4.2 admits — **finding** | ● | ● | | | |
-| **9.4** | **compromise-recovery validation** | **fail-closed holds; and it holds vacuously — two findings** | ● | | | | |
+| **9.4** | **compromise-recovery validation** | **fail-closed holds, INDUCTIVELY; and it holds vacuously — two findings, plus N1 on the key it reads** | ● | ● | | | |
 | 10.1 | MUST-implement list | topology-first dispatch; dual-sig handoff; the phase-2a scope rule | ● | ● | | | |
 | 12.3 | three algorithms, one direction | the no-shared-validator wall at the arrival path | ● | | | | |
 
-### Seven rows carry FINDINGS, not coverage — read them that way
+### Nine rows carry FINDINGS, not coverage — read them that way
 
 Like the quorum track, this one produced more findings than results, and a grid cell is a poor
 place to say which is which.
@@ -526,6 +543,16 @@ place to say which is which.
   §9.2 requires rejecting. `PublicPathNeverControllerSigned`.
 - **§3.6's handoff arm dereferences an unresolved target**, in the same section where
   `identity_confers_function` guards the same helper. `HandoffTargetGuarded`.
+- **§9.4's anchor is keyed by a handle that moves** (N1, added 2026-09-09 by the second engine).
+  §5.1 writes the entry under the `quorum-publish`'s `published_handle`; §9.4 reads it under the
+  recovery's `old_handle`. A §4.3 routine rotation moves the second, produces no publish, and no
+  section requires a re-key or a re-publish — so a preventive privacy rotation removes the only
+  compromise-recovery path. `AnchorSurvivesHandoff` and `HandoffKeepsRecoveryAvailable`, violated
+  with nothing weakened; both **green** under the candidate repair.
+- **§6.3's `update_handle_cache_to` is defined in no section** (N2, same date), and its two
+  readings each satisfy one of two properties the spec states — neither satisfies both.
+  `RecoveryIdempotent` under the move reading and `SecondRecoveryHasAnchor` under the retain
+  reading. The three implementations answer three ways.
 
 **One of these is cross-spec and exists only in a pair of documents.** `EXTENSION-ATTESTATION`'s
 TV-A8 delegates the rejection of an invalid-signature revocation to *"identity's
@@ -543,11 +570,16 @@ be a double-count. `docs/LEAN-SEAM.md` O16 is the row.
 
 ### What is not covered
 
-**Two engines on ONE of three modules, as of 2026-09-08.** `tla/IdentityCertChainApalache.tla`
-carries §3.6 topology dispatch and §9.2 confinement to Apalache — chosen first because it is
-where every K-of-N verdict in this extension is dispatched, so the other two modules lean on it.
-**`IdentityProcess` and `IdentityRecovery` remain TLC-only** — and note that `IdentityRecovery`
-is the module carrying I2, this track's headline, which therefore still rests on one engine.
+**Two engines on ALL THREE modules, as of 2026-09-09**, and read what that does and does not
+mean. `tla/IdentityCertChainApalache.tla` came first (§3.6 topology dispatch and §9.2
+confinement, where every K-of-N verdict in this extension is dispatched);
+`tla/IdentityRecoveryApalache.tla` and `tla/IdentityProcessApalache.tla` followed on 2026-09-09.
+**This track has no single-engine subject left, and that is a smaller claim than it sounds.**
+Both engines are checkers over the same TLA+ transcription — same author, same reading — so a
+misreading survives both, and neither can express unforgeability. What the two later ports
+actually bought was not corroboration: each lifted a **domain restriction** the first model had
+hard-coded, and each produced findings (N1/N2, then N3/N4) that the first engine could not have
+seen at any depth. `docs/CORROBORATION.md` records `n` as a count and not as a grade.
 No Spin encoding, and **no prover**: `docs/LEAN-SEAM.md` O19's gap is untouched, so every
 finding on this track — including I5's "an unsigned revocation is honoured" — is a statement
 about which code path is reached and not a Dolev-Yao result. Identity's authority-logic
@@ -560,7 +592,11 @@ mistake". O17 is that row.
 **Not modeled at all:** §3.1, §3.2 (`resolve_controller_for_grants` and its content-hash
 tie-break), §3.4, §3.5, §4.2c, §5.1.1, §5.4, §6 and §6.0a / §6.0d / §6.0e / §6.0f / §6.1 / §6.2 /
 §6.4, §7 and its custody variants, §8, §9.1 / §9.3 / §9.5 / §9.6 / §9.7, §10.2–§10.4, all of §11,
-§12.1 / §12.2 / §12.4 / §12.5, and §13–§15. The recursive chain walk in `identity_verify_cert`
+§12.1 / §12.2 / §12.4 / §12.5, and §13–§15. **§6.4 is in that list and is named repeatedly in
+`ROUTING-2026-09-09-IDENTITY-ARRIVAL-PATH-STATE.md`**, because finding N3 is that §6.4's
+convergence-window bound is computed against a window §6.3's arrival path never closes. Nothing
+here verifies §6.4's cascade, so the models cite it without a `§` sigil and it stays uncovered —
+the §3e discipline applied to a section a finding *argues from* rather than *checks*. The recursive chain walk in `identity_verify_cert`
 step 5 and its depth bound are named in `tla/IdentityCertChain.tla`'s scope note and **not**
 modeled — that is `DeepChain`/`Bounds`' question and it is not re-asked here.
 
@@ -584,13 +620,20 @@ comparing each grid's `§` rows against the `§` citations in that track's Apala
 time a module lands. Recorded here rather than left to be re-discovered, and it is the obvious
 next thing for `coverage-check.py` to take over.
 
-*Live count, 2026-09-08:* there are **nine extension modules on three tracks**, of which **five
-have a second engine** (all three `attestation` modules, plus `QuorumKofN` and
-`IdentityCertChain` — Apalache) and **four remain TLC-only** (`QuorumSignerSet`, `QuorumTrust`,
-`IdentityProcess`, `IdentityRecovery`).
+*Live count — **derived by `make enginecount`, not stated by hand**, since 2026-09-09:* there are
+nine extension subjects on three tracks, of which **9 of 9** have a second engine — every
+module on all three tracks carries TLC and Apalache, and none is TLC-only.
 None has a third engine, and none has a prover model. The quantifier is stated as a count here,
 deliberately: the last time this sentence carried a bare universal it went false the day someone
 else grew the set, and a number goes stale visibly where "every" does not.
+
+**And a number stated by hand goes stale invisibly, which is what happened next.** The count in
+this paragraph and its twin in `AGENTS.md` were both written on 2026-09-08 and were both wrong
+by the following morning. `docs/CORROBORATION.md` is now the per-subject ledger, `make
+enginecount` derives the pair from the **green** gate tables, and every site that states it —
+including this one — fails the build when it drifts. **The engine COLUMNS in the grids above are
+still hand-maintained**; the gate counts engines per subject and does not check which section a
+column dot sits on, so the paragraph above this one still describes live work.
 
 Since 2026-09-07 the position was that **every extension module was TLC-only** — no Apalache,
 no Spin, no prover. Each track's own grid (§3c, §3d, §3e) said "one engine" plainly; this

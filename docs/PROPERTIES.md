@@ -10,10 +10,15 @@ exactly — the *strength* of each result and where it stops.
 > tracks** (`make trackcheck`); **all four are modeled** — `core`, `attestation`, `quorum` and
 > `identity` — and every property below is a statement about **`core`**. The three extension
 > tracks have their own grids in `docs/COVERAGE-MATRIX.md` §3c, §3d and §3e and are
-> **deliberately not on this scorecard**: it is a PROVEN/MODELED scorecard, and of the nine
-> extension modules **five have a second engine** (all three `attestation` modules, plus
-> `QuorumKofN` and `IdentityCertChain` — Apalache) while **four are TLC-only**, none has a third
-> engine and none has a prover. Listing them here would
+> **deliberately not on this scorecard**: it is a PROVEN/MODELED scorecard, and **9 of 9**
+> extension subjects have a second engine (every module on all three tracks, Apalache) while
+> none has a third engine, none has a Spin encoding and none has a prover.
+> *(This sentence said "five have a second engine … four are TLC-only" until 2026-09-09, in
+> words rather than in the canonical `N of M` form. It went stale on 2026-09-08 and again on
+> 2026-09-09, and neither `make enginecount` nor a grep for the number could see it — a
+> paraphrase of a live claim is invisible to a search for the subject and to a search for the
+> canonical words alike, which is exactly D15's fifth shape. It is a declared `enginecount`
+> site now.)* Listing them here would
 > put results of a different strength in the same table. Their findings are indexed in
 > `docs/status/FINDINGS-INDEX.md`. **No track is `scoped` any more**, so the gate that refuses
 > a model file on a scoped track has no subject in the live registry — which is worth knowing
@@ -230,6 +235,23 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
    Same trust boundaries Lean takes as axioms — not re-proven here.
 3. **Liveness is bounded-only** (see A2). Safety is lifted to unbounded by Apalache;
    liveness is not.
+3a. **Four subjects rest on ONE engine, and they are named rather than inferred.**
+   `docs/CORROBORATION.md` is the ledger and `make enginecount` is its gate (D16, added
+   2026-09-09): per subject, which engines have a **green** on it, derived from the gate tables
+   rather than from which files exist. **33 of 35** subjects carry two or more; the two that do
+   not are both on `core` — `revokemech` (zero — genuinely non-terminating, excluded from the
+   matrix by design) and `core-refinement` (TLC, T4's classifier, deliberately last).
+   **No extension subject is single-engine as of 2026-09-09.**
+   **`identityprocess` was the fourth until 2026-09-09**, when the port that closed it produced
+   two findings (N3, N4) by lifting its single-arrival domain rather than by re-checking its
+   invariants — the fourth consecutive time that has happened (`docs/LEAN-SEAM.md` O22).
+   **`identityrecovery` was the fifth until 2026-09-09**, and it was ranked first to fix because
+   the §9.4 compromise-recovery result is a *negative-reachability* claim — the shape with the
+   highest vacuity risk this repo publishes. `tla/IdentityRecoveryApalache.tla` now carries it,
+   inductively; `identityprocess` is next and `docs/LEAN-SEAM.md` O22 says where to point it.
+   Read any one-engine result as a hypothesis with a machine behind it.
+   *And read the counterpart from wall 1 above:* a second engine narrows the search, not the
+   transcription. Two model checkers over one `.tla` file share its reading of the spec.
 4. **Vacuity — all three thin positives now retired, and the gap instrumented.**
    - *Retired at 0.8.2:* `Store`'s store-cardinality conjunct was **vacuous** — the model
      held a single key while asserting a bound of 2, so `Cardinality(store) ≤ MaxStore`
@@ -343,7 +365,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Sixteen targets decide the 461 runs.
+     the finding is what made that discipline necessary). Seventeen targets decide the 609 runs.
 
      **This table carries no run counts, deliberately — corrected 2026-09-07.** It used to,
      and they were stale: `tlc-neg` sat at 40 against a real 45, `tlc-green` at 15 against 24,

@@ -35,9 +35,10 @@ cover the active-attacker surface — **14 lemmas closed by both**, plus `Bindin
 ProVerif only. **Every `core` concurrency module is checked by all three engines of its family**
 (that is per *module* and per *track*; at *section* granularity one core row still rests on one
 engine — §3.3, and only as the *subject* of §6.11(a′) rather than as a property of its own; and
-of the **nine extension modules across `attestation`, `quorum` and `identity`, five have a
-second engine and four are TLC-only**, and **none of the nine has a third engine or a prover at
-all**) — see `docs/COVERAGE-MATRIX.md` for the grid,
+of the
+nine extension subjects across `attestation`, `quorum` and `identity`, **9 of 9 subjects carry a green on two engines** and none is TLC-only, and **none of the
+nine has a third engine or a prover at all** — derived by `make enginecount`, named per subject
+in `docs/CORROBORATION.md`) — see `docs/COVERAGE-MATRIX.md` for the grid,
 what each engine can and cannot do, and the exact bound on every claim. Every property is §-cited to
 `spec-data/v0.8.2/`,
 every secure result has a negative control with teeth, and the scope boundaries — above all the
@@ -170,7 +171,7 @@ The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**461 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**609 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
 surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
 audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a

@@ -496,6 +496,61 @@ tlc-finding:
 # coverage ONLY — ReentryApalache (§6.11(a') frame-write atomicity), AuthorityApalache (all
 # four §5.2 rules) and BoundsApalache (§5.9 / §4.10(b)). Single-tool coverage was a hole the
 # audit found, not a scope decision.
+#
+# THE FOURTEEN IdentityRecoveryApalache ROWS ARE THE SAME REMEDY ON THE LAST EXTENSION SUBJECT
+# THAT NEEDED IT (2026-09-09, D16, docs/CORROBORATION.md). Read them in three groups, because
+# they assert three different things and the table cannot show that:
+#   ConstInitOK (6)          — CORROBORATION. Identical constants to tla/IdentityRecovery.cfg
+#                              with rotations OFF, which is that model's domain exactly. Same
+#                              claims, decided by SMT over runs of ANY length rather than
+#                              bounded-exhaustively — and `RecoveryIdempotent` therefore now
+#                              covers UNBOUNDED replay where `MaxDeliveries == 2` covered two.
+#   ConstInitRotations (5)   — THE MEASUREMENT, and the reason the group exists (O20's shape).
+#                              With §4.3 handle rotation admitted — nothing weakened, a
+#                              normative kind of the pinned spec — these five still hold. That
+#                              is what makes finding N1 "the lift costs AVAILABILITY, not
+#                              AUTHENTICITY" rather than "removing an assumption broke
+#                              something", which is not a measurement. Deleting them as
+#                              redundant with the ConstInitOK rows would delete the result.
+#   ConstInitRekeyRetain +
+#   ConstInitHandoffRekey (3) — THE REMEDIES, CHECKED. Each names a fix for a finding below and
+#                              is green under it. A remedy this repo proposed without measuring
+#                              is exactly what came back corrected once already
+#                              (docs/PROPERTIES.md §D.1), so they are rows and not prose.
+#
+# THE ELEVEN IdentityProcessApalache ROWS CLOSE THE LAST SINGLE-ENGINE SUBJECT ON THE IDENTITY
+# TRACK (2026-09-09, D16, docs/CORROBORATION.md), and read them in two groups:
+#   ConstInitOK (9)          — CORROBORATION. Every claim tla/IdentityProcess.tla makes, on that
+#                              model's own constants, now decided over runs of ANY LENGTH rather
+#                              than over the ONE ARRIVAL its three variables can represent
+#                              (docs/LEAN-SEAM.md O22). `RevokedCertNeverAdmitted` is in this
+#                              group and is NOT a ported claim: it is finding N3's GREEN half,
+#                              and it is what makes N3 a measurement of which repair closes it
+#                              rather than "a lifted restriction broke something" (the O20
+#                              lesson). Two ported operators needed their ANTECEDENT widened —
+#                              see `UnbindOnlyOnRejection` and `SeedRowReachable` in the module,
+#                              which say why and what the single-arrival domain hid.
+#   ConstInitIssueChecksRetire +
+#   ConstInitRetireKillsLive (2) — THE REMEDIES, CHECKED. §6.3's dispatch table names seven
+#                              handlers and defines none of them, so N4's two candidate fixes are
+#                              both statements about text that does not exist. Each is green
+#                              under its own cinit, for the reason the block above gives.
+#
+# THE NINE QuorumTrustApalache ROWS CLOSE THE LAST SINGLE-ENGINE SUBJECT ANYWHERE ON THE EXTENSION
+# TRACKS (2026-09-09, D16, docs/CORROBORATION.md). Two groups, and the split is by CINIT:
+#   ConstInitTLCDomain (4)   — CORROBORATION, and it is a real cinit rather than a synonym for
+#                              ConstInitOK: it switches OFF the three lifts (revocations,
+#                              re-arrival, raw unbind) so the model's domain is
+#                              tla/QuorumTrust.tla's exactly. Every claim that model makes
+#                              reproduces, now over runs of ANY length.
+#   ConstInitOK (5)          — THE SAME CLAIMS WITH THE LIFTS ON, and the fifth row is new.
+#                              `RevokeLeavesNoStaleEntry` is §4.2.1 TRIGGER 3's own obligation and
+#                              had no row on this subject before, because the TLC module has no
+#                              revocation action. `CacheMatchesValidated` green HERE is the
+#                              measurement that matters: the §4.2.1 contract is exactly sufficient
+#                              over ALL THREE triggers, where the claim it corrects was over two.
+#                              See `OnlyAcceptInvalidates` in APALACHE_NEG for the falsification
+#                              of the two-trigger form, which was green for two days.
 APALACHE_GREEN := \
   "RevokeApalache ConstInitOK InvDet IndInitDet" \
   "RevokeApalache ConstInitOK InvRev IndInitRev" \
@@ -523,22 +578,69 @@ APALACHE_GREEN := \
   "BootstrapApalache ConstInitOK InvAllOrNothing IndInitAllOrNothing" \
   "BootstrapApalache ConstInitOK InvRegGate IndInitRegGate" \
   "BootstrapApalache ConstInitOK InvConnect IndInitConnect" \
-  "AttestIndexApalache ConstInitOK Inv IndInitIx"
+  "AttestIndexApalache ConstInitOK Inv IndInitIx" \
+  "IdentityRecoveryApalache ConstInitOK RecoveryFailClosed IndInitRec" \
+  "IdentityRecoveryApalache ConstInitOK AcceptedRecoveryIsQuorumSigned IndInitRec" \
+  "IdentityRecoveryApalache ConstInitOK RecoveryIdempotent IndInitRec" \
+  "IdentityRecoveryApalache ConstInitOK AnchorWasValidated IndInitRec" \
+  "IdentityRecoveryApalache ConstInitOK RecoveryAttainable IndInitRec" \
+  "IdentityRecoveryApalache ConstInitOK SeedFollowsArrival IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRotations RecoveryFailClosed IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRotations AcceptedRecoveryIsQuorumSigned IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRotations RecoveryAttainable IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRotations SeedFollowsArrival IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRotations RecoveryIdempotent IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRekeyRetain RecoveryIdempotent IndInitRec" \
+  "IdentityRecoveryApalache ConstInitHandoffRekey AnchorSurvivesHandoff IndInitHandoff" \
+  "IdentityRecoveryApalache ConstInitHandoffRekey HandoffKeepsRecoveryAvailable IndInitHandoff" \
+  "IdentityProcessApalache ConstInitOK LocalCreateNeverUnbinds IndInitP" \
+  "IdentityProcessApalache ConstInitOK UnbindOnlyOnRejection IndInitP" \
+  "IdentityProcessApalache ConstInitOK FailureIsObservable IndInitP" \
+  "IdentityProcessApalache ConstInitOK NoSuccessEvents IndInitP" \
+  "IdentityProcessApalache ConstInitOK ForeignKindNotDispatched IndInitP" \
+  "IdentityProcessApalache ConstInitOK SeedRowReachable IndInitP" \
+  "IdentityProcessApalache ConstInitOK RevocationSurvivesArrival IndInitP" \
+  "IdentityProcessApalache ConstInitOK QuorumUpdateSurvivesArrival IndInitP" \
+  "IdentityProcessApalache ConstInitOK RevokedCertNeverAdmitted IndInitP" \
+  "IdentityProcessApalache ConstInitIssueChecksRetire RetirementIsDurable IndInitRetire" \
+  "IdentityProcessApalache ConstInitRetireKillsLive RetirementIsDurable IndInitRetire" \
+  "QuorumTrustApalache ConstInitOK CacheMatchesValidated IndInitCache" \
+  "QuorumTrustApalache ConstInitOK NoInvalidationWithoutTrigger IndInitRules" \
+  "QuorumTrustApalache ConstInitOK InvalidationScopedPerQuorum IndInitRules" \
+  "QuorumTrustApalache ConstInitOK AcceptLeavesNoStaleEntry IndInitRules" \
+  "QuorumTrustApalache ConstInitOK RevokeLeavesNoStaleEntry IndInitRules" \
+  "QuorumTrustApalache ConstInitTLCDomain CacheMatchesValidated IndInitCache" \
+  "QuorumTrustApalache ConstInitTLCDomain NoInvalidationWithoutTrigger IndInitRules" \
+  "QuorumTrustApalache ConstInitTLCDomain InvalidationScopedPerQuorum IndInitRules" \
+  "QuorumTrustApalache ConstInitTLCDomain AcceptLeavesNoStaleEntry IndInitRules"
 
 # THE STRENGTHENING MUST PRESERVE ITSELF, AND UNTIL 2026-09-08 NOTHING CHECKED THAT.
 #
 # `apalache-green` checks two things per row: Init => Inv, and IndInit /\ Next => Inv'. Where
 # IndInit is just Inv (ConnCodes, Bootstrap) those two ARE the inductive proof. Where IndInit
-# is `TypeOK /\ <strengthening> /\ Inv` — 20 of the 27 rows above — they are not. Preservation
+# is `TypeOK /\ <strengthening> /\ Inv` — 20 of the 27 rows AS THE TABLE STOOD ON 2026-09-08 —
+# they are not. Preservation
 # of Inv FROM strengthened states says nothing unless the strengthening is itself preserved,
 # and `docs/PROPERTIES.md` names the strengthenings ("RefcountSound", "DecisionSound") without
 # ever asserting that closure. The published claim was "proved INDUCTIVE"; what was checked was
 # weaker.
 #
 # Asked D13's question of our own gate — what does this assert, and what else satisfies it? —
-# and then answered it by RUNNING it rather than reasoning: every row below was measured, and
-# all 27 CLOSE. Nothing was wrong. The claim was under-asserted, which is the cheaper half of
+# and then answered it by RUNNING it rather than reasoning: every row was measured, and
+# all 27 CLOSED. Nothing was wrong. The claim was under-asserted, which is the cheaper half of
 # D13 and the half that goes unnoticed, because the result of checking is that nothing changes.
+#
+# BOTH FIGURES IN THE TWO PARAGRAPHS ABOVE ARE DATED ON PURPOSE, AND THE DATE WAS ADDED BECAUSE
+# THEY HAD ALREADY GONE STALE. `APALACHE_GREEN` was 27 rows when this header was written; the
+# fourteen IdentityRecoveryApalache rows landed on 2026-09-09 and nothing here moved, so for one
+# day this block described a table 14 rows smaller than the one beneath it. That is D15's
+# mechanism inside a D13 gate's own documentation — a number about our own past that reads as a
+# live claim about the table below it, which is the exact shape `tools/runcount.py` refuses to
+# gate and says so. The live invariant is not a count and does not go stale: EVERY ROW OF
+# `APALACHE_GREEN` WHOSE `IndInit` IS NOT ITS `Inv` MUST HAVE A ROW HERE. Adding a green row with
+# a named strengthening and no closure row re-opens exactly the gap this target was built to
+# close, and no tool checks that — it is a reading, which is why it is stated as a rule rather
+# than as a figure.
 #
 # Format: MODULE CINIT IND. Each row checks IND /\ Next => IND', i.e. the strengthening is
 # preserved. Together with the base and step rows above, THIS is the inductive proof.
@@ -568,7 +670,18 @@ APALACHE_CLOSURE := \
   "BootstrapApalache ConstInitOK IndInitAllOrNothing" \
   "BootstrapApalache ConstInitOK IndInitRegGate" \
   "BootstrapApalache ConstInitOK IndInitConnect" \
-  "AttestIndexApalache ConstInitOK IndInitIx"
+  "AttestIndexApalache ConstInitOK IndInitIx" \
+  "IdentityRecoveryApalache ConstInitOK IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRotations IndInitRec" \
+  "IdentityRecoveryApalache ConstInitRekeyRetain IndInitRec" \
+  "IdentityRecoveryApalache ConstInitHandoffRekey IndInitHandoff" \
+  "IdentityProcessApalache ConstInitOK IndInitP" \
+  "IdentityProcessApalache ConstInitIssueChecksRetire IndInitRetire" \
+  "IdentityProcessApalache ConstInitRetireKillsLive IndInitRetire" \
+  "QuorumTrustApalache ConstInitOK IndInitCache" \
+  "QuorumTrustApalache ConstInitOK IndInitRules" \
+  "QuorumTrustApalache ConstInitTLCDomain IndInitCache" \
+  "QuorumTrustApalache ConstInitTLCDomain IndInitRules"
 
 # ----------------------------------------------------------------------------------
 # EXTENSION-TRACK ENUMERATION MODELS — a second engine for models with no transitions.
@@ -600,6 +713,15 @@ APALACHE_CLOSURE := \
 # is still well defined under the STRUCTURAL reading of `is_self_revoked` and is NOT well
 # defined under the recursive one. The undefined helper does not merely change the answer — one
 # reading has an answer and the other does not. Read this row with F5, not as a result.
+#
+# THE FIVE `QuorumSignerSetApalache ConstInitSupUnordered` GREENS ARE THE SAME KIND OF ROW
+# (2026-09-08, LEAN-SEAM O20). With §QUORUM:4.2's hard-coded index order LIFTED, four of the
+# resolver's five checked properties still hold and one does not (`CohortNeverSilentlyReverts`,
+# in APALACHE_ENUM_FINDING). Those greens are what make this a MEASUREMENT of the assumption
+# rather than a demonstration that weakening a model breaks something, and
+# `CohortNeverSilentlyRevertsWhenAcyclic` is the row that says which weaker property was
+# actually load-bearing: acyclicity, not the index order. Deleting them as redundant would
+# delete the result.
 APALACHE_ENUM_GREEN := \
   "AttestLiveApalache ConstInitOK UnrollDeep" \
   "AttestLiveApalache ConstInitOK MaxOfExact" \
@@ -619,6 +741,18 @@ APALACHE_ENUM_GREEN := \
   "AttestRevokeApalache ConstInitOK DescReadingsCoincide" \
   "AttestRevokeApalache ConstInitOK NoLiveAncestorOfLive" \
   "AttestRevokeApalache ConstInitSupUnordered FixedPointUniqueStruct" \
+  "QuorumSignerSetApalache ConstInitOK UnrollDeep" \
+  "QuorumSignerSetApalache ConstInitOK MostRecentExact" \
+  "QuorumSignerSetApalache ConstInitOK LeastExact" \
+  "QuorumSignerSetApalache ConstInitOK SpecWalkNeverExhausts" \
+  "QuorumSignerSetApalache ConstInitOK CohortMatchesNormativeOnChain" \
+  "QuorumSignerSetApalache ConstInitOK CohortNeverSilentlyReverts" \
+  "QuorumSignerSetApalache ConstInitOK ResolvedHeadIsCurrent" \
+  "QuorumSignerSetApalache ConstInitSupUnordered UnrollDeep" \
+  "QuorumSignerSetApalache ConstInitSupUnordered SpecWalkNeverExhausts" \
+  "QuorumSignerSetApalache ConstInitSupUnordered ResolvedHeadIsCurrent" \
+  "QuorumSignerSetApalache ConstInitSupUnordered CohortMatchesNormativeOnChain" \
+  "QuorumSignerSetApalache ConstInitSupUnordered CohortNeverSilentlyRevertsWhenAcyclic" \
   "QuorumKofNApalache ConstInitOK CountAgreesWithCardinality" \
   "QuorumKofNApalache ConstInitOK KofNRequiresASignature" \
   "QuorumKofNApalache ConstInitOK DedupeCountsPeersOnce" \
@@ -648,7 +782,15 @@ APALACHE_ENUM_GREEN := \
 #                         not terminate; ConstInitLadderShort proves each module's own unrolling
 #                         bound fails LOUDLY one node past it instead of silently truncating
 #                         (AttestLive: N = 4 vs its N = 3; AttestRevoke: N = 5 vs its N = 4, on
-#                         BOTH of its ladders — reachability and liveness).
+#                         BOTH of its ladders — reachability and liveness;
+#                         QuorumSignerSet: N = 4 vs its N = 3).
+#
+# ONE WITNESS IS A ROW ON ONE CINIT AND A GREEN ON THE OTHER, WHICH IS NOT A CONTRADICTION.
+# `QuorumSignerSetApalache ConstInitSupUnordered WitnessSupCycle` must be violated (a supersedes
+# cycle is constructible once the index order is lifted); the same operator under `ConstInitOK`
+# HOLDS, and holding is correct there because the order forbids cycles. The pair is the check
+# that the two cinits differ in the dimension O20 says they differ in, so it is deliberately NOT
+# listed under ConstInitOK here — a witness row means "must be violated", and this one must not.
 # Format: MODULE CINIT INV.
 APALACHE_ENUM_NEG := \
   "AttestLiveApalache ConstInitBugDirect NoLiveAncestorOfLive" \
@@ -664,6 +806,13 @@ APALACHE_ENUM_NEG := \
   "AttestRevokeApalache ConstInitOK WitnessSupersededByLive" \
   "AttestRevokeApalache ConstInitLadderShort UnrollDeep" \
   "AttestRevokeApalache ConstInitLadderShort LadderIsFixedPointRec" \
+  "QuorumSignerSetApalache ConstInitBugProbe CohortMatchesNormativeOnChain" \
+  "QuorumSignerSetApalache ConstInitBugLiteral CohortNeverSilentlyReverts" \
+  "QuorumSignerSetApalache ConstInitOK WitnessThreeChain" \
+  "QuorumSignerSetApalache ConstInitOK WitnessPendingUpdate" \
+  "QuorumSignerSetApalache ConstInitOK WitnessSilentRevert" \
+  "QuorumSignerSetApalache ConstInitSupUnordered WitnessSupCycle" \
+  "QuorumSignerSetApalache ConstInitLadderShort UnrollDeep" \
   "QuorumKofNApalache ConstInitBugDedupe DedupeCountsPeersOnce" \
   "QuorumKofNApalache ConstInitBugResolve UnresolvableNeverCounts" \
   "QuorumKofNApalache ConstInitOK WitnessKofNPasses" \
@@ -702,6 +851,15 @@ APALACHE_ENUM_NEG := \
 #     reading survives the composed cycle. That asymmetry is the finding's sharpest edge and it
 #     is why the green row is listed there with a pointer back here.
 # Retiring these needs §4.3 to state the assumption, not merely to define the helpers.
+#
+# THE TWO `QuorumSignerSetApalache ConstInitSupUnordered` ROWS ARE SHAPE 2 ON THE QUORUM TRACK
+# (2026-09-08, LEAN-SEAM O20), and the SECOND of them exists because the FIRST one's
+# counterexample was not the one worth routing. `CohortNeverSilentlyReverts` returns
+# `sup = <<1, 1, 2>>` — an attestation that supersedes ITSELF — which is a true instance and an
+# easy thing for a reader to dismiss. `CohortNeverSilentlyRevertsNoSelfLoop` forbids the
+# self-loop and is violated on a genuine two-node cycle, so the routed mechanism is the one the
+# counterexample exhibits. Both rows are kept: the pair is the statement that the defect is not
+# an artifact of the degenerate case.
 # Format: MODULE CINIT INV.
 APALACHE_ENUM_FINDING := \
   "AttestLiveApalache ConstInitFinding SpecHeadFindsLiveHead" \
@@ -712,6 +870,13 @@ APALACHE_ENUM_FINDING := \
   "AttestRevokeApalache ConstInitRevUnordered LadderIsFixedPointRec" \
   "AttestRevokeApalache ConstInitRevUnordered FixedPointUniqueRec" \
   "AttestRevokeApalache ConstInitRevUnordered FixedPointUniqueStruct" \
+  "QuorumSignerSetApalache ConstInitFinding ResultIndependentOfProbe" \
+  "QuorumSignerSetApalache ConstInitFinding SpecNeverSilentlyReverts" \
+  "QuorumSignerSetApalache ConstInitFinding NotExpiredReadingsAgree" \
+  "QuorumSignerSetApalache ConstInitFinding SpecMatchesNormative" \
+  "QuorumSignerSetApalache ConstInitFinding CohortMatchesNormative" \
+  "QuorumSignerSetApalache ConstInitSupUnordered CohortNeverSilentlyReverts" \
+  "QuorumSignerSetApalache ConstInitSupUnordered CohortNeverSilentlyRevertsNoSelfLoop" \
   "QuorumKofNApalache ConstInitFindingThreshold KofNRequiresASignature" \
   "QuorumKofNApalache ConstInitFindingAttainable ThresholdAttainable" \
   "IdentityCertChainApalache ConstInitFindingPublicSig PublicPathNeverControllerSigned" \
@@ -732,6 +897,142 @@ APALACHE_ENUM_FINDING := \
 # needs >= 5 (five Advance steps to reach the ceiling) and was observed passing at 4 during
 # the 0.8.2 audit. Lengths here carry margin over the shortest witness. Same failure family as
 # vacuity: a green that means nothing.
+#
+# TWO KINDS SHARE THIS TABLE AS OF 2026-09-09, AND A ROW DOES NOT SHOW WHICH IT IS — so each is
+# named here, exactly as `APALACHE_ENUM_NEG`'s header names its three. Both must be VIOLATED
+# and the reasons are opposite:
+#   NEGATIVE CONTROLS     — a deliberately WEAKENED model; the violation proves the property
+#                           has teeth. Everything above, plus IdentityRecoveryApalache's
+#                           ConstInitBugOpen (§9.4's MUST removed) and ConstInitBugFresh
+#                           (§QUORUM:3.3's named wrong answer, validating against the freshest
+#                           publish SEEN rather than the one CACHED).
+#   NON-VACUITY WITNESSES — asserted IN ORDER TO BE VIOLATED on a model where nothing is
+#                           weakened; the violation exhibits a state and IS the pass.
+#                           IdentityRecoveryApalache's four. They are load-bearing rather than
+#                           a formality on this subject specifically: its headline finding IS a
+#                           vacuity (§9.4's prohibition is green because the accepting path does
+#                           not exist), so a green there means nothing without
+#                           `WitnessRecoveryAccepted` beside it. `WitnessChainedAccept` is the
+#                           odd one — it exhibits the REMEDY for finding N2 (two recoveries in a
+#                           row are accepted under copy-and-keep), which is why it runs under
+#                           ConstInitRekeyRetain and not under ConstInitOK.
+#
+# IdentityProcessApalache's TEN ROWS (2026-09-09) SPLIT THE SAME TWO WAYS, four and six:
+#   CONTROLS  — ConstInitBugScope (§6.3's phase-2a scope rule removed), ConstInitBugHandler (a
+#               phase-2 failure allowed to propagate into an unbind), ConstInitBugNoEmit (phase 3
+#               dropped), ConstInitBugSuccessEvent (success-path emission, a v2 MUST NOT). Each
+#               is the TLC twin's cfg of the same name, one engine over.
+#   WITNESSES — the six ConstInitOK rows, and on THIS module they are load-bearing rather than a
+#               formality. The TLC twin's green sweep was VACUOUS on its first draft: under the
+#               union of the cohort's repairs nothing was ever rejected, so the phase-2a unbind
+#               path was dead and two greens were true of a model that never unbinds anything.
+#               `WitnessCapIssued` and `WitnessRevBound` carry the same job for the rows the LIFT
+#               added — `RevokedCertNeverAdmitted` is green by admitting no cert at all, and
+#               `RetirementIsDurable` is green by never tearing a cap down, so each has a witness
+#               that must exhibit the state its green is about. `WitnessCapTornDown` runs at
+#               length 4 rather than 3 because the teardown it must exhibit needs an issuance
+#               before it; see that module's `capTornDown` comment for why the shorter trace was
+#               the wrong one to route.
+#
+# QuorumTrustApalache's TEN ROWS (2026-09-09) split four controls and six witnesses, and ONE OF
+# THE WITNESSES IS NOT A VACUITY CHECK — it is a retraction with a gate row behind it:
+#   CONTROLS  — ConstInitBugNoInvalidate (§4.2.1 triggers 1+2 removed), ConstInitBugRawInvalidate
+#               (non-trigger 2 inverted), ConstInitBugCrossQuorum (non-trigger 3 inverted) are the
+#               TLC module's three controls one engine over. **ConstInitBugRevokeNoInvalidate is
+#               NEW and is the point**: §4.2.1 TRIGGER 3 had no teeth-test anywhere in this repo,
+#               because no model had an action that could fire it.
+#   WITNESSES — WitnessCachePopulated / WitnessUnvalidatedInTree / WitnessColdStartExposed are
+#               ported. WitnessRevocationFires and WitnessRevokeCleared are new and load-bearing
+#               for the same reason as the control above: without them every trigger-3 claim is a
+#               claim about an action that never fires, which is the state the TLC module was in
+#               without anyone noticing.
+#               **OnlyAcceptInvalidates is the odd row and it is deliberate.** It is
+#               tla/QuorumTrust.tla's `NoInvalidationWithoutAcceptance` transcribed UNCHANGED,
+#               whose comment there reads "Only a validate-accept may clear a cache entry." That
+#               sentence is FALSE of §4.2.1, which has three triggers; it was green for two days
+#               because the model had no action that could falsify it. Its required violation
+#               here is the correction, expressed as a gate row rather than as a paragraph
+#               nothing re-reads. `NoInvalidationWithoutTrigger` in APALACHE_GREEN is the claim
+#               that survives.
+# ----------------------------------------------------------------------------------
+# APALACHE FINDING ROWS ON A TRANSITION SYSTEM — the third table this repo has split out for
+# the same reason, and the reason is D13's sixth instance rather than tidiness.
+#
+# `APALACHE_NEG` (above) and `APALACHE_ENUM_FINDING` (below) each already carry the rule. What
+# neither can carry is a row that (a) must be VIOLATED, (b) weakens NOTHING, and (c) needs a
+# bounded run from `Init` because the module has real transitions. `APALACHE_ENUM_FINDING` runs
+# every row at `--length=0`, which is right for the enumeration models and settles nothing on a
+# state machine; `APALACHE_NEG`'s header says "the invariant has no teeth" on a green, and THAT
+# SENTENCE IS FALSE OF A FINDING ROW — a green here would mean the defect was fixed upstream and
+# the row must be RETIRED, not repaired. Two opposite meanings behind one exit code is exactly
+# what `TLC_FINDING` was split out to prevent.
+#
+# Format: MODULE CINIT INV INIT LENGTH. Every row MUST be violated, and the LENGTH column is the
+# same trap it is in APALACHE_NEG: a run too short to reach the defect reports NoError, which
+# reads identically to "the property holds". Lengths carry margin over the shortest trace, and
+# every trace below was READ rather than inferred from the exit code — which is how the first
+# draft of `RecoveryAttainable` under ConstInitRotations was caught asserting the wrong thing
+# (its counterexample had `handoffSeen = FALSE`; see that module's `rejGenuine` comment).
+#
+# All three of TLC_FINDING's shapes appear here:
+#   Shape 1 — NOTHING IS WEAKENED. ConstInitFindingSeed is §6.3 AS WRITTEN (phase 1 rejects
+#     `quorum-publish`, so the phase-2 seed row never runs), and ConstInitRotations is the green
+#     sweep's constants plus a §4.3 handle rotation, which is a normative kind of the pinned
+#     spec. Findings I1/R1, I2/R2 and N1.
+#   Shape 2 — THE CONSTANT FLIPS TOWARD ONE IMPLEMENTATION, because on this question the spec
+#     says nothing. ConstInitGo and ConstInitRustPy are the two readings of §6.3's
+#     `update_handle_cache_to`, a handler NAMED in a normative dispatch table and DEFINED IN NO
+#     SECTION. Finding N2, and read its two rows as a PAIR: each reading satisfies one of two
+#     properties the spec states and neither satisfies both. Retiring one of them without the
+#     other would leave a reader thinking one implementation is simply right.
+#   Shape 3 — TOWARD ONE IMPLEMENTATION on a silence. ConstInitFindingAnchor is entity-core-rust's
+#     unvalidating admission rule (I6/R3): there is no validation step to omit, because none is
+#     written.
+#
+# IdentityProcessApalache's FIVE ROWS (2026-09-09) ARE SHAPES 1 AND 2, AND THE SPLIT IS NOT WHERE
+# A READER WOULD GUESS — the two cinits do NOT correspond to the two findings.
+#   ConstInitFindingSpec (4 rows) — SHAPE 2, the constant flipped TOWARD the spec. §6.3 and §3.6
+#     AS WRITTEN: no pre-route branch, and `revocation` excluded by §3.6's explicit comment. The
+#     three ported rows carry I1, I2 and I3 to a second engine; the fourth, `RevokedCertNeverAdmitted`,
+#     is finding N3 and is NEW — it needs two arrivals and the TLC twin has one.
+#   ConstInitOK (1 row) — SHAPE 1, NOTHING WEAKENED, and it is the sharpest row in the file for
+#     that reason. `RetirementIsDurable` is violated on the GREEN SWEEP'S OWN CONSTANTS, which on
+#     this track are the UNION of all three implementations' repairs — so finding N4 survives
+#     every workaround the cohort invented, and no setting of any constant here makes it go away
+#     except the two that add text §6.3 does not have (APALACHE_GREEN's last two rows).
+# Read `ConstInitOK` appearing in BOTH this table and APALACHE_GREEN as the point rather than as
+# an inconsistency: nine claims hold on those constants and a tenth does not.
+#
+# QuorumTrustApalache's THREE ROWS ARE ALL SHAPE 2 — the constant flips TOWARD the spec.
+#   ConstInitFindingClosure / ConstInitFindingFailPath — Q5, ported. `WalkClosedOverValidated`
+#     FALSE is §4.2 AS WRITTEN (the §ATTEST:5.4 index lookup, which §ATTEST:5.7 I4 says filters by
+#     nothing); TRUE is the closure §4.2's cold-start sentence merely ASSERTS. The FailPath row
+#     runs with §8 switched off, so the defect is shown not to depend on raw writes at all.
+#   ConstInitFindingDelete — NEW, and read it against ConstInitOK rather than alone. The ONLY
+#     difference from the green sweep is that §8's permitted `tree:put` may write NULL. The
+#     read-side closure is IN FORCE and the cache still goes stale, because §4.2.1 non-trigger 2
+#     forbids invalidating on a raw tree-write and the entry it removed was validated. So the
+#     closure Q5's remedy names is READ-side and what §4.2 actually needs is WRITE-side. Same
+#     sentence and same §8 mechanism as Q5, opposite direction, and it SURVIVES Q5's remedy —
+#     which is why it is routed as a strengthening of Q5 rather than as a new finding.
+APALACHE_FINDING := \
+  "IdentityRecoveryApalache ConstInitFindingSeed   SeedFollowsArrival             Init 3" \
+  "IdentityRecoveryApalache ConstInitFindingSeed   RecoveryAttainable             Init 5" \
+  "IdentityRecoveryApalache ConstInitFindingAnchor AnchorWasValidated             Init 3" \
+  "IdentityRecoveryApalache ConstInitFindingAnchor AcceptedRecoveryIsQuorumSigned Init 5" \
+  "IdentityRecoveryApalache ConstInitRotations AnchorSurvivesHandoff         Init 4" \
+  "IdentityRecoveryApalache ConstInitRotations HandoffKeepsRecoveryAvailable Init 5" \
+  "IdentityRecoveryApalache ConstInitRustPy    SecondRecoveryHasAnchor       Init 6" \
+  "IdentityRecoveryApalache ConstInitGo        RecoveryIdempotent            Init 6" \
+  "IdentityProcessApalache ConstInitFindingSpec SeedRowReachable            Init 2" \
+  "IdentityProcessApalache ConstInitFindingSpec RevocationSurvivesArrival   Init 2" \
+  "IdentityProcessApalache ConstInitFindingSpec QuorumUpdateSurvivesArrival Init 2" \
+  "IdentityProcessApalache ConstInitFindingSpec RevokedCertNeverAdmitted    Init 4" \
+  "IdentityProcessApalache ConstInitOK          RetirementIsDurable         Init 5" \
+  "QuorumTrustApalache ConstInitFindingClosure  CacheMatchesValidated Init 4" \
+  "QuorumTrustApalache ConstInitFindingFailPath CacheMatchesValidated Init 4" \
+  "QuorumTrustApalache ConstInitFindingDelete   CacheMatchesValidated Init 5"
+
 APALACHE_NEG := \
   "AttestIndexApalache ConstInitBugAtomic NoResidueOnFailure    Init 8" \
   "AttestIndexApalache ConstInitBugKind   KindIndexEligibleOnly Init 8" \
@@ -759,7 +1060,34 @@ APALACHE_NEG := \
   "ConnCodesApalache ConstInitSeqReading  PreHelloAuthIsInvalidNonce Init 6" \
   "BootstrapApalache ConstInitBugEarlyIndex BootAllOrNothing             Init 6" \
   "BootstrapApalache ConstInitBugGate       NoRegistrationBeforeBootstrap Init 6" \
-  "BootstrapApalache ConstInitBugConnect    ConnectPreAuthorized          Init 6"
+  "BootstrapApalache ConstInitBugConnect    ConnectPreAuthorized          Init 6" \
+  "IdentityRecoveryApalache ConstInitBugOpen  RecoveryFailClosed             Init 4" \
+  "IdentityRecoveryApalache ConstInitBugFresh AcceptedRecoveryIsQuorumSigned Init 5" \
+  "IdentityRecoveryApalache ConstInitOK WitnessAnchorSeeded     Init 3" \
+  "IdentityRecoveryApalache ConstInitOK WitnessRecoveryAccepted Init 5" \
+  "IdentityRecoveryApalache ConstInitOK WitnessFailClosedFires  Init 3" \
+  "IdentityRecoveryApalache ConstInitRekeyRetain WitnessChainedAccept Init 8" \
+  "IdentityProcessApalache ConstInitBugScope        LocalCreateNeverUnbinds Init 3" \
+  "IdentityProcessApalache ConstInitBugHandler      UnbindOnlyOnRejection   Init 3" \
+  "IdentityProcessApalache ConstInitBugNoEmit       FailureIsObservable     Init 3" \
+  "IdentityProcessApalache ConstInitBugSuccessEvent NoSuccessEvents         Init 3" \
+  "IdentityProcessApalache ConstInitOK WitnessUnbindReached Init 3" \
+  "IdentityProcessApalache ConstInitOK WitnessPhase2Reached Init 3" \
+  "IdentityProcessApalache ConstInitOK WitnessFailureEvent  Init 3" \
+  "IdentityProcessApalache ConstInitOK WitnessCapIssued     Init 3" \
+  "IdentityProcessApalache ConstInitOK WitnessCapTornDown   Init 4" \
+  "IdentityProcessApalache ConstInitOK WitnessRevBound      Init 3" \
+  "IdentityProcessApalache ConstInitOK WitnessSeeded        Init 3" \
+  "QuorumTrustApalache ConstInitBugNoInvalidate       CacheMatchesValidated        Init 5" \
+  "QuorumTrustApalache ConstInitBugRevokeNoInvalidate CacheMatchesValidated        Init 5" \
+  "QuorumTrustApalache ConstInitBugRawInvalidate      NoInvalidationWithoutTrigger Init 3" \
+  "QuorumTrustApalache ConstInitBugCrossQuorum        InvalidationScopedPerQuorum  Init 3" \
+  "QuorumTrustApalache ConstInitOK WitnessCachePopulated    Init 3" \
+  "QuorumTrustApalache ConstInitOK WitnessUnvalidatedInTree Init 3" \
+  "QuorumTrustApalache ConstInitOK WitnessColdStartExposed  Init 4" \
+  "QuorumTrustApalache ConstInitOK WitnessRevocationFires   Init 3" \
+  "QuorumTrustApalache ConstInitOK WitnessRevokeCleared     Init 4" \
+  "QuorumTrustApalache ConstInitOK OnlyAcceptInvalidates    Init 4"
 
 # Every row MUST fail, AND MUST FAIL BY FINDING A COUNTEREXAMPLE — not by erroring out.
 #
@@ -879,6 +1207,33 @@ apalache-enum-finding:
 	  echo "   ok (counterexample found as required -- the finding still stands)"; \
 	done
 
+# The transition-system twin of the target above. Same grading and the same retirement message;
+# the difference is the bounded run from a named INIT, because these modules have transitions
+# and `--length=0` would settle nothing about them. See the APALACHE_FINDING header for why
+# this is a third table rather than a flag on either of the two that already exist.
+.PHONY: apalache-finding
+apalache-finding:
+	@for row in $(APALACHE_FINDING); do \
+	  set -- $$row; mod=$$1; ci=$$2; inv=$$3; init=$$4; len=$$5; \
+	  echo "== Apalache FINDING $$mod $$ci/$$inv (MUST be violated -- nothing is weakened) =="; \
+	  out=$$($(APRUN) check --cinit=$$ci --init=$$init --next=Next --inv=$$inv --length=$$len $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -eq 0 ]; then \
+	    echo "GREEN ON A FINDING ROW: $$mod $$ci/$$inv now HOLDS."; \
+	    echo "      This is NOT a model regression and MUST NOT be repaired by editing the"; \
+	    echo "      model. Either the spec defect was fixed upstream -- in which case RETIRE"; \
+	    echo "      the row, move the claim into APALACHE_GREEN and strike the finding in"; \
+	    echo "      docs/status/FINDINGS-INDEX.md -- or the --length is too SHORT to reach it,"; \
+	    echo "      which reports identically. Check the length before believing the retirement."; \
+	    exit 1; \
+	  fi; \
+	  if ! echo "$$out" | grep -qF "EXITCODE: ERROR (12)"; then \
+	    echo "FAIL: $$ci/$$inv failed WITHOUT a counterexample -- not evidence of the finding."; \
+	    echo "$$out" | grep -E "Configuration error|EXITCODE" | tail -3 | sed 's/^/      /'; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (counterexample found as required -- the finding still stands)"; \
+	done
+
 # Full TLA+ green slice: bounded-exhaustive (TLC) + unbounded inductive (Apalache).
 green: tlc-green apalache-green apalache-closure apalache-enum-green
 
@@ -886,7 +1241,8 @@ green: tlc-green apalache-green apalache-closure apalache-enum-green
 # proves the properties hold; it does NOT prove they could have failed or that the model does
 # anything. This target proves all three.
 matrix: tlc-green apalache-green apalache-closure apalache-enum-green \
-        tlc-neg apalache-neg apalache-enum-neg tlc-witness tlc-finding apalache-enum-finding
+        tlc-neg apalache-neg apalache-enum-neg tlc-witness tlc-finding apalache-enum-finding \
+        apalache-finding
 
 # ----------------------------------------------------------------------------------
 # Apalache — the SYMBOLIC (SMT) cross-check engine (cross-check #A). Same .tla models,

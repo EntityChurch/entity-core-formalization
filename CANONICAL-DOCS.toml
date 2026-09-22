@@ -68,13 +68,19 @@ group = "Overview"
 [[doc]]
 path  = "docs/FINAL-ASSURANCE-SUMMARY.md"
 title = "Final Assurance Summary (capstone)"
-blurb = "What was proved, how far it goes, what it deliberately does not say; the 461-run re-verification matrix."
+blurb = "What was proved, how far it goes, what it deliberately does not say; the 609-run re-verification matrix."
 group = "Assurance"
 
 [[doc]]
 path  = "docs/COVERAGE-MATRIX.md"
 title = "Coverage matrix — what is verified, by which tool, and how far it reaches"
 blurb = "What each of the four engines can and cannot do; protocol section x engine; what is NOT covered, split into out-of-scope / tool-limited / backlog; the exact bound on every claim."
+group = "Assurance"
+
+[[doc]]
+path  = "docs/CORROBORATION.md"
+title = "Corroboration ledger — how many engines carry each claim"
+blurb = "Per modeled subject: which engines have a GREEN result on it, and — named individually, with reasons — every subject that rests on only one. Answers the question the coverage matrix does not: how many independent engines would have to be wrong at once for a published result to be wrong. Derived from the gate tables and checked by `make enginecount`; states in the file what two engines do NOT buy."
 group = "Assurance"
 
 [[doc]]

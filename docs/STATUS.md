@@ -24,8 +24,8 @@ otherwise**; the `attestation` and `quorum` tracks are days old and are reported
 |---|---|---|
 | `core` | Entity Core Protocol | **modeled** — 95 model files, 302 runs, pinned at `spec-data/v0.8.2` |
 | `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
-| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 39 runs, **TLC on all three; Apalache on §4.1 only**, pinned at `spec-data/ext-quorum-v1.2` |
-| `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 52 runs, **TLC on all three; Apalache on §3.6/§9.2 only**, pinned at `spec-data/ext-identity-v3.10` |
+| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 65 runs, **TLC on all three; Apalache on §4.1 and §4.2**, pinned at `spec-data/ext-quorum-v1.2` |
+| `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 98 runs, **TLC on all three; Apalache on §9.4 and on §3.6/§9.2** — §6.3 is the one module left on a single engine, pinned at `spec-data/ext-identity-v3.10` |
 
 Added 2026-09-06, **before** any extension model exists, and that order is the point. The
 coverage number is derived from a *document-blind* `§N.M` pattern, so an
@@ -75,6 +75,161 @@ a bare clone does not have, so it is excluded from `make matrix` rather than ski
 it. See §Next item 4 and `docs/LEAN-SEAM.md` §7.
 
 ## Where we left off
+
+**2026-09-09 — the standard this repo works to is now a discipline with a gate behind it, and
+the experiment a rule asked for one track over paid out.** Three things, and the first is the
+one to read.
+
+- **D16 and D17 are ratified** (`AGENTS.md`), and **`make enginecount`** is D16's enforcement
+  point. The standard: **two structurally different engines, minimum, before a result is
+  published as a property of the protocol; a result carried by one says so by name.**
+  `docs/CORROBORATION.md` is the per-subject ledger — subject → files → engines — and the gate
+  derives the engine set from the **GREEN** gate tables, not from which files exist, then fails
+  on a stale exemption, an undeclared subject, or a prose site whose pair has drifted. It is
+  **33 of 35** subjects overall and **9 of 9** on the extension tracks. The figure it replaces
+  ("five of the nine") was written by hand on 2026-09-08 and was stale the next morning, which
+  is the fourth artifact in this repo to fail that way. *(This line said 30 and 6 when it was
+  written this morning and moved by lunchtime, when `identityrecovery` gained its second engine
+  — which is why **this file is now a declared `enginecount` site**. It was stating the live
+  pair and nothing was checking it: a paraphrase of a live claim, invisible to a search for the
+  subject and to a search for the canonical words alike.)*
+  **The gate earned its keep in the hour it was written**: its first draft counted an engine as
+  present when a *file* with that extension existed, and so credited Tamarin with the replay
+  result on the strength of `BindingReplayBug.spthy` — **a file whose whole job is to fail**.
+  A control is not corroboration. Fifth consecutive session in which a new gate's first draft
+  was wrong and only running it found out.
+  **D17** is the other half of the same instruction: *an unenforced obligation is a defect, and
+  so is a spec that lets two implementations disagree.* Where a spec states a MUST, name the
+  operation that enforces it and the vector that exercises it; where either is missing, the
+  absence IS the finding. Eleven of twenty-four routed findings already have that shape — the two
+  added on 2026-09-09 are both of it.
+- **O20 closed by the experiment it asked for, and the answer was not the one attestation gave.**
+  `tla/QuorumSignerSetApalache.tla` lifts the index order `QuorumSignerSet.tla` hard-codes into
+  its `Init`. **Four of §QUORUM:4.2's five checked properties are unaffected**; one is not, and
+  `CohortNeverSilentlyRevertsWhenAcyclic` — green on the same lifted cinit — says what the
+  assumption really is: **acyclicity of one relation**, weaker than the index order the model
+  assumed. On attestation the same experiment found a requirement *stronger* than the prose
+  (F5/O10). Two tracks, one method, opposite answers, neither predictable from the other.
+  The violated row is **Q8**: on a `supersedes` cycle §4.2 hands back the roster frozen at
+  `:create`. Graded **B** — the input is not constructible under content addressing, and *that
+  unstated argument is the finding*. It also carries a live cohort split in kind (**D15** in the
+  divergence register): Rust and Python fall through, **Go recurses without bound**, its
+  `visited` set rebuilt per call so it does not span the alternation — F5's mechanism in shipped
+  code.
+- **Second engines went 5 of 9 → 6 of 9 → 7 of 9 → 8 of 9 → 9 of 9; the matrix went 461 → 487 → 533 → 574 → 609 runs.**
+  `QuorumSignerSet` was the module carrying Q1, this repo's most-quoted quorum finding, and
+  Q1–Q4 are now reproduced by a second, structurally different engine.
+- **`IdentityRecovery` got its second engine the same day, and it is the one that mattered most
+  — `tla/IdentityRecoveryApalache.tla`, 46 runs.** It carries **I2**, the only S1 finding live
+  in shipped code, as a **negative-reachability** result: §9.4's prohibition is green precisely
+  because the accepting path is unreachable. That claim is now **inductive**, so it covers
+  unbounded replay where `MaxDeliveries == 2` covered two, and every claim the TLC module makes
+  reproduces.
+
+  **Two new findings on a subject nine findings had already been routed from, and D18 is what
+  they cost.** The restrictions that mattered were **not in `Init`**: the enumeration written
+  yesterday walked all nine extension models' `Init` predicates and filed this one under "not in
+  the class", which was true of `Init` and useless about the model. What restricted it was a
+  **cache variable with no key**, an **action that did not exist**, and a **bounded counter**.
+  §5.1 writes the §9.4 anchor under the `quorum-publish`'s `published_handle`; §9.4 reads it
+  under the recovery's `old_handle`.
+  **N1 — a routine privacy rotation disables compromise recovery.** Section 13.3 rotates the
+  handle by dual-sig, *"the quorum doesn't sign this"*, produces no `quorum-publish`, and no
+  section requires a re-key or a re-publish. So the anchor stays at the pre-rotation key, §9.4
+  looks up a key nothing wrote, and §9.6's only remedy for a stolen key fail-closes. **All three
+  implementations are exposed identically** — Go's handoff arm says so in a comment ("No
+  additional caches to update"); the others have no branch. That is a **C2** row: nobody
+  diverged, everybody implemented the sentence that exists, and the defect is in the one that
+  does not.
+  **N2 — `update_handle_cache_to` is named in a normative dispatch table and defined nowhere**,
+  and its two readings each satisfy ONE of two properties the spec states: move breaks §6.3's
+  idempotent semantic (Go), retain makes §9.4 usable once per published handle (Rust, Python —
+  and Python does not implement the handler at all). Three implementations, three answers, **C3**.
+  The reading that satisfies both — copy to the new key, keep the old — is a **green row plus a
+  witness**, not a suggestion, because the one remedy this repo published without measuring is
+  the one that came back corrected.
+  Routed: `docs/status/ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md`. Ledger rows **O21**
+  (closed, assumption false) and **O22** (closed the same day — see below).
+- **`IdentityProcess` got the last second engine on the extension tracks —
+  `tla/IdentityProcessApalache.tla`, 40 runs — and O22 closed by being measured, like O10 and
+  O20 before it.** `IdentityProcess.tla` has three variables and `Next == UNCHANGED vars`: it is
+  **one arrival**. §6.3's arrival path is a **loop** — phase 2's handlers and phase 2a's unbind
+  WRITE the tree that §3.6 steps 2 and 3 later READ — so one arrival cannot represent either half
+  of it. Every ported claim reproduces; two new findings do not exist in the old domain at all.
+  **N3 — a revocation deleted on arrival leaves the cert it names permanently valid.** I2 already
+  said an arriving `revocation` is unbound by phase 2a. §3.6 step 3 looks revocations up *in the
+  tree*, so the cert is then admitted on every later arrival — I2's data-loss claim becomes an
+  authorization claim, and the step between them needs a second arrival. **Section 6.4 prices this
+  exposure against a bound its own arrival path removes**: *"the window's bound is the convergence
+  latency"*, and *"a peer that has not yet observed it will cascade when the revocation arrives via
+  sync"*. It arrives; it does not cascade; the window never closes. Its MAY-level mitigation
+  ("reject if revocation is observable") re-reads the same deleted entry. Rust and Python exposed
+  (**C2**), Go not (**C3**) — and the **green under `ConstInitOK` is half the finding**, because it
+  names which repair closes it.
+  **N4 — an `identity-retirement` is undone by the retired cert arriving again.** Phase 2
+  dispatches on `(kind, function)` and consults no state; phase 1 readmits the cert because §4.5
+  says nothing about liveness and §ATTEST:4.3's liveness is supersedes plus revocation. **This one
+  is violated under `ConstInitOK`, which on this track is the UNION of all three implementations'
+  repairs** — no cohort workaround touches it. Rust and Python are exposed (**C2**, register D18);
+  Go escapes by implementing three of the seven dispatch rows as no-ops (**C3**, D19), which is not
+  a defence. Both candidate repairs are measured green.
+  **And N2's class, enumerated (D14): all SEVEN handler names in §6.3's dispatch table occur
+  exactly once in the whole document — in the table.** None is defined anywhere, which is why both
+  of N4's repairs are statements about text that does not exist.
+  Routed: `docs/status/ROUTING-2026-09-09-IDENTITY-ARRIVAL-PATH-STATE.md`.
+- **`QuorumTrust` got the last second engine anywhere on the extension tracks —
+  `tla/QuorumTrustApalache.tla`, 35 runs — and it corrected a claim rather than finding a defect.**
+  §4.2.1's cache-invalidation contract has **three** invalidation triggers.
+  `tla/QuorumTrust.tla` has an action for two — trigger 3, *authority-revocation arrival*, is in
+  no action, no constant and no invariant — and `ROUTING-2026-09-07-QUORUM.md` published *"the
+  §4.2.1 contract is **exactly sufficient**"* naming those same two. **A sufficiency claim over an
+  incomplete rule set is a claim about a different contract.** The re-measurement favours the
+  spec: with the revocation action added, `CacheMatchesValidated` is green *and inductive* over all
+  three triggers; trigger 3 now has a negative control it never had; and the old two-trigger form
+  is a required-violation row (`OnlyAcceptInvalidates`), so it cannot go quiet again.
+  **The transferable piece is D13's cheaper half arriving through a domain rather than a grading
+  criterion: a green whose subject is a RULE SET is only as complete as the model's ACTION SET,
+  and nothing about it looks incomplete from inside** — every row passed, every control had teeth,
+  and the missing trigger produced no failure to investigate.
+- **Q5's remedy was the wrong closure, and the amendment survives the remedy.** Q5's fix was a
+  **read-side** closure (only validated entries are readable), which is sufficient only because
+  that model's tree cannot shrink. §8 permits `tree:put` to these paths and `tree:put(path, null)`
+  is an unbind; with unbinds admitted the read-side closure holds **and the cache still goes
+  stale**, because non-trigger 2 forbids invalidating on the write that removed the entry. What
+  §4.2 needs is **write-side**: the readable set changes only through validate-accept. Routed as
+  an amendment to Q5, not a new number
+  (`docs/status/ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md`); **O11 restated and still
+  OPEN**, which is a fourth ledger outcome — measured, proposition survived, strength wrong.
+  That note's §5 **declares the cohort census for the two new directions was not taken**, because
+  naming a census is not taking one.
+- **And the D18 sweep had already cleared this module on the wrong question.** Its table row reads
+  *"`~cached[q]` on `Walk` — not in the class"*, which is true of that guard: §4.2.1's "recompute
+  on next call" IS a cache-miss guard. The sweep asked which guards looked suspicious where D18
+  asks *what legal state can this model not represent*, cleared the one it examined, and stopped.
+  All three real restrictions were elsewhere. **A discipline can be applied and still not asked.**
+- **A ported invariant can carry the old domain in its antecedent, and only the checker found it.**
+  `SeedRowReachable` ported verbatim **failed the inductive step** — on a cert that legitimately
+  does not dispatch because step 3 revoked it, which is correct behaviour and not I1. The claim was
+  always about the kind gate; the single-arrival domain made the missing antecedent invisible. Its
+  sibling `UnbindOnlyOnRejection` needed the same widening and we predicted that one. Also caught by
+  reading a trace rather than an exit code: N4's first counterexample was a retirement followed by a
+  first-ever cert — nothing had been torn down, so nothing was "undone". True instance, wrong
+  mechanism, and the row now requires the teardown. Sixth consecutive session for that corollary.
+- **Two gates were widened by their own failure, in the hour they failed.** `make runcount`
+  derived a total that was **eight runs short** because `APALACHE_FINDING` — a table added to
+  `tla/Makefile` the same session and wired into `matrix` — was in no row of its `DERIVATION`
+  list. It would have gone green the moment eight prose sites were edited to the wrong number.
+  `tools/runcount.py` now fails on **any** gate table in an engine Makefile that no row counts,
+  with a `NOT_RUNS` list carrying the reason for the four that legitimately are not runs. And
+  `make enginecount`'s declared-site list, written yesterday, was already missing a site: **this
+  file**, whose D16 entry states both derived pairs and moved by lunchtime. Declared now, and
+  teeth-tested by breaking it. *The input set of a gate is a claim — including the input set of
+  the gate that checks claims about input sets.*
+
+*Also this pass:* the Apalache "Could not find or create directory" flake **recurred** (one row,
+mid-sweep, green on retry) after the previous handoff recorded it as absent. It is
+environmental, it reads exactly like a model failure, and a sweep that hits it needs the row
+re-run rather than the model debugged.
 
 **2026-09-08, second pass — the corroboration gap went from 2 of 9 to 5 of 9, and closing the
 last attestation module produced a finding neither engine could have produced alone.** Three
@@ -138,7 +293,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 461 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 609 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -183,20 +338,21 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 | TLC negative controls | 65 |
 | TLC non-vacuity witnesses | 42 |
 | TLC findings (must be violated; `tla/Makefile:TLC_FINDING`, whose header states which rows weaken nothing, which read toward the spec, and which read toward an implementation because the spec is silent) | 25 |
-| Apalache inductive (26 invariants × base+step, + 2 at N=3) | 54 |
-| Apalache strengthening closure (`apalache-closure`) | 26 |
-| Apalache enumeration green (extension tracks) | 31 |
-| Apalache negative controls | 27 |
-| Apalache enumeration controls + witnesses | 24 |
-| Apalache finding rows (must be violated) | 14 |
+| Apalache inductive (59 invariants × base+step, + 2 at N=3) | 122 |
+| Apalache strengthening closure (`apalache-closure`) | 37 |
+| Apalache enumeration green (extension tracks) | 43 |
+| Apalache negative controls + witnesses | 54 |
+| Apalache enumeration controls + witnesses | 31 |
+| Apalache finding rows, enumeration models (must be violated) | 21 |
+| Apalache finding rows, transition systems (must be violated; bounded from `Init`) | 16 |
 | Spin green (7 × safety+LTL, 4 safety-only, 3 × safety+LTL variant rows) | 24 |
 | Spin negative controls | 39 |
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
-| **total** | **461** |
+| **total** | **609** |
 
 Split by proof track, derived by `make runcount` rather than stated by hand: **302 runs** on
-`core`, **68** on `attestation`, **39** on `quorum` and **52** on `identity`. Attestation:
+`core`, **68** on `attestation`, **100** on `quorum` and **139** on `identity`. Attestation:
 `AttestIndex` — 1 green, 3 controls, 3 witnesses; `AttestLive` — 1 green, 2 controls,
 3 witnesses, 2 findings; `AttestRevoke` — 1 green, 2 controls, 3 witnesses, 2 findings; plus
 the three Apalache modules' 24 rows (`AttestIndexApalache`, `AttestLiveApalache`,
@@ -644,15 +800,22 @@ item 4.
      *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
      §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
      attribution. Derived now, **by `make ledgercount` rather than by hand**: the ledger is
-     **38 rows** — 13 Class L, 5 Class T, 20 Class O — of which **15 CLOSED**, 1 CLOSED —
-     ASSUMPTION FALSE (T4), 1 CLOSED — ASSUMPTION ISOLATED (O6), 1 CLOSED — ASSUMPTION
-     ISOLATED AND CORRECTED (O10, 2026-09-08), 1 CLOSED-MODULO-H (L1),
-     2 N/A-device, 3 BY-DESIGN, and **14 OPEN** (O5, O7–O9 from the attestation track,
-     O11–O15 and O20 from quorum, O16–O19 from identity — all but O20 added 2026-09-07 with
-     those tracks' first nine modules; **O20 was added 2026-09-08 by a rule rather than by a
-     model**, `AGENTS.md` D15 tenth shape). **O10 closed by being measured and its assumption was WRONG as
-     written** — it said revocation-graph acyclicity and the answer is a joint order over both
-     relations; see the row.
+     **40 rows** — 13 Class L, 5 Class T, 22 Class O — of which **15 CLOSED**, 3 CLOSED —
+     ASSUMPTION FALSE (T4; O21 and O22, 2026-09-09), 2 CLOSED — ASSUMPTION ISOLATED (O6; O20,
+     2026-09-09), 1 CLOSED — ASSUMPTION ISOLATED AND CORRECTED (O10, 2026-09-08),
+     1 CLOSED-MODULO-H (L1),
+     2 N/A-device, 3 BY-DESIGN, and **13 OPEN** (O5, O7–O9 from the attestation track,
+     O11–O15 from quorum, O16–O19 from identity — all added 2026-09-07 with
+     those tracks' first nine modules). **O20 was added 2026-09-08 by a rule rather than by a
+     model** (`AGENTS.md` D15 tenth shape) and closed the next day by the experiment it asked
+     for. **O22 did the same one day later**: added 2026-09-09 by the D18 sweep, closed
+     2026-09-09 by `tla/IdentityProcessApalache.tla`, the port the row itself named. **Four rows
+     have now closed by being measured and THREE had to be restated to close** — O10 said
+     revocation-graph acyclicity where the answer is a joint order over both relations; O20 said
+     the update chain is ordered where the answer is that §QUORUM:4.2 needs only acyclicity, and
+     the index order its model hard-coded was strictly stronger; O22's proposition was right and
+     its PRICE was wrong, which is a third kind of restatement and the one a reader is least
+     likely to catch. See the rows.
      **No extension track has a prover**, so O5, O14 and O19 — the three Dolev-Yao rows — are
      the same undischarged gap counted three times, and every green on any of them assumes
      signatures work. Adding Apalache to five of the nine modules on 2026-09-08 did not move
@@ -1199,7 +1362,7 @@ item 4.
     files could be declared, for the second time in one day — and with this promotion **no
     scoped track remains**, so that half of the gate now has no subject in the live registry.
     Routed: `docs/status/ROUTING-2026-09-07-IDENTITY.md`; indexed in
-    `docs/status/FINDINGS-INDEX.md`, now 21 findings across three notes, 18 machine-checked.
+    `docs/status/FINDINGS-INDEX.md`, now 22 findings across three notes, 20 machine-checked.
 
     **The finding worth reading first is I2, and its shape is a green.** §9.4's fail-closed rule
     for compromise recovery is a NEGATIVE REACHABILITY claim, and `TRACKS.toml` plus
@@ -1271,7 +1434,7 @@ item 4.
     **CONSOLIDATION PASS 2026-09-08 — and it found three defects in the VALIDATION machinery
     rather than in any spec's design.** Writing a consolidated register of what
     `entity-core-{go,rust,py}` actually do (`docs/status/CONFORMANCE-DIVERGENCE-REGISTER.md`,
-    D1–D14, classified C1–C5) surfaced a category that had been evidence-only:
+    D1–D15, classified C1–C5) surfaced a category that had been evidence-only:
     **an implementation divergence is a measurement of where the specification failed to
     converge three independent authors**, and every one of ours was buried inside a spec
     finding's Impact section rather than tracked in its own right. Three things fell out, routed
@@ -1392,6 +1555,9 @@ item 4.
     [ADR-0031] is explicit that a published file is addressed to a reader outside this ecosystem
     and that **internal paths do not belong in a file you declare canonical**. `docs/status/` is
     never published. Yet **28 citations across 6 of the 25 declared canonical docs** point there:
+    *(The measurement is as of 2026-09-08 and is left at what it measured. There are 26 declared
+    docs now — `docs/CORROBORATION.md`, added 2026-09-09, which was written to resolution (a):
+    it describes its internal references rather than linking them, and adds nothing to the 28.)*
 
     | Doc | Citations | Distinct targets |
     |---|---|---|
@@ -1418,3 +1584,57 @@ item 4.
     **No gate covers this.** `spec-tool pins` is scoped to commit-SHA citations and does not look
     at paths. If (a) or (b) is chosen, a gate is a ten-line addition to `tools/` and should land
     with it — otherwise it regrows, which is the D14 shape.
+
+16. **Corroborate the remaining single-engine subjects. `identityrecovery` is DONE (2026-09-09)
+    and paid twice; `quorumtrust` and `identityprocess` are what is left.**
+    *Opened 2026-09-09 with D16 and `make enginecount`, which is what makes this item a
+    measured gap rather than a vague one.* `docs/CORROBORATION.md` names every subject that
+    rests on fewer than two engines — **four now, five when this item was opened** — and the
+    ranking was never by difficulty.
+
+    - **~~`IdentityRecovery` — first, and not because it is easiest.~~ DONE 2026-09-09,
+      `tla/IdentityRecoveryApalache.tla`, 46 runs.** It carried **I2**, the only finding here
+      graded S1 and the only one live in shipped code, as a **negative-reachability** result on
+      one engine — the weakest shape this repo publishes. §9.4's prohibition is now proved
+      *inductive* and therefore covers unbounded replay, where `MaxDeliveries == 2` covered two;
+      every claim of the TLC module reproduces.
+
+      **And the lift found two findings on a subject nine findings had already been routed
+      from.** The restrictions that mattered were **not in `Init`** — the enumeration that
+      checked `Init` across all nine extension models had recorded this module as "not in the
+      class", correctly and uselessly. They were a cache variable with no key, an action the
+      model did not have, and a bounded counter. §5.1 writes the §9.4 anchor under the
+      `quorum-publish`'s `published_handle`; §9.4 reads it under the recovery's `old_handle`.
+      **N1** — a routine privacy rotation moves the second, produces no publish, and no section
+      requires a re-key or a re-publish, so the preventive rotation the spec recommends removes
+      the identity's only compromise-recovery path, identically on all three implementations.
+      **N2** — §6.3's `update_handle_cache_to` is named in a normative dispatch table and
+      defined in no section; its two readings each satisfy one of two properties the spec
+      states, the cohort splits three ways across exactly that gap, and the reading that
+      satisfies both is a green row rather than a suggestion. That is what promoted D15's tenth
+      shape from a candidate to **D18**. Routed:
+      `docs/status/ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md`.
+    - **`QuorumTrust`** — §4.2/§4.2.1's arrival-time trust model, carrying Q5–Q7. Also a real
+      transition system with a cache; also the inductive shape.
+    - **`IdentityProcess`** — §6.3's kind-dispatch table, a pure function. Should port close to
+      mechanically and is the cheapest of the two — **and D18 says where to point it**:
+      `docs/LEAN-SEAM.md` **O22**, three variables and no history, so the model represents
+      exactly ONE arrival while §6.3 phase 2 dispatches handlers that write state. That is the
+      domain in which N1 and N2 are invisible, still unlifted, on the module that carries I1.
+    - **`core-refinement` and `revokemech`** stay where they are, with the reasons written in
+      the ledger: porting a *classifier* would corroborate the classification rather than the
+      protocol, and `RevokeMech.spthy` is genuinely non-terminating.
+
+    **Point each port at the first model's `Init`, not at its invariants.** That is the one
+    instruction the three payouts so far share (F5/O10 on attestation, O20/Q8 on quorum,
+    N1/N2/O21 on identity), and each time the model's own domain restriction turned out to
+    misstate the assumption it stood for — once too strong, once too weak, once false.
+    **Read `Init` and then keep going**: on identity the restriction was in a variable's shape
+    and in an action that did not exist, which is why the rule is now D18 rather than a note
+    about `Init`. `docs/LEAN-SEAM.md` **O13** is the nearest unbooked candidate: `QuorumSignerSet`'s `WellFormedChain` guard, an invariant antecedent rather than
+    an `Init` conjunct, and the same mechanism one shape over.
+
+    **What none of this buys, and the reason it is item 16 and not item 1:** a second model
+    checker answers the same question a second way. `§QUORUM:4.1` has two engines and neither can
+    express unforgeability. **Item 12 — a prover on any extension track — is still the only work
+    that changes what an extension track can CLAIM.**

@@ -89,6 +89,14 @@ PROSE_SITES = [
      r"it is (\d+) rows / \d+ Class L"),
     ("AGENTS.md", "the LEAN-SEAM paragraph", "class_L",
      r"it is \d+ rows / (\d+) Class L"),
+    # Added 2026-09-09, and it had been stale for a day: this table said "14 of 38" when the
+    # ledger was 13 of 40. Its own header says "do not quote these from here" -- which is a
+    # DISCLAIMER, and a disclaimer is not a gate. It reads as though the risk has been handled,
+    # which is why the stale figure survived a session that re-derived every other number.
+    ("docs/status/FINDINGS-INDEX.md", "the open-work table", "open",
+     r"Assumption-ledger rows OPEN \|[^|]*\| \*\*(\d+) of \d+\*\*"),
+    ("docs/status/FINDINGS-INDEX.md", "the open-work table", "rows",
+     r"Assumption-ledger rows OPEN \|[^|]*\| \*\*\d+ of (\d+)\*\*"),
 ]
 
 

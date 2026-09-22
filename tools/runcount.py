@@ -72,6 +72,17 @@ DERIVATION = [
     ("apalache-enum-green",   "tla/Makefile",     "APALACHE_ENUM_GREEN",   "rows", 1),
     ("apalache-enum-neg",     "tla/Makefile",     "APALACHE_ENUM_NEG",     "rows", 1),
     ("apalache-enum-finding", "tla/Makefile",     "APALACHE_ENUM_FINDING", "rows", 1),
+    # Added 2026-09-09 with the identity track's second engine on IdentityRecovery. The
+    # transition-system twin of the row above: a finding row that must be VIOLATED, on a model
+    # where nothing is weakened, run BOUNDED from a named Init because the module has real
+    # transitions. One run per row.
+    #
+    # AND ITS ARRIVAL IS WHY `unknown_tables()` BELOW EXISTS. This list is an input set, and an
+    # input set is a claim (D15). Adding APALACHE_FINDING to tla/Makefile left `make runcount`
+    # GREEN-CAPABLE while silently omitting eight runs from a total published in eight places —
+    # the same shape as `enginecount`'s first draft not reading TLC_GREEN_PAIRS, and as the
+    # non-recursive globs before that. The tool now fails on a gate table it does not know.
+    ("apalache-finding",      "tla/Makefile",     "APALACHE_FINDING",      "rows", 1),
     ("spin green (safety+LTL)", "spin/Makefile",  "SPIN_GREEN",        "words", 2),
     ("spin green (safety)",   "spin/Makefile",    "SPIN_GREEN_SAFETY", "words", 1),
     ("spin green (N=3)",      "spin/Makefile",    "SPIN_GREEN_N3",     "rows",  2),
@@ -87,6 +98,19 @@ DERIVATION = [
 # liveness graph exhausts the 2 GB cap at Store's safety bound). Declared here rather than
 # silently added, and asserted to still exist in the recipe below.
 STORELIVE_MARKER = "StoreLive.cfg"
+
+# Gate-table-shaped variables in the engine Makefiles that are NOT run counts, each with the
+# reason. `unknown_tables()` requires every such variable to be here or in DERIVATION, so a new
+# table cannot be added to a Makefile and silently omitted from the published total.
+NOT_RUNS: dict[str, str] = {
+    # The prover verdict tables. Each is the EXPECTED-VERDICT column for a row already counted
+    # under PV_GREEN / PV_NEG / TM_GREEN / TM_NEG -- D13's enforcement that a run declares what
+    # it must report, not a second invocation. Counting them would double every prover run.
+    "PV_EXPECT": "expected verdicts for PV_GREEN rows, not runs",
+    "PV_NEG_EXPECT": "expected verdicts for PV_NEG rows, not runs",
+    "TM_EXPECT": "expected verdicts for TM_GREEN rows, not runs",
+    "TM_NEG_EXPECT": "expected verdicts for TM_NEG rows, not runs",
+}
 
 # ── WHERE THE TOTAL IS CLAIMED IN PROSE ─────────────────────────────────────────────────
 # Each row is (file, description, pattern with exactly one capture group). The captured
@@ -348,6 +372,35 @@ def check_status_slices(total: int, per: dict[str, int]) -> list[str]:
     return problems
 
 
+def unknown_tables() -> list[str]:
+    """Gate tables that exist in a Makefile and are counted by NOTHING here.
+
+    D15, and learned the hard way twice: `DERIVATION` above is an input set, and an input set
+    is a claim. On 2026-09-09 `APALACHE_FINDING` was added to `tla/Makefile` and wired into
+    `matrix`; this tool kept deriving a total that omitted its eight runs, and would have gone
+    green the moment eight prose sites were edited to the wrong number. Nothing about that is
+    specific to that table.
+
+    So: every `UPPER_CASE := \\` assignment in the three engine Makefiles whose name matches a
+    gate-table shape must be named in `DERIVATION` -- or listed in `NOT_RUNS` with a reason,
+    which is the disclosure half. A table that is neither is a build failure.
+    """
+    problems = []
+    for rel in ("tla/Makefile", "spin/Makefile", "tamarin/Makefile"):
+        text = read(rel)
+        for name in re.findall(r"^([A-Z][A-Z0-9_]+)\s*:?=\s*\\", text, re.M):
+            if not re.match(r"^(TLC|APALACHE|SPIN|PV|TM)_", name):
+                continue
+            if name in NOT_RUNS:
+                continue
+            if not any(v == name and f == rel for _, f, v, _, _ in DERIVATION):
+                problems.append(
+                    f"{rel}: gate table {name} is counted by no row of DERIVATION -- either add"
+                    " it, or add it to NOT_RUNS with the reason it is not a run"
+                )
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--verbose", action="store_true", help="show the per-target derivation")
@@ -369,7 +422,7 @@ def main() -> int:
         for tr in sorted(by_track):
             print(f"  {tr:26} {by_track[tr]:4}")
         problems = (check_prose(total) + check_status_slices(total, per)
-                    + check_track_prose(by_track))
+                    + check_track_prose(by_track) + unknown_tables())
     except Fail as exc:
         print(f"FAIL -- {exc}", file=sys.stderr)
         return 1

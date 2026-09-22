@@ -312,7 +312,9 @@ models       = [
   "tla/QuorumKofN.tla",
   "tla/QuorumKofNApalache.tla",
   "tla/QuorumSignerSet.tla",
+  "tla/QuorumSignerSetApalache.tla",
   "tla/QuorumTrust.tla",
+  "tla/QuorumTrustApalache.tla",
 ]
 note = """
 A system/quorum is a signer roster + threshold whose own membership changes are attestations
@@ -343,13 +345,58 @@ the interesting half).
 
 Six findings routed: docs/status/ROUTING-2026-09-07-QUORUM.md.
 
-SECOND ENGINE, 2026-09-08 — ONE of three modules. tla/QuorumKofNApalache.tla carries §4.1 to
+SECOND ENGINE, 2026-09-08 — TWO of three modules. tla/QuorumKofNApalache.tla carries §4.1 to
 Apalache. It went first because §4.1 has no recursion (the cheapest port on this track) and
 because it is the validator §2 calls "the only mechanism that distinguishes quorum from a
-regular peer node". QuorumSignerSet and QuorumTrust are still TLC-only; there is no Spin
-encoding here and NO PROVER, so LEAN-SEAM O14 is untouched. Note where that lands: the module
-that now has two engines is precisely the one whose real property -- unforgeability -- neither
-engine can express. Cryptography is a per-peer boolean in both transcriptions.
+regular peer node". Note where that lands: the module that got the second engine first is
+precisely the one whose real property -- unforgeability -- neither engine can express.
+Cryptography is a per-peer boolean in both transcriptions, and LEAN-SEAM O14 is untouched by
+either. (QuorumTrust was still TLC-only when this was written; it gained Apalache on 2026-09-09 — see below.) There is no Spin encoding here and NO PROVER.
+
+tla/QuorumSignerSetApalache.tla (2026-09-09) is the second, and it was written to run ONE
+EXPERIMENT rather than to add corroboration -- LEAN-SEAM O20, which is a row a RULE went looking
+for (AGENTS.md D15's tenth shape) rather than one a model produced. QuorumSignerSet.tla's `Init`
+restricts the supersedes pointer to lower indices UNCONDITIONALLY, the identical shape that on
+tla/AttestRevoke.tla hid a requirement stronger than the prose drawn from it (F5/O10). Lifting
+it here as a constant answers the question that file could not ask, and the answer is NOT
+AttestRevoke's:
+
+  - FOUR of §4.2's five checked properties are unaffected by the lifted order.
+  - `CohortNeverSilentlyReverts` is VIOLATED, on a supersedes cycle -- §4.2 hands back the
+    roster frozen at `:create` while a quorum-update sits in the tree inside its validity
+    window, because a node on a cycle is its own transitive descendant and §ATTEST:4.3 calls
+    any attestation with a live descendant dead. Q8, and it reaches Q2's consequence by a route
+    with no walk defect in it at all.
+  - `CohortNeverSilentlyRevertsWhenAcyclic` is GREEN, so the index order was STRICTLY STRONGER
+    than what §4.2 needs and what it was standing in for is acyclicity -- which §6.2 does not
+    validate, §3.2 describes only in prose, and content addressing supplies for the same
+    unstated reason it does in §ATTEST:4.3.
+
+The first counterexample was a self-superseding attestation (`sup = <<1, 1, 2>>`), which is a
+true instance and the wrong one to route; `CohortNeverSilentlyRevertsNoSelfLoop` forbids it and
+is violated on a genuine two-node cycle. Both rows are kept, for the reason the attestation
+note gives about guards: a finding whose stated mechanism is not the one its counterexample
+exhibits is docs/PROPERTIES.md §D.1 happening again.
+
+THIRD PORT, 2026-09-09 — tla/QuorumTrustApalache.tla, which closes the last single-engine subject
+anywhere on the extension tracks and corrected a CLAIM rather than finding a defect. §4.2.1's
+cache-invalidation contract has THREE triggers; tla/QuorumTrust.tla has an action for two, and
+ROUTING-2026-09-07-QUORUM.md published "the §4.2.1 contract is exactly sufficient" naming those
+same two. The correction is measured and favours the spec: with the revocation action added,
+CacheMatchesValidated is green and INDUCTIVE over all three. The falsification of the old
+two-trigger form is a required-violation row (OnlyAcceptInvalidates), so it cannot go quiet again.
+
+The D18 sweep had ALREADY looked at this module and cleared it — "`~cached[q]` on Walk is the
+algorithm, not a restriction" — which is true of that guard and was the wrong question. The three
+restrictions were elsewhere: the missing trigger-3 action, a MONOTONE TREE (§8 permits
+tree:put(path, null) and no action unbinds), and one arrival per attestation. The middle one
+amends Q5: the closure we published as the remedy is READ-side, and with unbinds admitted it holds
+while the cache still goes stale, because non-trigger 2 forbids invalidating on the write that
+removed the entry. What §4.2 needs is WRITE-side — the readable set changes only through
+validate-accept. LEAN-SEAM O11 restated, still OPEN; routed in
+docs/status/ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md, whose §5 DECLARES that the cohort
+census for the two new directions was not taken. All three quorum modules now carry two engines;
+there is still no Spin encoding and NO PROVER (LEAN-SEAM O14).
 """
 
 [track.identity]
@@ -371,7 +418,9 @@ models       = [
   "tla/IdentityCertChain.tla",
   "tla/IdentityCertChainApalache.tla",
   "tla/IdentityProcess.tla",
+  "tla/IdentityProcessApalache.tla",
   "tla/IdentityRecovery.tla",
+  "tla/IdentityRecoveryApalache.tla",
 ]
 note = """
 Built on both of the above: certs, rotation by handoff (dual-sig), rotation by recovery
@@ -420,15 +469,46 @@ wearing an identity section number. LEAN-SEAM O16.
 SECOND ENGINE, 2026-09-08 — ONE of three modules. tla/IdentityCertChainApalache.tla carries
 §3.6 topology dispatch and §9.2 confinement to Apalache, chosen first because it is where every
 K-of-N verdict in this extension is dispatched and the other two modules lean on it.
-IdentityProcess and IdentityRecovery are still TLC-only -- INCLUDING the module that carries
-I2, this track's headline -- and there is no Spin encoding and no prover (LEAN-SEAM O19).
+
+SECOND ENGINE ON THE HEADLINE MODULE, 2026-09-09 — tla/IdentityRecoveryApalache.tla, and it is
+the third consecutive time a lifted domain restriction has found what the first engine could
+not. The restrictions were not in `IdentityRecovery.tla`'s `Init` (D15's tenth shape walked
+every extension model's `Init` and correctly recorded this module as "a concrete start state"):
+they are the KEYLESS CACHE, the handle that never moves, and `MaxDeliveries == 2`. §5.1 writes
+the §9.4 trust anchor at `contacts/{published_handle_hex}/quorum-publish` and §9.4 reads it at
+`contacts/{old_handle_hex}/quorum-publish`, so a model with one slot assumes the two handles
+are the same one. Two new findings, both measured: a §13.3 ROUTINE privacy rotation moves the
+handle §9.4 will look up and nothing re-keys or re-publishes the anchor (N1), and §6.3's
+`update_handle_cache_to` is named in a normative dispatch table, defined in no section, and its
+two readings each satisfy ONE of two properties the spec states while neither satisfies both
+(N2) — with the cohort split three ways across exactly that gap.
+
+SECOND ENGINE ON THE LAST MODULE, THE SAME DAY — tla/IdentityProcessApalache.tla, and the FOURTH
+consecutive time. The restriction here was neither in `Init` nor in a variable's shape: it was
+the model's SHAPE. `IdentityProcess.tla` has three variables and `Next == UNCHANGED vars`, so it
+is ONE ARRIVAL. §6.3's arrival path is a loop — phase 2's handlers and phase 2a's unbind WRITE
+the tree that §3.6 steps 2 and 3 later READ — and one arrival cannot represent either half of it.
+Every ported claim reproduces; two findings do not exist in the old domain. N3: an arriving
+`revocation` is unbound by phase 2a (I2) and §3.6 step 3 looks revocations up in the tree, so the
+cert it names is admitted on EVERY later arrival — and section 6.4 prices that exposure against a
+bound ("the window's bound is the convergence latency") its own arrival path removes. N4: phase 2
+dispatches on (kind, function) consulting no state, so a re-arriving cert re-issues the cap an
+`identity-retirement` removed; §4.5 says nothing about liveness and §ATTEST:4.3's liveness is
+supersedes plus revocation, so phase 1 readmits it. N4 is violated under the UNION of all three
+implementations' repairs, so no cohort workaround touches it. Both repairs for each are measured
+green. LEAN-SEAM O22 closed — ASSUMPTION FALSE.
+
+So all three modules carry two engines and no Spin encoding and NO PROVER exist on this track
+(LEAN-SEAM O19). Do not read "no single-engine module" as corroboration: both engines are
+checkers over the same transcription by the same author, and what the last two ports bought was
+findings from a lifted DOMAIN, not a second opinion on a question already asked.
 
 Seven findings routed: docs/status/ROUTING-2026-09-07-IDENTITY.md. Two of them are CROSS-SPEC
 and one of those exists only in a PAIR of documents — §ATTEST:TV-A8 delegates the rejection of
 an invalid-signature revocation to "identity's `identity_verify_cert` ... at topology-dispatch
 step", and §3.6 rejects every `kind="revocation"` before topology dispatch is reached. Neither
-document is wrong read alone. On the two modules that still have one engine, no Apalache;
-no Spin anywhere; no prover, so LEAN-SEAM O19's gap is untouched.
+document is wrong read alone. No Spin anywhere; no prover, so LEAN-SEAM O19's gap is untouched
+on every module, second engine or not.
 
 THE COHORT ON THIS TRACK DOES NOT AGREE WITH ITSELF, which is new. On quorum, three independent
 authors derived the same unwritten rule three times and that unanimity was the argument for

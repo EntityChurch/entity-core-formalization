@@ -18,6 +18,65 @@ copy, so between a spec release and a re-validation this repository is *behind o
 
 ## [Unreleased]
 
+### Added — the corroboration standard, and its gate
+
+**Two engines, minimum.** A result published here as a property of the protocol is now required
+to be carried by **at least two structurally different engines**, and a result carried by one
+must say so by name. **`docs/CORROBORATION.md`** is the ledger — per modeled subject, which
+engines have a *green* result on it, and every subject that rests on a single engine listed
+individually with the reason — and **`make enginecount`** derives the whole thing from the gate
+tables and fails when any published figure disagrees. It is **31 of 35** subjects on two or more
+engines, **7 of 9** on the three extension protocols.
+
+The ledger says in its own text what a second engine does **not** buy, because the number is
+easy to over-read: it does not make two models of one spec section independent of the reading
+that produced them, and two model checkers over one transcription cannot ask a question neither
+can express. Every extension track's adversarial property is still discharged by nothing.
+
+**A file existing is not an engine checking anything.** An engine counts for a subject only where
+that engine's *green* table names one of the subject's files. Controls, witnesses and finding
+rows are claims about what breaks, and the first draft of this gate credited a prover with a
+result on the strength of a file whose only job is to fail.
+
+### Added — `EXTENSION-IDENTITY` §9.4 under a second engine, and two findings from its domain
+
+**`tla/IdentityRecoveryApalache.tla`** carries compromise-recovery validation to Apalache. The
+corroboration half: every claim the first model makes reproduces, and §9.4's fail-closed rule is
+now proved **inductive**, so it holds for an unbounded number of deliveries rather than the two
+the first model could represent.
+
+The other half is what the second engine was pointed at. §5.1 stores the trust anchor at
+`contacts/{published_handle_hex}/quorum-publish` — keyed by the *`quorum-publish`'s* own property
+— and §9.4 looks it up at `contacts/{old_handle_hex}/quorum-publish`, keyed by the *recovery's*.
+The first model had one cache slot with no key, so it assumed those were the same handle.
+
+- **A routine handle rotation disables compromise recovery.** The privacy-hygiene rotation is
+  dual-signed by the two handle keys — the quorum does not sign it — produces no
+  `quorum-publish`, and no section requires either a re-key of the cached entry or a fresh
+  publish afterwards. The anchor is left under the previous handle, so a later recovery
+  fail-closes on the one path the specification names as the remedy for a stolen key. All three
+  implementations behave identically here.
+- **The dispatch handler that could carry the entry across is named and never defined.** Its two
+  available readings each satisfy one of two properties the specification states and neither
+  satisfies both: moving the entry breaks the idempotent semantic the dispatch section asks for,
+  retaining it makes the anchor usable only once per published handle. The three implementations
+  answer three different ways. The reading that satisfies both is included as a checked
+  configuration rather than as a recommendation.
+
+### Added — `EXTENSION-QUORUM` §4.2 under a second engine, and what its model had assumed
+
+**`tla/QuorumSignerSetApalache.tla`** carries the signer-set resolver to Apalache, reproducing
+each of the four §4.2 findings by a second method. It exists mainly to run one experiment: the
+TLC model restricts the supersedes pointer to lower-numbered entries *unconditionally*, and that
+restriction is a claim nothing had measured.
+
+Lifted, **four of §4.2's five checked properties are unaffected and one is not**. On a supersedes
+cycle the resolver returns the roster the quorum was created with while a membership change is in
+force — and the companion result, green on the same constants, shows the assumption the section
+actually needs is **acyclicity**, weaker than the ordering its model assumed. The configuration is
+not constructible where entries are content-addressed; that unstated argument is the finding.
+Routed, not fixed here.
+
 ### Added — a second engine on the attestation track, and the closure half of the inductive proof
 
 **`tla/AttestIndexApalache.tla` and `tla/AttestLiveApalache.tla`** carry two of the attestation
@@ -31,6 +90,9 @@ weakened.
 engine**, none of the nine has a third, and none has a prover model, so the Dolev-Yao gap is
 untouched. A second engine also buys no independence from the transcription: both files are one
 author's reading of one spec text, and a shared misreading survives both.
+*(That count was true of this entry and has since moved twice inside the same unreleased cycle;
+`docs/CORROBORATION.md` is the live figure and the entry above is the one to read for it. The
+third and fourth sentences are unchanged and are the durable part.)*
 
 ### Fixed — the inductive proof asserted less than it claimed
 

@@ -9,8 +9,13 @@ one tool, on the layer it can actually reach.
 > is about `core` and only `core`.** All four are modeled as of 2026-09-07 (nine TLC modules
 > across the three extension tracks, `docs/COVERAGE-MATRIX.md` §3c–§3e) and **none of the three
 > owns a row here yet**: this map's whole claim is that every formal question has exactly one
-> named owner, and no extension track has that structure — each has one engine and no prover,
-> which `docs/LEAN-SEAM.md` O5, O14 and O19 record one row per track. They get their own rows
+> named owner, and no extension track has that structure — **no prover on any of them**, which
+> `docs/LEAN-SEAM.md` O5, O14 and O19 record one row per track, and while **9 of 9** extension
+> subjects carry even a second model checker (`docs/CORROBORATION.md`, `make enginecount`).
+> *(This sentence read "each has one engine and no prover" until 2026-09-09. The engine half
+> went false on 2026-09-08, the day the first extension Apalache modules landed, and was missed
+> by that session's own D14 sweep — which searched the subject and not the quantifier. The
+> prover half is unchanged and is the part that matters.)* They get their own rows
 > when they earn them rather than being folded into these. *(This paragraph said `quorum` and
 > `identity` were "vendored, unpinned and unmodeled" until 2026-09-07; both were promoted the
 > same day, hours apart.)*

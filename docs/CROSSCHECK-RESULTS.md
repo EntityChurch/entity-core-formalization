@@ -29,12 +29,14 @@ Read with `tla/PHASE1-FORMALIZATION-REPORT.md` (the models being corroborated).
 > conjunction (`CoreApalache.InvComposed`) that had been carried as "consciously deferred"
 > since Phase 1. Every module is now checked by all three engines; nothing is deferred.
 >
-> *(Scope, added 2026-09-07, updated 2026-09-08: that sentence is about the **`core` track**,
-> which was the only track when it was written. Of the nine extension modules added later on
-> `attestation`, `quorum` and `identity`, **five** (all three `attestation` modules, plus
-> `QuorumKofN` and `IdentityCertChain`) have a second engine as of 2026-09-08 and **four are
-> still TLC-only**; none has a third engine and none has a prover. This blockquote is a historical snapshot and is left as written; the qualifier is
-> the correction.)*
+> *(Scope, added 2026-09-07, updated 2026-09-08 and again 2026-09-09: that sentence is about the
+> **`core` track**, which was the only track when it was written. Of the nine extension subjects
+> added later on `attestation`, `quorum` and `identity`, **9 of 9 subjects have a second engine**
+> (every module on all three tracks, Apalache) and none is TLC-only; none has a third engine and none
+> has a prover. That count is **derived by `make enginecount`** from the green gate tables and
+> fails the build here when it drifts — it was hand-maintained until 2026-09-09 and had already
+> gone stale twice. This blockquote is a historical snapshot and is left as written; the
+> qualifier is the correction.)*
 >
 > One Apalache result is stronger than the others in kind: `BoundsApalache` proves §5.9's
 > depth-brake property over **symbolic** constants constrained only by the ratio condition,
