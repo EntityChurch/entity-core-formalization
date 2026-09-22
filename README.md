@@ -15,7 +15,7 @@ exactly one **track**, declared in [`TRACKS.toml`](TRACKS.toml) and gated by `ma
 
 | Track | Subject | Spec owner | Status |
 |---|---|---|---|
-| **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 103 model files, 334 runs, pinned at `spec-data/v0.8.2` (11 of them at `v0.8.2.25`) |
+| **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 105 model files, 380 runs, pinned at `spec-data/v0.8.2` (13 of them at `v0.8.2.25`) |
 | **attestation** | The signed-edge substrate: `attesting → attested`, four mandatory indexes, the supersedes chain | `entity-system-architecture` | **modeled** — 3 modules (§5.7 index invariants; §4.3/§5.1–5.3 liveness and the chain walks; §4.3's revocation recursion), 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
 | **quorum** | K-of-N signer rosters; `quorum-update` / `quorum-publish`; `current_signer_set(as_of)` | `entity-system-architecture` | **modeled** — 3 modules (§4.2 the signer-set resolver and its clock; §4.2/§4.2.1 the arrival-time trust model; §4.1 K-of-N), 100 runs, **TLC and Apalache on all three**, pinned at `spec-data/ext-quorum-v1.2` |
 | **identity** | Cert chains, rotation by handoff, rotation by recovery, retirement | `entity-system-architecture` | **modeled** — 3 modules (§6.3 the arrival convergence point; §9.4 compromise-recovery validation; §3.6 topology dispatch and §9.2 key confinement), 139 runs, **TLC and Apalache on all three** — no module on this track is left on a single engine, pinned at `spec-data/ext-identity-v3.10` |
@@ -53,7 +53,7 @@ frozen snapshots, and each names its own `MODELING-PIN-*` separately from that s
 > is how a repo ends up publishing three different answers to one question.
 >
 > Today `spec-data/MODELING-PIN` reads `v0.8.2` — spec version **0.8.2**. The live spec has
-> since advanced to **0.8.2.25**, and `make specdrift` reports **14 of 29 cited sections moved**.
+> since advanced to **0.8.2.32**, and `make specdrift` reports **15 of 29 cited sections moved**.
 > Results here are reproducible statements about **0.8.2**, not about the protocol as it
 > stands today. The pin moves only as the last step of re-validating the models against a new
 > snapshot, never on a file copy — so a repo in this state is one doing the honest thing
@@ -90,9 +90,9 @@ available for a delegated-authority protocol:
 
 Full picture: **`docs/ASSURANCE-MAP.md`**.
 
-## Status: verified against protocol 0.8.2; live spec is 0.8.2.25
+## Status: verified against protocol 0.8.2; live spec is 0.8.2.32
 
-The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **14 of 29 cited
+The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **15 of 29 cited
 sections moved** — so results here are statements about **0.8.2**, and the pin is behind the
 live spec by **23** point revisions (distinct `0.8.2.N` revision tags carried by the live text;
 `0.8.2.12` and `0.8.2.15` were superseded and no longer appear in it). *That figure is
@@ -102,19 +102,31 @@ reproducible rather than recalled — `grep -o '0\.8\.2\.[0-9]\+' … | sort -u 
 hand-derived figure in a parenthetical, beside two gated ones, four revisions stale.*
 
 What that does and does not mean, measured rather than asserted
-(`docs/SPEC-DRIFT-ASSESSMENT.md`): **eleven of the twelve moved sections contradict no model** —
-new normative clarification, in three cases text that adopts or converges with a finding from this
-repo, and in one case (**§5.8**) a single backtick removed from a cross-reference row. The
-twelfth, **§4.7**, is the one place the live
-text contradicts a model: `connection_sequence_error` moved from **400** to **409**, and
-`tla/ConnCodes.tla` transcribes 400. Nothing proved here is falsified, because every result
-is quoted against the pin — but a reader wanting a statement about 0.8.2.19 does not have
-one yet.
+(`docs/SPEC-DRIFT-ASSESSMENT.md`): **no section in the moved set contradicts a model** — the
+movement is new normative clarification, in several cases text that adopts or converges with a
+finding from this repo, and in one case (**§5.8**) a single backtick removed from a cross-reference
+row. Nothing proved here is falsified, because every result is quoted against the pin — but a
+reader wanting a statement about the *live* spec does not have one.
+
+⛔ *This paragraph read **"eleven of the twelve moved sections contradict no model … the twelfth,
+§4.7, is the one place the live text contradicts a model"** until 2026-09-17, and it was the
+**fourth and oldest** copy of that claim. §4.7 stopped being an exception on **2026-09-15**, when
+`tla/ConnCodes.tla`, its Apalache port and `spin/conncodes.pml` were retargeted to
+`spec-data/v0.8.2.25/` — §4.7 is measured against its own snapshot now, so there is no §4.7 claim
+here to contradict. **Every one of the four sites stated the count in its own words and at its own
+vintage** — "eleven of the twelve", "fifteen of the sixteen", a table cell — which is why the gate
+that anchors on the canonical phrasing `N of 29 cited sections moved` saw none of them, and why
+three were found only after a fourth was. Each is repaired the same way: **the value is deleted and
+the subject named.***
 
 ### What is verified, and by what
 
 Four engines in two families. **Every `core` concurrency module is checked by all three engines
-of its family, and both provers close every attacker lemma but two** — that redundancy is the
+of its family, and both provers close every attacker lemma but two**  *(⛔ read
+"concurrency module", not "core module": `AuthoritySelect` — §6.8's authority-selection rule,
+2026-09-16 — is a core STRUCTURAL module on TLC + Apalache with no Spin encoding, and the
+quantifier does not reach it. `docs/COVERAGE-MATRIX.md` §4 carries why that distinction is
+written down rather than rounded off.)* — that redundancy is the
 answer to the obvious objection, *"who formalizes the formalization?"* The two exceptions are
 named, not glossed: `BindingReplay` is ProVerif-only (ProVerif's tables do not model single-use
 atomically, so no-replay is Tamarin's) and `RevokeMech` does not terminate in Tamarin. The grid
@@ -185,7 +197,7 @@ ProVerif toolchain) runs everything; the model checkers are all containerized.
 ```
 make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
-make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (641 runs)
+make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (687 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
 make trackcheck # which proof track is each model file on? (TRACKS.toml)
@@ -219,7 +231,7 @@ AGENTS.md                 ← repo-specific agent guidance (build/test, layout, 
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
   COVERAGE-MATRIX.md      ← section x engine, the limits, what is NOT covered (start here)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 641-run matrix
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 687-run matrix
   STATUS.md               ← rolling status: where it is, what is next
   SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls

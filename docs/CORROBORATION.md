@@ -65,6 +65,17 @@ invalidation triggers, `tla/QuorumTrust.tla` has an action for two, and the suff
 `ROUTING-2026-09-07-QUORUM.md` names two. The correction came out in the spec's favour and the
 number of engines is not what produced it.
 
+**AND THE SIXTH PORT PAID NOTHING, WHICH IS RECORDED HERE BECAUSE A LEDGER THAT LISTS ONLY THE
+WINS IS A SELECTED SAMPLE.** `authority-select` (core, 2026-09-16) was ported to Apalache with
+D16's own advice followed — *point the second engine at the first one's `Init`* — and there was
+nothing there to point at: `tla/AuthoritySelect.tla`'s `Init` is an empty chain and every hop's
+origin, provenance and path are chosen freely, which is already wider than any implementation.
+Every claim reproduced and **no new finding came out of it.** What the port did buy is the thing
+it was bought for and no more: the eight properties are **inductive** rather than true of chains
+of three, and `MisclassificationCostsAvailabilityOnly` — which quantifies over all three readings
+of §6.8's discriminator — is the row that most needed it, because as a bounded result it was a
+statement about short chains and as an inductive one it is a statement about the rule.
+
 ## The standard, stated so it can be applied to a new module
 
 > **Two structurally different engines, minimum, before a result is published as a property of
@@ -76,7 +87,7 @@ A subject may sit at one engine for a while; that is a scheduling decision, not 
 describe it as verified. The rule the gate enforces is that **the exemption is written down**.
 
 <!-- enginecount-site: docs/CORROBORATION.md :: Derived, not recalled -->
-**Derived, not recalled: 34 of 36 subjects carry a green on two or more engines.** On the three
+**Derived, not recalled: 35 of 37 subjects carry a green on two or more engines.** On the three
 extension tracks it is **9 of 9**. Both numbers are re-derived by `make enginecount` from the
 green tables on every run of `make check` and `make matrix`; every prose site that states them
 is checked against the derivation, because the "five of the nine" in `AGENTS.md` was written by
@@ -89,6 +100,7 @@ hand on 2026-09-08, was true that day, and was stale the next morning.
 | subject | track | files | engines with a green | n |
 |---|---|---|---|---|
 | `authority` | core | `spin/authority.pml` `tla/Authority.tla` `tla/AuthorityApalache.tla` | TLC · Apalache · Spin | 3 |
+| `authority-select` | core | `tla/AuthoritySelect.tla` `tla/AuthoritySelectApalache.tla` | TLC · Apalache | 2 |
 | `binding` | core | `tamarin/Binding.pv` `tamarin/Binding.spthy` `tamarin/BindingBug.pv` `tamarin/BindingBug.spthy` `tamarin/BindingReplay.pv` `tamarin/BindingReplayBug.pv` `tamarin/BindingReplayBug.spthy` | ProVerif · Tamarin | 2 |
 | `bootstrap` | core | `spin/bootstrap.pml` `tla/Bootstrap.tla` `tla/BootstrapApalache.tla` | TLC · Apalache · Spin | 3 |
 | `bounds` | core | `spin/bounds.pml` `tla/Bounds.tla` `tla/BoundsApalache.tla` | TLC · Apalache · Spin | 3 |

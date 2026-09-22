@@ -20,10 +20,19 @@ one tool, on the layer it can actually reach.
 > `identity` were "vendored, unpinned and unmodeled" until 2026-09-07; both were promoted the
 > same day, hours apart.)*
 
-> **Pinned at spec 0.8.2; the live spec is 0.8.2.25.** Rows 4 and 5 below — the two this
+> **Pinned at spec 0.8.2; the live spec is 0.8.2.32.** Rows 4 and 5 below — the two this
 > repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and
-> `make specdrift` reports **14 of 29 cited sections moved**. Fifteen of the sixteen contradict no model — one of them, §5.8, is a **single backtick** removed
-> from a cross-reference row; §4.7 is the one that contradicts a model constant. Measured section by
+> `make specdrift` reports **15 of 29 cited sections moved**. **None of the moved set
+> contradicts a model** — one of them, §5.8, is a **single backtick** removed
+> from a cross-reference row. ⛔ *This clause read "fifteen of the sixteen contradict no model …
+> §4.7 is the one that contradicts a model constant" until 2026-09-17. §4.7 stopped being the
+> exception on **2026-09-15**, when `tla/ConnCodes.tla`, its Apalache port and `spin/conncodes.pml`
+> were retargeted to `spec-data/v0.8.2.25/` under `[track.core.model_pins]` — the correction
+> reached `AGENTS.md` and `docs/STATUS.md` that day and did not reach here. **A count restated in
+> words** ("fifteen of the sixteen") **is invisible to the gate that anchors on `N of 29 cited
+> sections moved`**, which is why it outlived the fix by two days with `make driftclaim` green.
+> Repaired the way that shape always is here: the value is deleted and the subject named.*
+> Measured section by
 > section in `docs/SPEC-DRIFT-ASSESSMENT.md` — which is also where the earlier movements
 > (§5.2 and §5.6, 0.8.2.16) are classified: they contradict no model here, and they land on
 > the **Lean seam** instead. The two newest (§5.4 and §6.8, 0.8.2.20/21) are classified in

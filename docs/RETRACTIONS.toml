@@ -323,3 +323,43 @@ Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`."
 pattern = "admits no [a-z, -]*under an active attacker"
 witness = "docs/RETRACTIONS.toml"
 allow   = ["docs/PROPERTIES.md", "docs/FINAL-ASSURANCE-SUMMARY.md"]
+
+[[retraction]]
+id      = "R14"
+retired = "2026-09-17"
+claim   = "§4.7 is the one place the live spec text contradicts a model"
+why     = """True when written and false from 2026-09-15, when `tla/ConnCodes.tla`, its Apalache
+port and `spin/conncodes.pml` were retargeted to `spec-data/v0.8.2.25/` under
+`[track.core.model_pins]`. §4.7 is measured against its own snapshot now, so there is no §4.7
+claim against the pin for the live text to contradict — and core's published coverage pair fell
+29 -> 27 of 91 to say so, which is the mechanism working rather than a regression.
+
+WHY THIS ROW RATHER THAN FOUR CORRECTION NOTES. The claim survived in FOUR live documents for two
+days with every gate green, and each of the four stated it in DIFFERENT WORDS AT A DIFFERENT
+VINTAGE: `README.md` "eleven of the twelve moved sections contradict no model ... the twelfth,
+§4.7, is the one place the live text contradicts a model"; `docs/ASSURANCE-MAP.md` "fifteen of the
+sixteen contradict no model ... §4.7 is the one that contradicts a model constant";
+`docs/FINAL-ASSURANCE-SUMMARY.md` the same pair with the 400 -> 409 detail; and
+`docs/SPEC-DRIFT-ASSESSMENT.md`'s own summary table as a cell reading `1 (§4.7)`, which disagreed
+with that same file's §4.7 subsection marked CLOSED.
+
+`make driftclaim` anchors on the canonical phrasing `N of 29 cited sections moved` and saw none of
+them, which is D15's fifth shape — a stale number hides best in a sentence that states it in other
+words. The 2026-09-15 fix reached `AGENTS.md` and `docs/STATUS.md` and stopped there.
+
+⛔ AND THE SWEEP FOR IT UNDER-ENUMERATED ON THE FIRST PASS. Three sites were found, the repairs
+were written, and the FOURTH — `README.md`, the most-read published file in the repo — surfaced
+only on a second grep using an older phrasing. A paraphrase does not age with its siblings: each
+restatement freezes at the value it was written with, so this class must be swept by the OLD
+VALUES, plural, and not by the current sentence. That is the transferable half and it is why the
+pattern below targets the ASSERTION SHAPE rather than "§4.7", which appears in every corrected
+site and in the whole §4.7 subsection that legitimately records the history.
+
+ON THE `allow` LIST: `README.md` carries the withdrawn wording INSIDE its own dated correction box
+("This paragraph read ... until 2026-09-17"), which is the one case this registry's header permits
+— a genuinely dated historical statement, kept visible per the ratchet's rule that a withdrawn
+claim is more useful visible than deleted. It is allowed for that reason and no other. The gate
+caught it on the row's first run, which is the row working."""
+pattern = "the one (place|section|row)[a-z ]*the live (text|spec) contradicts a model"
+witness = "docs/SPEC-DRIFT-ASSESSMENT.md"
+allow   = ["docs/RETRACTIONS.toml", "README.md"]

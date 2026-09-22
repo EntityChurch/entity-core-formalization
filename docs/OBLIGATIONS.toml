@@ -146,7 +146,29 @@ note        = ""
 section     = "6.3"
 obligations = 7
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by pin-overridden models -- `tla/AuthoritySelect.tla` and its Apalache port, at
+`spec-data/v0.8.2.25`, 2026-09-16. DISPOSITION STAYS `UNEXAMINED` AND THE NOTE SAYS WHY RATHER
+THAN ROUNDING UP.
+
+What those models are about is §6.3's `check_path_permission` as a CALL SITE for §6.8's
+authority-selection rule: which authority its `authority` argument carries. They do not
+transcribe ONE of this row's seven PIN obligations. The pin's §6.3 MUSTs are the two-level
+authorization contract -- dispatch scope via `check_permission`, path scope via
+`check_path_permission`, *"Both checks MUST pass"*, the listing filter, and the pagination
+ordering -- and nothing here verifies any of them as the pin states them.
+
+⭐ AND THE PIN'S TEXT IS ITSELF EVIDENCE FOR THE FINDING THOSE MODELS ROUTE, which is why this
+note is longer than the row. At `v0.8.2` the listing filter reads *"each entry MUST be
+individually checked against THE REQUEST'S CAPABILITY"* -- ONE authority, singular, and the
+`check_path_permission` signature that takes one `authority` argument matches it exactly. By
+`v0.8.2.25` the same paragraph reads *"The authority is §6.8 ROW 1 -- the caller's verified
+capability, with the executing handler's grant as a ceiling; BOTH MUST PASS"*, and THE SIGNATURE
+DID NOT MOVE. So the single-authority shape is not a drafting slip: it is the residue of a text
+in which a single authority WAS the whole rule, left behind when the rule grew a conjunction.
+That is the same failure 0.8.2.24 names one clause over -- *a generalization that changes which
+object a qualifier attaches to has to say what happened to the qualifier*.
+"""
 
 [[track.core.uncited]]
 section     = "1.8"
@@ -277,7 +299,15 @@ verifies it AS THE PIN STATES IT, and that is what this row records.
 section     = "6.7"
 obligations = 2
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by a pin-overridden model -- `tla/AuthoritySelect.tla`, at `spec-data/v0.8.2.25`,
+2026-09-16 -- and only for the execution-context inventory: §6.7 is what states that the context
+supplies BOTH the handler's own grant and the caller's verified capability, which is what makes
+§6.8 row 1's two-authority check implementable at all. Neither of this row's PIN obligations is
+about that; they sit in the resolution-first dispatch / information-leak paragraph (404 before
+403), which no model here represents. `UNEXAMINED` is the honest disposition and the citation
+does not change it.
+"""
 
 [[track.core.uncited]]
 section     = "7.4"
@@ -319,7 +349,15 @@ note        = ""
 section     = "3.11"
 obligations = 1
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by a pin-overridden model -- `tla/AuthoritySelect.tla`, at `spec-data/v0.8.2.25`,
+2026-09-16 -- for ONE sentence, and not for this row's obligation. The model's `origin` variable
+distinguishes a chain a live caller started from one a delivery or timer started, and §3.11's
+*"a standing continuation firing on a fresh external trigger roots it at 0"* is the text that
+says those are different chains rather than one long one. This row's single PIN obligation is
+about `chain_id`'s SHAPE (*"MUST be a single tree path segment"*), which no model here touches.
+`UNEXAMINED`, unchanged.
+"""
 
 [[track.core.uncited]]
 section     = "3.12"

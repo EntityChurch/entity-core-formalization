@@ -523,17 +523,34 @@ absence of a row in the NEW file reads as absence of the work.** The real state 
 gap, not a work gap**, which is cheaper to fix and invisible from inside either tree. Corrected
 in place with the wrong sentence left standing.
 
-**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.25** and `make specdrift` reports
-**14 of 29 cited sections moved**, and **none of the fourteen now contradicts a model** — one of them
-(§5.8) is a single backtick removed from a cross-reference row.
+**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.32** and `make specdrift` reports
+**15 of 29 cited sections moved**, and **none of the moved set now contradicts a model** — one of
+them (§5.8) is a single backtick removed from a cross-reference row.
+⛔ *That clause read **"none of the fourteen"** until 2026-09-16, with `make driftclaim` green over
+the whole sentence the entire time.* The gate anchors on the canonical phrasing `N of 29 cited
+sections moved` and on the live version; **a second, spelled-out copy of the same count sitting in
+the next clause is invisible to it** — D15's fifth shape (*a stale number hides best in a sentence
+that states it in different words*) inside the paragraph the gate does read. Repaired the way that
+shape is always repaired here: **the value is deleted and the subject named**, so the clause cannot
+go stale on the sixteenth section. **The fifteenth is §7.3** (0.8.2.26, the signature-message
+consolidation), it is cited by **26** model files, and it does not contradict one — every citation
+is the crypto wall, which is exactly what *"which bytes the message is"* abstracts away.
+`docs/SPEC-DRIFT-ASSESSMENT.md` §1 carries the row and the one adjacency it does NOT wave past.
 ⭐ **§4.7 WAS the exception and is not any more, 2026-09-15.** `connection_sequence_error` moved
 400 → 409 at 0.8.2.4 while `tla/ConnCodes.tla` transcribed 400; that module, its Apalache port
 and `spin/conncodes.pml` are now **retargeted to `spec-data/v0.8.2.25`**. ⛔ **Do not quote a
 figure for the off-pin group from memory: `make specdrift` reports ONE number for ALL files
-sharing a snapshot, so it moved from `0 of 11` to `0 of 21` the moment a SECOND subject
-retargeted to `.25` (the eight `tamarin/Resolution*` files, 2026-09-16) — a live figure going
-stale because a different subject landed, with every gate green. It is not a declared
-`driftclaim` site; derive it.** ⛔ **They are therefore NOT statements about the pin, and the mechanism
+sharing a snapshot, so it moves for TWO independent reasons and both have now fired.** It went
+`0 of 11` → `0 of 21` the moment a SECOND subject retargeted to `.25` (the eight
+`tamarin/Resolution*` files, 2026-09-16) — **the denominator moving because a different subject
+landed**, with every gate green. Then it went to a non-zero numerator on 2026-09-17 without this
+repo touching anything, because **live advanced past `.25`** and the off-pin group's own cited
+set started moving underneath it — `.26` through `.32` changed §4.7 and §4.11 substantively
+(a whole new `non_canonical_ecf` row, the close-is-forced-where-desynchronized split, the
+in-flight bound). ⛔ **So `0 of N` is not a standing property of an override; it is a measurement
+with a shelf life, and the shelf life of the `.25` group expired six revisions after it was
+vendored.** It is not a declared `driftclaim` site and no gate will tell you — **derive it,
+every time, and read `docs/SPEC-DRIFT-ASSESSMENT.md` §1 for which of the two reasons moved it.** ⛔ **They are therefore NOT statements about the pin, and the mechanism
 for saying so is a gate rather than a sentence:** `[track.core.model_pins]` in `TRACKS.toml`,
 a `MODELING-PIN-OVERRIDE:` marker in each file, both directions checked by `make trackcheck` §E,
 their citations held out of the coverage pair by `make coverage` and measured against their own
@@ -597,18 +614,33 @@ sections touched — so no finding changes. Read both halves: the file-level ans
 section-level answer are different questions and this repo publishes the second one.
 Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**641-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
-Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
-(**17 ProVerif / 16 Tamarin** green theories), 100 negative controls and 13 non-vacuity
-witnesses. No inductive invariant is deferred; no control is known-weak.
-⛔ **Four numbers, one sentence, ONE of them gated.** `make runcount` declares this paragraph a
-site and reads the **641** and nothing else. The prover pair said `15 / 14` until 2026-09-16,
-when the `resolution` subject made it 17 / 16 — derivable from `PV_GREEN`/`TM_GREEN` and
-therefore corrected here, and it had been wrong for as long as it took to notice. **The 100 and
-the 13 are hand-maintained, correspond to no table this repo derives, and are NOT corrected
-here because nobody has re-derived them** — saying so is cheaper than a figure that looks
-checked. This is the unread-facet shape (D15, thirteenth) inside the paragraph that announces
-the gate, and D20 is its sibling: ask of a gated sentence which of its claims the gate reads.
+**687-run** `make matrix` is the gate: **11** concurrency/structural modules checked by all
+three of TLC + Apalache + Spin, **plus `AuthoritySelect` on TLC + Apalache only** (§6.8's
+authority-selection MUST, 2026-09-16, `model_pins`-targeted at `v0.8.2.25`), both provers
+running every attacker theory (**17 ProVerif / 16 Tamarin** green theories), and a control and
+witness set whose sizes `docs/STATUS.md`'s slice table states per target. No inductive
+invariant is deferred; no control is known-weak.
+⛔ **Four numbers, one sentence, ONE of them gated — and THREE of the four have now gone stale
+here, each in its own way.** `make runcount` declares this paragraph a site and reads **the run
+total** and nothing else.
+- *The prover pair* said `15 / 14` until 2026-09-16, when the `resolution` subject made it
+  17 / 16 — derivable from `PV_GREEN`/`TM_GREEN`, corrected, and wrong for as long as it took
+  to notice.
+- *"all 11 … modules checked by TLC + Apalache + Spin"* was a **bare universal quantifier over
+  our own artifacts**, and adding a twelfth module on two engines made it false in the way
+  D14's sixth instance describes — the set grew underneath the sentence. The repair is not a
+  bigger number: it is naming the module that does **not** satisfy the quantifier, because
+  `AuthoritySelect` has no Spin encoding and *"12 modules on three engines"* would have been a
+  cleanly-incremented lie.
+- *"100 negative controls and 13 non-vacuity witnesses"* were hand-maintained, correspond to no
+  table this repo derives, and were **knowingly** left uncorrected here with that fact stated.
+  That was defensible while nobody had touched them. This session added 8 controls and 4
+  witnesses, so continuing to print `100` would have been publishing a figure known to be
+  wrong — **the values are deleted and the SUBJECT named instead**, which is D15's fifth-shape
+  repair (*state the subject, let the gate own the value*) applied the moment the disclosure
+  stopped being true rather than at the next audit.
+This is the unread-facet shape (D15, thirteenth) inside the paragraph that announces the gate,
+and D20 is its sibling: ask of a gated sentence which of its claims the gate reads.
 
 Two things are new and change how you read the rest. **`docs/LEAN-SEAM.md`** is the
 assumption ledger — per abstraction in the models, the proposition relied on and the Lean
@@ -619,7 +651,7 @@ the complementarity claim stops being prose. **It paid out on 2026-09-06:** the 
 residual it found was adopted by the keystone peer, §5.5a now has a theorem per pattern form,
 and both gates caught the movement — `leanseam` on the digests, `leanproof` on three new
 theorems **by name**, refusing to accept a re-declare without a re-read. **Do not trust a
-count of the ledger's rows that you did not derive:** it is 42 rows / 13 Class L, **15 OPEN**,
+count of the ledger's rows that you did not derive:** it is 43 rows / 13 Class L, **16 OPEN**,
 and a recalled figure has been published wrong here **five** times. Run **`make ledgercount`**
 — it parses the ledger and fails when a declared prose site disagrees. *Note what this line
 used to say and why it was wrong: "`leanseam` and `leanproof` print the live numbers." They do
@@ -906,9 +938,13 @@ tripwire for this family: discarded output is the tell.
 
 ***And for the WITHDRAWN-CLAIM half specifically, "grep the retracted words" is now a program:
 `make retractcheck` (`tools/retractcheck.py`, `docs/RETRACTIONS.toml`), in `check` and
-`matrix`.*** **Eleven** rows, each with the phrasing, the date, why it was withdrawn — and a
+`matrix`.*** **Every row** carries the phrasing, the date, why it was withdrawn — and a
 **`witness`**, a document that must still contain the words, because a mistyped tripwire reports
-a clean pass forever. It found one on its first run: **`tla/AttestRevoke.tla`'s header still
+a clean pass forever. ⛔ *This sentence stated a ROW COUNT until 2026-09-17 and it read `Eleven`
+while the registry held **twelve**, with `make retractcheck` green throughout — nothing derives
+that figure and no site declares it, so it was a hand-maintained number inside the paragraph
+announcing a gate against hand-maintained claims. The value is deleted and the subject named:
+run the gate, which prints the count.* It found one on its first run: **`tla/AttestRevoke.tla`'s header still
 asserted F5's withdrawn conclusion** ("termination rests on the revocation graph being acyclic"),
 in the model that is the subject of the correction, a day after the Apalache port refuted it.
 D14's fifth instance again — *a corrected defect survives longest somewhere that does not look
@@ -1586,7 +1622,7 @@ engines" be quoted as "corroborated" without the sentence that says what it corr
 `docs/CORROBORATION.md` declares subject → files → engines; the gate derives the engine set from
 the **green** tables in the three engine Makefiles and fails on any disagreement, on a model file
 in no subject, on a single-engine subject with no written reason, on a stale exemption, and on a
-prose site whose corroboration pair has drifted. It is **34 of 36** subjects overall and **9 of 9**
+prose site whose corroboration pair has drifted. It is **35 of 37** subjects overall and **9 of 9**
 on the extension tracks; do not quote either number without running it.
 
 *It earned its keep in the hour it was written, on the derivation rather than the arithmetic.*

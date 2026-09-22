@@ -33,7 +33,9 @@ translated — and **Apalache** SMT proofs that turn the key safety invariants f
 a bound* into *proven inductive (unbounded)*. **Tamarin + ProVerif** (two provers, lockstep)
 cover the active-attacker surface — **14 lemmas closed by both**, plus `BindingReplay` in
 ProVerif only. **Every `core` concurrency module is checked by all three engines of its family**
-(that is per *module* and per *track*; at *section* granularity one core row still rests on one
+(⛔ *"concurrency module" is doing work: `AuthoritySelect`, added 2026-09-16 for §6.8's
+authority-selection MUST, is a core structural module on TLC + Apalache with no Spin encoding —
+see `docs/COVERAGE-MATRIX.md` §4.* That is per *module* and per *track*; at *section* granularity one core row still rests on one
 engine — §3.3, and only as the *subject* of §6.11(a′) rather than as a property of its own; and
 of the
 nine extension subjects across `attestation`, `quorum` and `identity`, **9 of 9 subjects carry a green on two engines** and none is TLC-only, and **none of the
@@ -53,11 +55,20 @@ in §5 (Findings and residual risk).
 
 > **Which spec version this capstone certifies.** Everything here certifies models written
 > against the SHA-pinned `spec-data/v0.8.2/` — the protocol at spec version **0.8.2**. The
-> live spec is **0.8.2.25** and `make specdrift` reports **14 of 29 cited sections moved**, so
+> live spec is **0.8.2.32** and `make specdrift` reports **15 of 29 cited sections moved**, so
 > this capstone certifies 0.8.2 and nothing later. No result below is falsified by the
-> movement — fifteen of the sixteen moved sections contradict nothing modeled, and §4.7's `connection_sequence_error`
-> status change (400 → 409) contradicts `tla/ConnCodes.tla` only against text this capstone
-> does not claim. `docs/SPEC-DRIFT-ASSESSMENT.md` has the section-by-section measurement.
+> movement — **no section in the moved set contradicts a model.** ⛔ *This sentence read
+> "fifteen of the sixteen moved sections contradict nothing modeled, and §4.7's
+> `connection_sequence_error` status change (400 → 409) contradicts `tla/ConnCodes.tla` only
+> against text this capstone does not claim" until 2026-09-17, and both halves had gone stale on
+> **2026-09-15**: `tla/ConnCodes.tla` is no longer a pin-targeting model at all — it, its Apalache
+> port and `spin/conncodes.pml` were retargeted to `spec-data/v0.8.2.25/` under
+> `[track.core.model_pins]`, so §4.7 is measured against its own snapshot and this capstone makes
+> no §4.7 claim to contradict. The retarget's cost is stated where it lands: core's published
+> coverage pair fell **29 → 27 of 91**, because nothing pin-targeting cites §4.7 or §5.2a any more.
+> A count restated in words is invisible to the gate that anchors on `N of 29 cited sections
+> moved`.* `docs/SPEC-DRIFT-ASSESSMENT.md` has the section-by-section measurement, and
+> `docs/COVERAGE-MATRIX.md` §3f is the off-pin grid.
 >
 > This was not always so, and the history is worth keeping: the models were pinned at 0.8.0
 > while the protocol advanced to 0.8.2, and `docs/SPEC-DRIFT-ASSESSMENT.md` records how that
@@ -171,7 +182,7 @@ The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**641 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**687 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
 surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
 audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a

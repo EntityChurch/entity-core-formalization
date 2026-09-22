@@ -83,6 +83,7 @@ not just the enumerated ones.
 | Register | `Inv` (`SafeSys ∧ NoUserAtSystem`) | §6.2 | system-namespace guard holds; no user registers at a system path |
 | **Reentry** | **`InvFrame` (`FramesNotInterleaved`)** | **§6.11(a′)** | **two frames' bytes never interleave on a pooled connection** |
 | **Authority** | **`InvGrantless` / `InvEntry` / `InvResource` / `InvTarget`** | **§5.2** | **all four 0.8.2 dispatch-authority rules** |
+| **AuthoritySelect** | **`NoDeputySubstitution` / `CallerFacingNeedsCaller` / `Row1CeilingHolds` / `HandlerGrantIsAlwaysCeiling` / `MisclassificationCostsAvailabilityOnly` / `NoStaleTokenAuthority` / `OwnBehalfNotSpuriouslyDenied` / `PeerRootNeverDenied`** | **§6.8 @ `v0.8.2.25`** | **WHICH authority the handler-level check consults: all three rows, the discriminator and both readings §6.8 names as NOT the test, row 1's ceiling. ⛔ OFF-PIN — this rule does not exist at `spec-data/v0.8.2`** |
 | **Bounds** | **`InvBrake` / `InvCount` / `InvCodes`** | **§5.9 / §4.10(b)** | **depth brake before TTL; single decrement; distinct reason strings — over SYMBOLIC constants** |
 | **Core** | **`InvComposed`** | **all of the above, together** | **the composed whole-protocol safety conjunction** |
 | **ConnCodes** | **`ReasonCodesDistinct` / `StatusMatchesCode`** | **§4.7** | **distinct failures never share a reason code; each code carries the status the table fixes — over BOTH permitted readings of the contested §4.6/§4.7 cell** |
@@ -144,6 +145,18 @@ from the day they landed.
   (deadlock-free establish→request→revoke), plus the two modules added at 0.8.2:
   - **`Authority`** (§5.2) — the three-valued dispatch authority, the resource-check
     binding, and the no-resource-inheritance rule.
+  - **`AuthoritySelect`** (§6.8, **at `v0.8.2.25`, not at the pin**) — which authority the
+    *handler-level* check runs against. ⛔ **Read it beside `Authority` and not as more of it:**
+    `Authority` is the DISPATCH-level check (§5.2 `check_permission`) and asks *is this dispatch
+    authorized*; this one is §6.3 `check_path_permission` and asks *whose authority is being
+    spent on this path*. Two questions, two modules, deliberately — and two `docs/CORROBORATION.md`
+    subjects, because `authority`'s three engines are statements about the PIN and these two are
+    not. ⭐ Its sharpest claim is not a transcription: `MisclassificationCostsAvailabilityOnly`
+    quantifies over all three readings of §6.8's discriminator and says the ceiling is what makes
+    every wrong answer fail closed — which is why `P-10` argues the ceiling is load-bearing rather
+    than hygiene. **What it does NOT cover:** the `handler_pattern` frame (that is `P-6`/`D28`,
+    open), the §5.4 matcher (Lean's), and any claim that a chain's origins are consistent along it
+    (`docs/LEAN-SEAM.md` **O25**, OPEN).
   - **`Bounds`** (§5.9/§4.10) — TTL versus continuation `chain_depth` as distinct
     magnitudes, single-decrement TTL accounting, and distinct reason strings.
 - **Liveness — bounded only, by nature** (Apalache does safety/induction by
@@ -267,7 +280,7 @@ Reproduce: `make -C tamarin green`; 17 ProVerif + 17 Tamarin bug controls each f
 3a. **Four subjects rest on ONE engine, and they are named rather than inferred.**
    `docs/CORROBORATION.md` is the ledger and `make enginecount` is its gate (D16, added
    2026-09-09): per subject, which engines have a **green** on it, derived from the gate tables
-   rather than from which files exist. **34 of 36** subjects carry two or more; the two that do
+   rather than from which files exist. **35 of 37** subjects carry two or more; the two that do
    not are both on `core` — `revokemech` (zero — genuinely non-terminating, excluded from the
    matrix by design) and `core-refinement` (TLC, T4's classifier, deliberately last).
    **No extension subject is single-engine as of 2026-09-09.**
@@ -394,7 +407,7 @@ Reproduce: `make -C tamarin green`; 17 ProVerif + 17 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Seventeen targets decide the 641 runs.
+     the finding is what made that discipline necessary). Seventeen targets decide the 687 runs.
 
      **This table carries no run counts, deliberately — corrected 2026-09-07.** It used to,
      and they were stale: `tlc-neg` sat at 40 against a real 45, `tlc-green` at 15 against 24,

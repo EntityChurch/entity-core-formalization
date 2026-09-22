@@ -1,12 +1,39 @@
 # Spec-drift assessment — the pin vs the live spec
 
 > **LIVE — the pin is behind again, and this document is the measurement.** The models are
-> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.25**, and `make specdrift`
-> reports **14 of 29 cited sections moved**. §1 below is that measurement, taken 2026-09-06
-> and re-derived **six times since** — twice on 2026-09-09, again on 2026-09-10, on
-> 2026-09-12, on **2026-09-14**, and again on **2026-09-15**, because the upstream repo
-> committed **0.8.2.15 through 0.8.2.25** across that window — **ten separate
-> commits, two of them while this document was being edited.**
+> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.32**, and `make specdrift`
+> reports **15 of 29 cited sections moved**. §1 below is that measurement, taken 2026-09-06
+> and re-derived **seven times since** — twice on 2026-09-09, again on 2026-09-10, on
+> 2026-09-12, on **2026-09-14**, on **2026-09-15**, and again on **2026-09-17**, because the
+> upstream repo committed **0.8.2.15 through 0.8.2.32** across that window — **fourteen
+> separate commits, two of them while this document was being edited.**
+>
+> ⭐ **The 2026-09-17 re-derivation moved the VERSION and not the COUNT, and that is the whole
+> finding.** `0.8.2.31` and `0.8.2.32` changed **§9.1 and nothing else** — 10 lines between them,
+> the version header included — and **no model here cites §9.1**, so the cited-section count is
+> **15 of 29** before and after. `make driftclaim` fired anyway, correctly, on the eight sites
+> that name the live version: this repo added `check_live_version` on 2026-09-09 precisely
+> because nine sites once said `0.8.2.11` while it was `0.8.2.15` with the gate green on an
+> unchanged count. **The facet that moved is the one that was added after it moved silently
+> once.**
+>
+> ⭐ **AND WHAT `0.8.2.31` PUT IN §9.1 IS THE RULE THIS REPO MODELED THE SAME DAY.** The
+> conformance floor's authority-selection row had published *"selected by WHO NAMED THE PATH …
+> handler-derived → the executing handler's own grant"* — the discriminator **§6.8 corrected at
+> 0.8.2.22** — for eight revisions, in the MUST-implement list an implementer builds from.
+> `.31` corrects it to *"whether the access serves a live caller's request"* and states row 1's
+> conjunction in as many words: *"the caller's verified capability AND the executing handler's
+> own grant, and BOTH MUST pass."* **That is `P-9`'s subject arriving in a fourth home**, and
+> `P-9` is unaffected by it: §6.3's `check_path_permission` still takes **one** `authority`, and
+> §6.3 is byte-identical. The floor gained the conjunction; the arity did not move. **`P-10`'s
+> ceiling is what that conjunction IS**, so the row now published to implementers is the reading
+> our finding rows measured as fail-closed.
+>
+> ⛔ **§6.3 and §6.8 are byte-identical between `spec-data/v0.8.2.25/` and live `0.8.2.32`** —
+> checked by section span against the live text on 2026-09-17, not assumed from the count. The
+> `P-9`/`P-10` packet and `tla/AuthoritySelect.tla`'s transcription both survive `.31` and `.32`
+> intact. *This is the check D15's fifteenth shape exists to force: when the drift gate fires,
+> re-read the ARGUMENT and not only the number the gate names.*
 >
 > ⚠ **§1d is the one to read if you are picking up work.** The sixteenth section is **§4.10**,
 > and unlike every other row here the movement is an *invitation*: 0.8.2.25's new **§4.11**
@@ -52,7 +79,7 @@ does not read.
 
 | Track | Pin | Live tree | Files | Cited § moved |
 |---|---|---|---|---|
-| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **14 of 29 cited sections moved** |
+| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **15 of 29 cited sections moved** |
 | `attestation` | `spec-data/ext-attestation-v1.3` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`attestation` no drift** |
 | `quorum` | `spec-data/ext-quorum-v1.2` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`quorum` no drift** |
 | `identity` | `spec-data/ext-identity-v3.10` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`identity` no drift** |
@@ -72,19 +99,19 @@ before believing a zero (D15, ninth shape).
 
 ---
 
-# 1. Live measurement — 0.8.2 pin vs 0.8.2.25 live
+# 1. Live measurement — 0.8.2 pin vs 0.8.2.32 live
 
 **Measured 2026-09-06; re-derived twice on 2026-09-09, again on 2026-09-10, on 2026-09-12,
-on 2026-09-14, and again on 2026-09-15.** Reproduce with `make specdrift`; the
+on 2026-09-14, on 2026-09-15, and again on 2026-09-17.** Reproduce with `make specdrift`; the
 prose sites that state the status are gated by `make driftclaim`.
 
 | | |
 |---|---|
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
-| Live (`entity-core-protocol/specs`) | **0.8.2.25** · CBOR encoding 1.5 → 1.7 · type system also differs |
+| Live (`entity-core-protocol/specs`) | **0.8.2.32** · CBOR encoding 1.5 → **1.8** · type system 4.2.1 → **4.3** |
 | Frozen copy of live, for the re-check | `spec-data/v0.8.2.25/` — **vendored 2026-09-15, digest-verified; the pin did NOT move.** `v0.8.2.24/` stays in place as a point-in-time pin. ⭐ **The first snapshot in this repo's history where a section was ADDED** (§4.11); 92 → 93 numbered sections, none removed, none renumbered, 31 of 31 model citations still resolve |
-| **Sections the models cite that moved** | **14 of 29** |
-| Sections whose movement contradicts a model | **1** (§4.7) |
+| **Sections the models cite that moved** | **15 of 29** |
+| Sections whose movement contradicts a model | **0** — ⛔ *this row read `1 (§4.7)` until 2026-09-17, two days after §1's own §4.7 subsection was marked `✅ CLOSED 2026-09-15`. The summary table and the subsection it summarizes disagreed, in one file, with every gate green: nothing derives this row.* |
 | Sections whose movement lands on the **Lean seam** rather than on a model | **2** (§5.2, §5.6 — §1a) |
 | Sections that moved where **every citation of them is an abstraction disclaimer** | **1** (§5.4 — §1b) |
 | Sections that moved because a defect was closed in a mechanism **no model represents** | **1** (§5.5 — **§1c**) |
@@ -147,16 +174,20 @@ below records an earlier draft of this document making.
 | **§5.6** | **14** | **0.8.2.16** — `scope_subset` likewise dispatches; new `pattern_covers` helper; a type mismatch between child and parent is now a malformed grant | **none for any model here** — see §1a. Lands on the Lean seam, and this is the half with a routed finding behind it |
 | §5.8 | 4 | **0.8.2.19** — **one backtick**, removed from a cross-reference table row (`` `EXTENSION-CONTINUATION.md` `` → `EXTENSION-CONTINUATION.md`) | **none, and it is the cleanest illustration this table has of its own limit.** One character, zero semantic content; the four `ChainTopology.*` theories cite §5.8 for chain-inclusion topology, not for that row |
 | **§5.4** | **9** | **0.8.2.20** — `canonicalize` is now **total**: the two `error(...)` returns become a `NEVER_MATCH = "/never-match"` sentinel, `matches_pattern` gains a first arm refusing it in either operand, and every `validate_absolute_path` call site is ruled MUST-consume | **none — and for a reason no other row here has.** All **nine** citations are **abstraction disclaimers** (*"the §5.4 path matcher stays abstract"*, *"is Lean's / abstracted here"*). See §1b |
-| **§6.8** | **10** | **0.8.2.20/21** — **+3.8KB**: the caller-specified-path check goes **act-neutral** (reads as well as writes) and MUST rather than voluntary; a new "the subject is the effective set" rule; and a new MUST selecting **which authority** the handler-level check runs against — *by who named the path, never by who initiated the chain* | **none.** The clause all ten citing models use — *"a revoked capability never passes a check"* — is **byte-identical**. The rest is new surface, and it lands inside `tla/Authority.tla`'s own abstraction. See §1b |
+| **§6.8** | **10** | **0.8.2.20/21** — **+3.8KB**: the caller-specified-path check goes **act-neutral** (reads as well as writes) and MUST rather than voluntary; a new "the subject is the effective set" rule; and a new MUST selecting **which authority** the handler-level check runs against | **none for the ten pin-targeting models** — the clause all ten use, *"a revoked capability never passes a check"*, is **byte-identical**. ⛔ **THIS ROW STATED THE DISCRIMINATOR IN THE 0.8.2.21 WORDING (*"by who named the path, never by who initiated the chain"*) UNTIL 2026-09-16, AND 0.8.2.22 NAMES THAT READING AS ONE OF THE THINGS THE RULE IS NOT.** The live rule selects by **whether the access serves a live caller's request**. Same defect as `docs/STATUS.md` §Next item `0******` carried, in a second document, found the same day and corrected here — D12, and the correction is now **measured** rather than read: `AuthoritySelectDerivationBug` is a negative control on the superseded reading and `WitnessReadingsDiverge` exhibits an access where the two return different verdicts, so the .21 → .22 change is **semantic, not editorial**. ⭐ **The "new surface" is no longer unmodeled**: `tla/AuthoritySelect.tla` transcribes it at `v0.8.2.25` under `model_pins`. See §1b |
 | **§4.10** | **8** | **0.8.2.25** — (a)'s *emission shape* goes **SHOULD/MAY → MUST** and is handed to the new **§4.11**; **(b) and (c) are byte-identical** | **none, and the row is an invitation rather than a cost.** All eight citations are to **(b)** (the capability-chain depth limit and its Ruling-3 reason-code distinctness) or to §4.10 generically as the admission bound. See **§1d** |
 | **§4.7** | **3** | **+7.0KB**, and **again at 0.8.2.25** — `invalid_request`'s scope widened to cover frames that never become an Envelope | **the one contradiction — see below.** The 0.8.2.25 widening does not add one: `ConnCodes.tla` transcribes the §4.7 *status table*, and what moved is the code's defining prose |
+| **§7.3** | **26** | ⭐ **NEW — 0.8.2.26, and this is the FIFTEENTH section.** §7.3 becomes *"the single normative home for the signature message `[MUST]`"*: the message is the target entity's `content_hash` **in full** — never the bare digest, never the entity's canonical-ECF bytes — with the leading format code as the **domain separator**. The provenance note is the interesting half: the corpus carried **three readings across five homes**, and the CBOR fixture was *the only executable home*, so executing it is what surfaced the split | **none, and the reason is §5.4's reason rather than §6.8's.** All 26 citations are the **crypto wall** — `sign`/`checksign` as abstract function symbols, `h/1` one-way and injective — so *which bytes the message is* is precisely what these theories abstract away. ⚠ **One adjacency stated rather than waved past:** the new clause's own argument for the format code is a **cross-format** confusion (*"one signature validates for one entity under every hash format §1.2 allocates"*), and `tamarin/Resolution*` — the theories that DO give the adversary the address — model a **single** hash constructor, so they cannot represent two formats at all. That is a declared abstraction, not a contradiction, and it is the nearest thing in this table to a modelable consequence |
 
 ### §4.7 — ✅ CLOSED 2026-09-15: the models were retargeted, not the spec re-read
 
 > ⭐ **This was "the one section where the live text contradicts a model" and it is not any
 > more.** `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` now
 > transcribe **`spec-data/v0.8.2.25`**, and `make specdrift` measures them against it: **0 of
-> 11 cited sections moved.** All four items below are modeled — the 409 status, the retired
+> 11 cited sections moved** *(as measured on 2026-09-15, and that is the whole point of the
+> figure — ⛔ **it is NOT 0 any more.** The off-pin group is one number for every file sharing a
+> snapshot, so it moves when a second subject retargets **and** when live advances past `.25`;
+> both have since fired. **Derive it, and see §1's header for which reason moved it.**)* All four items below are modeled — the 409 status, the retired
 > code, the unknown-operation row and the half-open rule — plus §4.11 and the 0.8.2.6 address
 > table, which did not exist when this section was written.
 >

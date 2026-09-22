@@ -309,21 +309,31 @@ Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
 ## 3f. Matrix A-OFFPIN — sections modeled against a NEWER snapshot than the core pin
 
 ⛔ **These rows are NOT part of the coverage pair above, and the pair went DOWN because of
-them.** **Eleven** model files transcribe **`spec-data/v0.8.2.25`** rather than the core pin
+them.** **Thirteen** model files transcribe **`spec-data/v0.8.2.25`** rather than the core pin
 `v0.8.2` — `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` (the
-`conncodes` subject, 2026-09-15) and the eight `tamarin/Resolution*` files (the `resolution`
-subject, 2026-09-16). Each is declared in `TRACKS.toml` under `[track.core.model_pins]`, marked
-in the file itself, and gated by `make trackcheck` §E in both directions. `make coverage` holds
-their citations out of Matrix A and requires them here instead; `make specdrift` measures them
-against `.25`.
+`conncodes` subject, 2026-09-15), the eight `tamarin/Resolution*` files (the `resolution`
+subject, 2026-09-16) and `tla/AuthoritySelect.tla` + `tla/AuthoritySelectApalache.tla` (the
+`authority-select` subject, 2026-09-16). Each is declared in `TRACKS.toml` under
+`[track.core.model_pins]`, marked in the file itself, and gated by `make trackcheck` §E in both
+directions. `make coverage` holds their citations out of Matrix A and requires them here
+instead; `make specdrift` measures them against `.25`.
 
-**Why they moved off the pin — and the two subjects moved for DIFFERENT reasons.** For
+⛔ **Do not read a count off this paragraph that you did not derive.** It said `Eleven` for one
+day, because a third subject retargeted. The live figure is
+`python3 -c "import tomllib;print(len(tomllib.load(open('TRACKS.toml','rb'))['track']['core']['model_pins']))"`,
+and `make trackcheck` §E is what asserts the set — not this sentence.
+
+**Why they moved off the pin — and the three subjects moved for THREE different reasons.** For
 `conncodes` a section MOVED: §4.11 does not exist at `v0.8.2`, and §4.7's out-of-order row
 carries a different status there (400 at the pin, **409** since 0.8.2.4). For `resolution` an
 obligation DID NOT EXIST: §3.1 at the pin states the map-key binding as a property of the
 ENVELOPE and names no operation on the receiver, and the receiver's obligation — with the two
-mechanisms that discharge it — arrived as §1.8 item 1 at 0.8.2.23. Either way a model cannot
-transcribe both texts, and a model transcribing the newer one is not evidence about the older.
+mechanisms that discharge it — arrived as §1.8 item 1 at 0.8.2.23. For `authority-select` a
+whole RULE did not exist: §6.8 at the pin carries one direction of the selection — the
+confused-deputy prohibition — and describes the caller-specified-path check as one a handler
+performs *"voluntarily"*. The three-row table, the `[MUST]`, the discriminator, its 0.8.2.22
+correction and row 1's ceiling all arrive after the pin. Either way a model cannot transcribe
+both texts, and a model transcribing the newer one is not evidence about the older.
 
 ⭐ **The cost is the honest part. §4.7 and §5.2a were Matrix A rows until 2026-09-15 and are
 not any more**, because no pin-targeting model cites either — so after the retarget **nothing
@@ -342,7 +352,10 @@ reads as though the risk was handled.*
 | **3.5** | **`system/peer`, `system/signature`** | **the normative `signer` check is address-level and is NOT a defence against entity substitution** | | | | ● | ● |
 | **4.7** | **connection error codes** | **MUST-emit reason-code contract; status per code; state conflict is 409; address before authentication** | ● | ● | ● | | |
 | **4.11** | **pre-admission refusals** | **the coded-frame obligation; drop and bare-close as DISTINCT failures; cause → code** | ● | ● | ● | | |
+| **3.11** | **bounds context / `chain_depth`** | **a standing continuation firing on a fresh trigger is a NEW chain root, not a continuation of the caller's** | ● | ● | | | |
 | **5.2a** | **verdict-to-status enumeration** | **reason codes distinct** | ● | ● | ● | | |
+| **6.3** | **`check_path_permission` / the listing filter** | **the call the §6.8 rule is carried out by — its ONE `authority` argument, and the listing filter's single call** | ● | ● | | | |
+| **6.7** | **handler execution context** | **the context supplies BOTH the handler's own grant and the caller's verified capability, which is what makes row 1 implementable at all** | ● | ● | | | |
 
 ⭐ **The five §1/§3 rows are the `resolution` subject, added 2026-09-16, and they are the first
 rows in this document that exist because a defect was found by somebody else.** `0.8.2.23`
@@ -358,6 +371,21 @@ mint is worth minting is §5.6's property and `NoEscalation`'s — nothing about
 arms, whose per-constituent `included[candidate]` lookups are in this defect's class and are
 **not modeled**, and nothing about the local content-store arm of the resolver. The §1.8 row's
 two dots are two engines on two mechanisms, not five lookup sites on a whole section.
+
+⛔ **§6.8 HAS NO ROW HERE AND THAT IS THE GATE'S RULE, NOT AN OVERSIGHT — BUT READ WHAT IT
+COSTS.** `make coverage` keeps a section cited by BOTH a pin model and an overridden one in the
+pin's claim, because some model really does transcribe the pin's text for it. §6.8 is such a
+section: Matrix A row §6.8 is five dots for *"confused deputy; persistent re-check"*, and those
+dots are earned — ten models consume §6.8's byte-identical *"a revoked capability never passes
+a check"* clause at the pin.
+
+**They say nothing about authority SELECTION**, which is `tla/AuthoritySelect.tla`'s subject
+and does not exist in the pinned §6.8 at all. So the §6.8 row now carries two engines nobody can
+see and three property classes under one label — ⭐ *is the row's stated property the one these
+engines establish?*, which §3a says is the question to ask, answered here BEFORE the row misleads
+someone rather than after. The selection rule's engines are TLC and Apalache, its snapshot is
+`v0.8.2.25`, and `docs/CORROBORATION.md`'s `authority-select` subject is where that is stated in
+a form a gate reads.
 
 ⛔ **§4.11 arm (f) is NOT in the row above.** The conformance paragraph names *"a pre-admission
 refusal arriving while an admitted request is in flight on the same connection MUST NOT cost
@@ -752,11 +780,22 @@ modeled — that is `DeepChain`/`Bounds`' question and it is not re-asked here.
 ## 4. Matrix B — the corroboration grid
 
 Matrix A shows *what* is covered. This shows *how independently* — the answer to "who
-checks the checker". **Every `core` module is covered by all three engines of its family.**
+checks the checker". **Every `core` CONCURRENCY/STRUCTURAL module that Spin re-encodes is
+covered by all three engines of its family — and as of 2026-09-16 that is no longer every
+`core` module.**
 
-**Read the word `core` in that sentence — it was not there until 2026-09-07 and its absence was
-a false claim.** This section said *"Every module is covered by all three engines of its
-family"*, unqualified, and it was written when `core` was the only track.
+**Read BOTH qualifiers, because each was added the day a quantifier here went false.**
+*`core`* was not there until 2026-09-07; without it the sentence read *"Every module is covered
+by all three engines of its family"*, unqualified, written when `core` was the only track.
+⛔ *The clause about Spin* was added **2026-09-16**, when `tla/AuthoritySelect.tla` +
+`tla/AuthoritySelectApalache.tla` landed as a core subject on **TLC + Apalache and no Spin**
+(§6.8's authority-selection MUST; `docs/CORROBORATION.md` `authority-select`). The previous
+sentence quantified over *core modules* and the new one is a core module, so it was false the
+moment that subject was declared — **`make enginecount` was GREEN throughout**, correctly, because
+it reads the declared per-subject engine sets and never reads this sentence. D14's sixth instance
+exactly: *a bare universal quantifier over your own artifacts, whose set someone else grew.*
+Recorded rather than quietly re-worded, and the repair deliberately NAMES the module that fails
+the old quantifier instead of widening the count to twelve.
 
 **THE APALACHE COLUMNS ON THE THREE EXTENSION GRIDS WERE RE-DERIVED FROM THE MODELS' OWN
 CITATIONS ON 2026-09-08, AND SOME OF THEM WERE ALREADY STALE.** `make coverage` asserts the

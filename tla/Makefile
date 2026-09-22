@@ -80,7 +80,7 @@ repl:
 # liveness graph exhausts the 2g cap at Store's safety bound of NReq = 4, so the two are
 # separate configs rather than one that silently drops a property.
 TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds \
-              ConnCodes Bootstrap \
+              ConnCodes Bootstrap AuthoritySelect \
               AttestIndex AttestLive AttestRevoke \
               QuorumSignerSet QuorumTrust QuorumKofN \
               IdentityProcess IdentityRecovery IdentityCertChain
@@ -144,7 +144,11 @@ TLC_WITNESS := \
   "Authority|AuthorityWitness|Invariant WitnessSubAllowed is violated" \
   "Bounds|BoundsWitness|Invariant WitnessDepthBrakeFires is violated" \
   "ConnCodes|ConnCodesWitness|Invariant WitnessAllRowsEmitted is violated" \
-  "Bootstrap|BootstrapWitness|Invariant WitnessBootComplete is violated"
+  "Bootstrap|BootstrapWitness|Invariant WitnessBootComplete is violated" \
+  "AuthoritySelect|AuthoritySelectDerivedWitness|Invariant WitnessDerivedAllowed is violated" \
+  "AuthoritySelect|AuthoritySelectStandingWitness|Invariant WitnessStandingLeg is violated" \
+  "AuthoritySelect|AuthoritySelectSilentWitness|Invariant WitnessSilentSubstitution is violated" \
+  "AuthoritySelect|AuthoritySelectDivergeWitness|Invariant WitnessReadingsDiverge is violated"
 
 # NEGATIVE CONTROLS. Every row MUST fail — a green here means the property has no teeth —
 # AND IT MUST FAIL FOR THE STATED REASON. Format: MODULE|CFG|expected TLC verdict line.
@@ -224,6 +228,14 @@ TLC_NEG := \
   "Authority|AuthorityOptDenyBug|Invariant EntryNotSpuriouslyDenied is violated" \
   "Authority|AuthoritySubGateBug|Invariant ResourceAuthorized is violated" \
   "Authority|AuthorityInheritBug|Invariant NoManufacturedTarget is violated" \
+  "AuthoritySelect|AuthoritySelectPropagatedBug|Invariant NoDeputySubstitution is violated" \
+  "AuthoritySelect|AuthoritySelectPropagatedDenyBug|Invariant OwnBehalfNotSpuriouslyDenied is violated" \
+  "AuthoritySelect|AuthoritySelectStaleBug|Invariant NoStaleTokenAuthority is violated" \
+  "AuthoritySelect|AuthoritySelectGrantBug|Invariant CallerFacingNeedsCaller is violated" \
+  "AuthoritySelect|AuthoritySelectDerivationBug|Invariant CallerFacingNeedsCaller is violated" \
+  "AuthoritySelect|AuthoritySelectInitiatorBug|Invariant OwnBehalfNotSpuriouslyDenied is violated" \
+  "AuthoritySelect|AuthoritySelectFlatBug|Invariant CallerFacingNeedsCaller is violated" \
+  "AuthoritySelect|AuthoritySelectPeerRootBug|Invariant PeerRootNeverDenied is violated" \
   "Bounds|BoundsEqualBug|Invariant DepthBrakeFirst is violated" \
   "Bounds|BoundsRatioBug|Invariant DepthBrakeFirst is violated" \
   "Bounds|BoundsDoubleCountBug|Invariant TtlNotDoubleCounted is violated" \
@@ -309,7 +321,32 @@ TLC_NEG := \
 # wrong answer, validating against the freshest publish seen rather than the one cached). Two
 # independent ways to break one property is a good sign about the property and a bad sign for
 # anyone reading the table alone; the cfg headers carry the distinction.
+#
+# -- A FOURTH SHAPE, ADDED WITH tla/AuthoritySelect.tla 2026-09-16: A COMPOSITION ROW ---------
+# The three shapes above each describe what ONE flipped constant is a statement about. This one
+# needs TWO, of DIFFERENT KINDS, and is violated under neither alone:
+#
+#   AuthoritySelectDeputy   Row1Authorities = "caller-only"  (a FINDING constant -- it is the
+#                                                             shape CORE §6.3's own single-
+#                                                             `authority` signature forces)
+#                           Discriminator   = "initiator"    (a CONTROL constant -- a reading
+#                                                             §6.8 names as NOT the test)
+#
+# MEASURED, NOT ASSERTED, and the measurement is the row's whole warrant: with `caller-only`
+# and the CORRECT discriminator, `NoDeputySubstitution` is GREEN; with `both` and the initiator
+# misreading it is GREEN; with both flips it is VIOLATED. So the pseudocode gap is not
+# independently harmful and the discriminator error is not independently an escalation -- each
+# is visible only as a defect in the other's presence. `MisclassificationCostsAvailabilityOnly`
+# in the green sweep is the positive half of the same statement.
+#
+# WHY IT IS FILED HERE AND NOT IN TLC_NEG: ask this table's own retirement question. A green
+# would mean either §6.3 gained a way to express row 1's conjunction or §6.8's discriminator
+# stopped escalating without it -- an upstream FIX, so RETIRE the row. A green does not mean
+# the property lost its teeth, which is TLC_NEG's meaning. Two constants, one of each kind,
+# and the retirement condition is what decides the table.
 TLC_FINDING := \
+  "AuthoritySelect|AuthoritySelectRow1Signature|Invariant Row1CeilingHolds is violated" \
+  "AuthoritySelect|AuthoritySelectDeputy|Invariant NoDeputySubstitution is violated" \
   "IdentityProcess|IdentityProcessSeedRow|Invariant SeedRowReachable is violated" \
   "IdentityProcess|IdentityProcessRevocation|Invariant RevocationSurvivesArrival is violated" \
   "IdentityProcess|IdentityProcessQUpdate|Invariant QuorumUpdateSurvivesArrival is violated" \
@@ -572,6 +609,14 @@ APALACHE_GREEN := \
   "AuthorityApalache ConstInitOK InvEntry IndInitEntry" \
   "AuthorityApalache ConstInitOK InvResource IndInitResource" \
   "AuthorityApalache ConstInitOK InvTarget IndInitTarget" \
+  "AuthoritySelectApalache ConstInitOK NoDeputySubstitution IndInit" \
+  "AuthoritySelectApalache ConstInitOK CallerFacingNeedsCaller IndInit" \
+  "AuthoritySelectApalache ConstInitOK Row1CeilingHolds IndInit" \
+  "AuthoritySelectApalache ConstInitOK HandlerGrantIsAlwaysCeiling IndInit" \
+  "AuthoritySelectApalache ConstInitOK MisclassificationCostsAvailabilityOnly IndInit" \
+  "AuthoritySelectApalache ConstInitOK NoStaleTokenAuthority IndInit" \
+  "AuthoritySelectApalache ConstInitOK OwnBehalfNotSpuriouslyDenied IndInit" \
+  "AuthoritySelectApalache ConstInitOK PeerRootNeverDenied IndInit" \
   "BoundsApalache ConstInitOK InvBrake IndInitBrake" \
   "BoundsApalache ConstInitOK InvCount IndInitCount" \
   "BoundsApalache ConstInitOK InvCodes IndInitCodes" \
@@ -671,6 +716,7 @@ APALACHE_CLOSURE := \
   "AuthorityApalache ConstInitOK IndInitEntry" \
   "AuthorityApalache ConstInitOK IndInitResource" \
   "AuthorityApalache ConstInitOK IndInitTarget" \
+  "AuthoritySelectApalache ConstInitOK IndInit" \
   "BoundsApalache ConstInitOK IndInitBrake" \
   "BoundsApalache ConstInitOK IndInitCount" \
   "BoundsApalache ConstInitOK IndInitCodes" \
@@ -1026,6 +1072,8 @@ APALACHE_ENUM_FINDING := \
 #     sentence and same §8 mechanism as Q5, opposite direction, and it SURVIVES Q5's remedy —
 #     which is why it is routed as a strengthening of Q5 rather than as a new finding.
 APALACHE_FINDING := \
+  "AuthoritySelectApalache ConstInitFindingSignature Row1CeilingHolds     Init 4" \
+  "AuthoritySelectApalache ConstInitFindingDeputy    NoDeputySubstitution Init 4" \
   "IdentityRecoveryApalache ConstInitFindingSeed   SeedFollowsArrival             Init 3" \
   "IdentityRecoveryApalache ConstInitFindingSeed   RecoveryAttainable             Init 5" \
   "IdentityRecoveryApalache ConstInitFindingAnchor AnchorWasValidated             Init 3" \
@@ -1056,6 +1104,18 @@ APALACHE_NEG := \
   "AuthorityApalache ConstInitBugDeny    EntryNotSpuriouslyDenied Init 6" \
   "AuthorityApalache ConstInitBugSubGate ResourceAuthorized       Init 6" \
   "AuthorityApalache ConstInitBugInherit NoManufacturedTarget     Init 6" \
+  "AuthoritySelectApalache ConstInitBugPropagated NoDeputySubstitution         Init 4" \
+  "AuthoritySelectApalache ConstInitBugPropagated OwnBehalfNotSpuriouslyDenied Init 4" \
+  "AuthoritySelectApalache ConstInitBugPropagated NoStaleTokenAuthority        Init 4" \
+  "AuthoritySelectApalache ConstInitBugGrant      CallerFacingNeedsCaller      Init 4" \
+  "AuthoritySelectApalache ConstInitBugDerivation CallerFacingNeedsCaller      Init 4" \
+  "AuthoritySelectApalache ConstInitBugInitiator  OwnBehalfNotSpuriouslyDenied Init 4" \
+  "AuthoritySelectApalache ConstInitBugFlat       CallerFacingNeedsCaller      Init 4" \
+  "AuthoritySelectApalache ConstInitBugPeerRoot   PeerRootNeverDenied          Init 4" \
+  "AuthoritySelectApalache ConstInitOK WitnessDerivedAllowed     Init 4" \
+  "AuthoritySelectApalache ConstInitOK WitnessStandingLeg        Init 4" \
+  "AuthoritySelectApalache ConstInitOK WitnessSilentSubstitution Init 4" \
+  "AuthoritySelectApalache ConstInitOK WitnessReadingsDiverge    Init 4" \
   "BoundsApalache ConstInitBugEqual  DepthBrakeFirst     Init 10" \
   "BoundsApalache ConstInitBugRatio  DepthBrakeFirst     Init 10" \
   "BoundsApalache ConstInitBugDouble TtlNotDoubleCounted Init 4" \

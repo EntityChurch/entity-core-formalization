@@ -1,10 +1,10 @@
 # entity-core-formalization — status
 
-_Updated: 2026-09-14 · this line: 0.8.2_
+_Updated: 2026-09-17 · this line: 0.8.2_
 
-> **The models are pinned at 0.8.2; the live spec is 0.8.2.25.** Every model in this repo is
+> **The models are pinned at 0.8.2; the live spec is 0.8.2.32.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
-> Protocol at spec version **0.8.2**. `make specdrift` reports **14 of 29 cited sections
+> Protocol at spec version **0.8.2**. `make specdrift` reports **15 of 29 cited sections
 > moved**, so the results below are a statement about **0.8.2** and not about the protocol as
 > it stands today. **0.8.2.24 and 0.8.2.25 are both vendored** (`spec-data/v0.8.2.24/`,
 > `spec-data/v0.8.2.25/`) for the re-check work; vendoring does not move the pin and no result
@@ -40,7 +40,7 @@ separately.
 
 | Track | Subject | Status |
 |---|---|---|
-| `core` | Entity Core Protocol | **modeled** — 103 model files, 334 runs, pinned at `spec-data/v0.8.2` (11 of them at `v0.8.2.25`) |
+| `core` | Entity Core Protocol | **modeled** — 105 model files, 380 runs, pinned at `spec-data/v0.8.2` (13 of them at `v0.8.2.25`) |
 | `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
 | `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 100 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-quorum-v1.2` |
 | `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 139 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-identity-v3.10` |
@@ -103,6 +103,134 @@ a bare clone does not have, so it is excluded from `make matrix` rather than ski
 it. See §Next item 4 and `docs/LEAN-SEAM.md` §7.
 
 ## Where we left off
+
+**2026-09-17 — RELEASE BOUNDARY. The drift gate fired on a facet the count could not see, a
+two-day-old correction had reached two documents and stopped, and the item we had ranked
+last-because-blocked is now first because the blocker was granted upstream.** No new modelling;
+this was the pass that gets the tree to a clean, quotable state.
+
+- ⛔ **`make driftclaim` was RED on arrival** — `entity-core-protocol` advanced **0.8.2.30 →
+  0.8.2.32** while the previous session ran. **Classified before any prose was touched**, which is
+  what D15's fifteenth shape requires: `.31` and `.32` changed **§9.1 and nothing else**, 10 lines
+  between them, and **no model cites §9.1** — so the cited-section count is **15 of 29 before and
+  after**. The facet that moved is the **live version**, which is gated only because nine sites
+  once read `0.8.2.11` while it was `0.8.2.15` with the count unchanged and the gate green. *The
+  gate that fired is the one added the last time this exact thing happened.*
+- ✅ **§6.3 and §6.8 are byte-identical between `spec-data/v0.8.2.25/` and live `0.8.2.32`**,
+  compared **by section span** rather than inferred from the unchanged count. `P-9`/`P-10` and
+  `tla/AuthoritySelect.tla`'s transcription both survive `.31` and `.32` intact.
+- ⭐ **`0.8.2.31` CORRECTED THE §9.1 CONFORMANCE FLOOR TO THE RULE WE MODELED THE SAME DAY, AND IT
+  STRENGTHENS BOTH ASKS.** The floor had published *"selected by **WHO NAMED THE PATH**"* — the
+  discriminator §6.8 corrected at `0.8.2.22` — for **eight revisions**, in the MUST-implement list
+  an implementer builds from. It now reads *"whether the access serves a live caller's request"*
+  and states row 1's conjunction outright: *"the caller's verified capability **AND** the executing
+  handler's own grant, and **BOTH MUST pass**."* **`P-9` stands and gains a fourth home** — the
+  floor gained the conjunction, the **arity** did not, and §6.3 is byte-identical. **`P-10`'s
+  ceiling is what that conjunction IS**, so the row now published to implementers is the reading
+  our finding rows measured as fail-closed, and the flattened reading `.31` removed is what
+  `AuthoritySelectFlatBug` exhibits as an escalation. **Neither re-routed; both already filed.**
+- ⛔ **FOUR SITES STILL SAID §4.7 CONTRADICTS A MODEL, TWO DAYS AFTER IT STOPPED BEING TRUE.**
+  `README.md`, `docs/ASSURANCE-MAP.md`, `docs/FINAL-ASSURANCE-SUMMARY.md` and — worst —
+  `SPEC-DRIFT-ASSESSMENT.md`'s **own summary table**, which disagreed with its own §4.7 subsection
+  (`✅ CLOSED 2026-09-15`) inside one file with every gate green. The 2026-09-15 retarget's
+  correction reached `AGENTS.md` and this file and stopped. **Each phrases the count in its own
+  WORDS at its own VINTAGE** — *"eleven of the twelve"*, *"fifteen of the sixteen"*, a table cell —
+  which is invisible to the anchor reading `N of 29 cited sections moved`.
+  ⛔ **And the sweep for it under-enumerated on the first pass: three were found, the fix was
+  written, and the FOURTH — `README.md`, the most-read published file here — surfaced only on a
+  second grep with a different phrasing.** *A paraphrase does not age with its siblings; each
+  restatement freezes at the value it was written with, so the class has to be swept by OLD
+  VALUES, plural, not by the current sentence.* D15's fifth shape and D14's grep list in one
+  defect; all four repaired by deleting the value and naming the subject.
+- ⛔ **The off-pin group's `0 of 21` is stale, and for a reason the warning beside it did not
+  cover.** That figure moves for **two** independent reasons: the **denominator** when a second
+  subject retargets (which is what the existing note describes), and the **numerator** when live
+  advances past the override snapshot — which fired here, because `.26`–`.32` changed §4.7 and
+  §4.11 substantively. **`0 of N` is not a standing property of an override; it is a measurement
+  with a shelf life**, and this one expired six revisions after `.25` was vendored.
+- ⭐⭐ **THE WORKLIST INVERTED: §4.11 ARM (f) WENT FROM "WHAT NOT TO DO FIRST" TO FIRST.** It was
+  blocked because the decisive distinction was *not wire-decidable as the text stands*, and the
+  ask that would fix that (`A-35`/`A-36`) sat with the cohort's declared bottleneck seat. **The
+  ruling landed in the SPEC instead**: `0.8.2.26` makes exactly the (a1)/(a2) split
+  `entity-core-go` asked arch for, and `0.8.2.29` bounds the surviving choice — *where **any
+  admitted request is in flight**, the peer **MUST NOT** close*. **Drain-then-close is now
+  non-conformant**, which is the hole go's own comment named and could not test. ⭐ **The modelling
+  case got STRONGER, not weaker**: a wire suite can now check *"the connection served a second
+  request"*, but the new MUST is conditional on a **concurrency predicate** over a shared
+  connection, which is `tla/Reentry.tla`'s subject exactly. **Fourth time an inherited blocker was
+  already resolved in someone else's tree** — read the source before pressing an ask.
+- 📋 **`§Next` gained a derived live worklist at its head** — 13 open rows, each naming the block
+  that carries the detail. Nothing renumbered and nothing deleted: three other documents
+  cross-reference those ids, and the closed blocks are kept in place because several of them
+  record a written-down hypothesis that turned out **wrong**, which is the part worth keeping.
+- ⚠ **Known and NOT fixed, recorded rather than quietly carried:** `spec-tool pins` reports **26
+  commit-SHA citations** in three canonical docs (`LEAN-SEAM` 16, `STATUS` 8, `AGENTS` 2) that a
+  reader of public `master` cannot resolve — [ADR-0012] Am. 1. This repo measured **0 unreachable
+  on 2026-08-30**, so it regrew silently; the check exits 0 in reader mode and is not gated, which
+  is exactly how. **Deprioritized deliberately at this boundary, not overlooked.**
+
+**2026-09-16 (d) — §6.8's authority-selection MUST is modeled on two engines, the rule the
+protocol seat said "cannot be checked by anything that exists" is checked, and the finding is that
+two defects nobody linked are not independent.** The written-down next item (§Next `0**********.1`)
+executed as scoped, including its own warning to transcribe from `spec-data/` and not from the
+worklist — which mattered, because the worklist carried the refuted 0.8.2.21 discriminator.
+
+- ⭐⭐ **`tla/AuthoritySelect.tla` + `tla/AuthoritySelectApalache.tla`** — a new `core` subject,
+  `authority-select`, **`model_pins`-targeted at `v0.8.2.25`** because §6.8's selection rule
+  **does not exist at the pin**: `v0.8.2` carries one direction of it and calls the
+  caller-specified-path check one a handler performs *"voluntarily"*. 46 new runs (**641 → 687**),
+  8 invariants proved **inductive** with closure, 8 controls, 2 finding rows, 4 witnesses.
+- ⭐ **The ceiling is what makes a discriminator error FAIL-CLOSED — and that is new.**
+  `MisclassificationCostsAvailabilityOnly` is green and quantifies over **all three** readings of
+  §6.8's discriminator: with row 1's ceiling present, misfiling a row-2 access into row 1 can only
+  REFUSE it. Remove the ceiling — the shape §6.3's one-`authority` signature forces — and the same
+  misreading is a **confused-deputy escalation**. ⛔ **Neither half alone does it; both "holds"
+  rows were RUN, not reasoned**, and the shortest counterexample is ONE hop with a live caller, no
+  continuation and no stale token.
+- ⭐ **It answers a gap the protocol seat wrote down.**
+  `PROPOSAL-THE-REFUSAL-…` §11: *"`N5` is the only item in this round that cannot be checked by
+  anything that exists."* §6.8 says its own defect is **wire-invisible** — *"both readings produce
+  a well-formed response and differ only in which authority was consulted"* — so no vector can
+  grade it. `WitnessSilentSubstitution` exhibits exactly that state: both readings ALLOW, different
+  authorities consulted. That is `ECP-R24`'s shape and the third disposition
+  `GUIDE-CONFORMANCE` §5.2a does not have.
+- ⛔ **`P-9` — row 1's conjunction has no expression in the algorithm that must satisfy it.**
+  `check_path_permission` takes ONE `authority`; `filter_listing` — whose own prose one paragraph
+  above states the two-authority MUST — calls it ONCE; and the `EXTENSION-SUBSCRIPTION` §2.3 call
+  §6.3 quotes **approvingly** passes the caller's capability with no ceiling. **The pin shows it is
+  a residue**: at `v0.8.2` the listing filter said *"checked against the request's capability"*,
+  singular, and the signature matched. The rule gained a conjunct and the arity did not move.
+- ⛔ **The `N5` census MOVED and the seats now disagree.** That proposal recorded *"unbuilt at all
+  three ground-up seats"*. **`entity-core-py` has since built it** — two `check_path_permission`
+  calls, caller then `handler_grant`, citing *"0.8.2.24 N5"* by name. go and rust have not: all 16
+  and both non-test call sites respectively are a single call. ⭐ **rust's listing-filter doc
+  comment quotes the PIN-ERA sentence verbatim** — it is transcribing the version of §6.3 in which
+  the rule was singular, which is `P-9`'s residue arriving in an implementation independently.
+  Positive control run before believing any zero. Routed: `ROUTING-2026-09-16-f`.
+- ⭐ **Their pin is 0.8.2.30, and §6.8 + §6.3 are BYTE-IDENTICAL to our `.25` snapshot** —
+  extracted from both files and compared rather than assumed. D17's fourth item, and D15's
+  fifteenth shape pre-empted rather than discovered.
+- ⛔ **Three of our own gates caught three different things on the first run, which is the argument
+  for them over the discipline.** `make coverage` rejected **three phantom core citations** — our
+  module header wrote `EXTENSION-TREE §8.1/§8.5` and `EXTENSION-SUBSCRIPTION §2.3`, and the
+  document-blind `§N.M` matcher read all three as **core** sections (the exact class `AGENTS.md`
+  documents). `make obligations` refused the retarget until §6.3/§6.7/§3.11 carried written notes.
+  `make enginecount` named all five stale `34 of 36` sites.
+- ⛔ **And a D14 sweep the gates could NOT see.** *"Every `core` module is covered by all three
+  engines of its family"* in `docs/COVERAGE-MATRIX.md` §4 went **false the moment this subject was
+  declared** — a core module on TLC + Apalache with no Spin — with `make enginecount` green
+  throughout, correctly, because it reads the declared per-subject sets and never reads that
+  sentence. D14's sixth instance exactly: *a bare universal quantifier over our own artifacts whose
+  set someone else grew.* Three sites repaired by **naming the module that fails the quantifier**
+  rather than incrementing the count to twelve. `AGENTS.md`'s matrix paragraph lost two more
+  hand-maintained figures the same way (see §Next).
+- **`docs/LEAN-SEAM.md` O25 opened WITH the model, not after it** (D18): a hop's origin is chosen
+  freely rather than inherited, so the domain is wider than any implementation — safe for every
+  per-hop property here, and it means nothing in this model says a chain's origins are consistent
+  along it, which is where a context-propagation bug lives.
+- **Gate status:** eight claim gates green (`trackcheck`, `coverage`, `obligations`, `runcount`,
+  `ledgercount`, `enginecount`, `specfreeze`, `retractcheck`). See §Next for the one thing this
+  session did not finish.
 
 **2026-09-16 (c) — arch's last two open frame questions are answered, one of them by correcting a
 row of their own published table, and §5.5a's MUST turns out to live in no pseudocode in the
@@ -292,7 +420,7 @@ one to read.
   `docs/CORROBORATION.md` is the per-subject ledger — subject → files → engines — and the gate
   derives the engine set from the **GREEN** gate tables, not from which files exist, then fails
   on a stale exemption, an undeclared subject, or a prose site whose pair has drifted. It is
-  **34 of 36** subjects overall and **9 of 9** on the extension tracks. The figure it replaces
+  **35 of 37** subjects overall and **9 of 9** on the extension tracks. The figure it replaces
   ("five of the nine") was written by hand on 2026-09-08 and was stale the next morning, which
   is the fourth artifact in this repo to fail that way. *(This line said 30 and 6 when it was
   written this morning and moved by lunchtime, when `identityrecovery` gained its second engine
@@ -499,7 +627,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 641 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 687 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -542,24 +670,24 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 
 | slice | runs |
 |---|---|
-| TLC green (20 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero` + `CoreRefines` + 6 T4 classifier rows) | 31 |
-| TLC negative controls | 69 |
-| TLC non-vacuity witnesses | 42 |
-| TLC findings (must be violated; `tla/Makefile:TLC_FINDING`, whose header states which rows weaken nothing, which read toward the spec, and which read toward an implementation because the spec is silent) | 25 |
-| Apalache inductive (65 invariants × base+step, + 2 at N=3) | 134 |
-| Apalache strengthening closure (`apalache-closure`) | 37 |
+| TLC green (20 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero` + `CoreRefines` + 6 T4 classifier rows) | 32 |
+| TLC negative controls | 77 |
+| TLC non-vacuity witnesses | 46 |
+| TLC findings (must be violated; `tla/Makefile:TLC_FINDING`, whose header states which rows weaken nothing, which read toward the spec, and which read toward an implementation because the spec is silent, and — new 2026-09-16 — which are COMPOSITIONS of a finding constant and a control constant) | 27 |
+| Apalache inductive (73 invariants × base+step, + 2 at N=3) | 150 |
+| Apalache strengthening closure (`apalache-closure`) | 38 |
 | Apalache enumeration green (extension tracks) | 43 |
-| Apalache negative controls + witnesses | 58 |
+| Apalache negative controls + witnesses | 70 |
 | Apalache enumeration controls + witnesses | 31 |
 | Apalache finding rows, enumeration models (must be violated) | 21 |
-| Apalache finding rows, transition systems (must be violated; bounded from `Init`) | 16 |
+| Apalache finding rows, transition systems (must be violated; bounded from `Init`) | 18 |
 | Spin green (7 × safety+LTL, 4 safety-only, 3 × safety+LTL variant rows) | 24 |
 | Spin negative controls | 43 |
 | ProVerif (17 green + 17 controls) | 34 |
 | Tamarin (16 green + 17 controls) | 33 |
-| **total** | **641** |
+| **total** | **687** |
 
-Split by proof track, derived by `make runcount` rather than stated by hand: **334 runs** on
+Split by proof track, derived by `make runcount` rather than stated by hand: **380 runs** on
 `core`, **68** on `attestation`, **100** on `quorum` and **139** on `identity`. Attestation:
 `AttestIndex` — 1 green, 3 controls, 3 witnesses; `AttestLive` — 1 green, 2 controls,
 3 witnesses, 2 findings; `AttestRevoke` — 1 green, 2 controls, 3 witnesses, 2 findings; plus
@@ -832,6 +960,48 @@ item 4.
 
 ## Next
 
+### The live worklist — read this, then the detail block for whatever you pick up
+
+*Added 2026-09-17 at the release boundary. **This table is a reading aid, not a source of
+truth.*** The numbered blocks below are the record and are cross-referenced by id from three
+other documents, so nothing is renumbered and nothing is deleted — but the list had grown to
+roughly 1,500 lines in which the **open** items sit between the closed ones, and a next session
+should not have to reconstruct the state by reading all of it. Each row names the block that
+carries the detail.
+
+⛔ **Two standing cautions before anything on it.** Every row whose input is a sibling tree is
+the `driftclaim` class — **re-read the source, do not trust the row**; four items on this list
+have already had their blocker resolved upstream without anyone here noticing. And
+**transcribe from `spec-data/`, never from this worklist**: one item below states a §6.8 rule in
+wording `0.8.2.22` superseded, left standing and marked, and a model built from it would have
+gone green on a refuted reading.
+
+| # | Open item | Where | State |
+|---|---|---|---|
+| 1 | ⭐ **§4.11 arm (f)** — the multiplexed pre-admission refusal, in `tla/Reentry.tla` | `0*********` (2nd) | **UNBLOCKED 2026-09-17.** The ruling landed in the spec: `.26` splits the close, `.29` forbids it while an admitted request is in flight. Needs `spec-data/v0.8.2.32/` vendored first, and a `D18` widening — `Reentry.tla` cannot *express* a refused frame (`O24`) |
+| 2 | **Read down the 122** — `make obligations` publishes 122 of 365 core obligations UNEXAMINED | `0**********` (2) | Standing. Highest-MUST-count uncited sections first: §3.5 (10), §1.4 (11), §6.9a (10), §4.5 (8), §6.13 (8). The gate makes this impossible to forget and does not do it |
+| 3 | **The `included`-map residue** — 12 of 13 prover subjects still take terms off `In(...)` | `0********` | First subject done 2026-09-16; **`O23` restated and still OPEN**. Cheapest real reduction is `chaintopology`; §5.5's multi-sig arms are modeled nowhere |
+| 4 | **§5.5's multi-sig root-trust branch** | `0**********` (3) | A five-state question that would move `P-7` from *reading* to *machine-checked*. ⚠ **Do this only if arch pushes back** — filing a model nobody disputed is `D19`'s anti-pattern |
+| 5 | **Coverage breadth** — 27 of 91 core sections | `1` | Standing. The real backlog is the remaining third of §4/§5/§6; which uncovered section is *scope* and which is *backlog* is `COVERAGE-MATRIX.md` §5 and that split must stay sharp |
+| 6 | **Two single-engine subjects** — `quorumtrust`, `identityprocess` | `16` | `make enginecount` makes this a measured gap. **35 of 37** overall, **9 of 9** on extensions |
+| 7 | **Six canonical docs cite `docs/status/` paths**, which never publish | `15` | Measured 2026-09-08, unfixed **on purpose** — it is a publishing-policy call with three defensible answers, not an edit. If (a) or (b) is ever chosen, the gate lands with it or it regrows |
+| 8 | **`make retractcheck` cannot see routing notes** — the packets that actually leave | `0**` | Deliberately not patched: the fix needs a *quoted-as-history* vs *asserted* distinction the registry cannot yet express, and this repo's record is that a gate written in a hurry is wrong |
+| 9 | **The bound nobody has attacked: `Peers = {A,B}`** | `5` | Scoped 2026-08-30 — three different questions wearing one constant |
+| 10 | **Liveness is bounded everywhere** and cannot be lifted by the current toolchain | `6` | Tool limit, disclosed rather than backlogged |
+| 11 | **Widen the TLA+ bounds** — 3-peer / churned-store | `8` | Standing |
+| 12 | **Tie models to conformance vectors** | `11` | Only the Class-G deadlock is currently grounded. ⭐ **`entity-system-conformance` is minting stable ids (`ECP-R1..R98`) and `obligations.py` should consume them when they land** — that is what would let a coverage claim be per-obligation rather than per-section |
+| 13 | **Phase 3 extension-protocol attacker models** | `12` | No extension track has a prover; `O5`, `O14`, `O19` |
+
+**Closed since the last release and kept in place rather than archived** — because each one's
+written-down hypothesis was answered and several were answered *wrongly*, which is the record
+worth keeping: the Lean-seam re-read (`0*********` 1st), the `included`-map first subject
+(`0********`), KS-9c (`0*******`), the K2 chain measurement (`0*****`), the star-free lemma
+(`0***`), the drift-gate widening (`0`, `0a`, `0*`), and **§6.8's authority-selection MUST
+(`0**********` item 1), which is this release's headline** — `authority-select`, 46 runs, 8
+inductive invariants, `P-9`/`P-10`.
+
+---
+
 0**********. ⭐ **THE NEXT REAL MODELLING TASK IS §6.8's AUTHORITY-SELECTION MUST, AND THE REASON
    TO PUT IT FIRST IS NOW A MEASURED SEQUENCING FACT RATHER THAN A PREFERENCE. NEW 2026-09-16 (c).**
 
@@ -851,7 +1021,29 @@ item 4.
 
    **What that leaves is the work that needs nobody**, in order:
 
-   1. ⭐⭐ **Model §6.8's authority-selection MUST in `tla/Authority.tla`.**
+   1. ✅ **DONE 2026-09-16 (d) — but NOT in `tla/Authority.tla`, and the reason is a rule this
+      item did not anticipate.** It landed as a **separate subject**, `authority-select`
+      (`tla/AuthoritySelect.tla` + its Apalache port), because `AGENTS.md`'s *retarget the whole
+      SUBJECT, never one file* rule cuts the other way here: `authority`'s three engines are all
+      statements about **§5.2 at the pin**, and adding a `.25` file to that subject would have
+      published three engines over two texts as agreement. A new subject keeps each internally
+      consistent. **Outcome, and read the third bullet — it is the one nobody predicted:**
+      46 runs (641 → 687), 8 invariants proved inductive; `P-9` (row 1's conjunction has no
+      expression in §6.3's one-`authority` signature, and the pin shows it is a residue); ⭐ `P-10`
+      (**the ceiling is what makes a discriminator error fail-closed** — remove it and the same
+      misreading is an escalation, measured, neither half alone); and the `N5` census has **moved**
+      — py built it, go and rust have not. Routed `ROUTING-2026-09-16-f`. **The item's own warning
+      paid**: it said *transcribe from `spec-data/`, never from this worklist*, and the worklist's
+      superseded discriminator is now a negative control (`AuthoritySelectDerivationBug`) with a
+      witness proving the 0.8.2.21 → .22 correction was semantic rather than editorial.
+      ⛔ **One thing this session did not finish: `make check` was left running.** Two runs were
+      started concurrently by mistake — against this repo's own *run the toolchains serially* rule
+      — and process-killing is blocked by fleet policy on this box, so they were left to complete.
+      **Re-run `make check` from clean before trusting a green**, and `make matrix` has not been
+      run at all since the new rows landed. The eight claim gates were each run individually and
+      are green.
+
+      *Original item:* ⭐⭐ **Model §6.8's authority-selection MUST in `tla/Authority.tla`.**
 
       ⛔ **FIRST, A CORRECTION TO ITEM `0******` BELOW, FOUND WHILE WRITING THIS ONE.** That item
       states the rule as *"selected by **who named the path**, never by who initiated the chain."*
@@ -899,11 +1091,55 @@ item 4.
       **Do this only if arch pushes back on `P-7`**; filing a model nobody disputed is the
       productive-track-reads-as-covered anti-pattern (`D19`).
 
-   ⛔ **What NOT to do first: §4.11 arm (f).** Its warrant is still the strongest on the board and
-   it is still `tla/Reentry.tla`'s job — but **the decisive distinction is not wire-decidable as
-   the text stands**, which is exactly why `A-35`/`A-36` had to be asked, and those sit with the
-   bottleneck seat. Item `0*********` below carries the full scoping and is ready to execute **the
-   day a ruling lands**.
+   ⛔ ~~**What NOT to do first: §4.11 arm (f).**~~ ⭐ **INVERTED 2026-09-17: THE RULING LANDED, AND
+   IT LANDED IN THE SPEC RATHER THAN IN AN ARCH ANSWER. ARM (f) IS NOW THE FIRST THING TO DO.**
+   *Original text: "Its warrant is still the strongest on the board and it is still
+   `tla/Reentry.tla`'s job — but the decisive distinction is not wire-decidable as the text stands,
+   which is exactly why `A-35`/`A-36` had to be asked, and those sit with the bottleneck seat. Item
+   `0*********` below carries the full scoping and is ready to execute the day a ruling lands."*
+
+   **What changed, read from `../entity-core-protocol/specs` on 2026-09-17, not from a handoff.**
+   §4.11 gained two clauses after our `.25` snapshot, and between them they decide the exact
+   question that was blocking:
+
+   - **`0.8.2.26` split the close** — *"The close is a CHOICE where the frame was consumed whole,
+     and is FORCED where it was not `[MUST]`."* **That is `entity-core-go`'s `A-35`/`A-36` ask
+     granted**: they asked arch to split arm (a) into whole-but-undecodable (survives) and
+     truncated (forced close), and the section now makes that split itself, on the stream-
+     desynchronization argument.
+   - ⭐ **`0.8.2.29` bounded the remaining choice, and this is the one that unblocks the model** —
+     *"where **any admitted request is in flight on that connection** … the peer **MUST NOT** close
+     and MUST continue after emitting the coded frame … **Continuing is therefore the only
+     disposition that is conformant on every connection**, and a peer that closes must first
+     establish that nothing admitted is outstanding."*
+
+   **So the thing this item called not-wire-decidable now has a stated decision procedure**, and
+   go's own recorded hole — *"a bare close still drains already-dispatched work … it does NOT tell
+   continue from drain-then-close"* — is closed by text rather than by their discriminator:
+   drain-then-close is now **non-conformant** whenever anything admitted was in flight. Their
+   second-request-on-the-same-connection probe tests a property the section **now states**, where
+   on 2026-09-16 it tested one the section explicitly left to the peer.
+
+   ⛔ **Three things to do with that, in this order, and the first is not modelling.**
+   1. **Re-read `A-35`/`A-36` against §4.11 at live before pressing them.** They may be answered
+      in full by `.26`, in which case pressing them adds to the cohort's declared bottleneck seat
+      for nothing. **This is the fourth time an inherited blocker turned out to be resolved in
+      someone else's tree** — the Lean-seam item below records the third and its lesson verbatim:
+      *a blocker inherited from a handoff is a claim about someone else's tree and goes stale like
+      any other.* Thirty seconds of reading decides it.
+   2. ⭐ **The modelling case got STRONGER, not weaker, and the reason is worth stating precisely.**
+      A wire suite can now check *"the connection served a second request"*; it still cannot
+      quantify over **interleavings**, and the new MUST is conditional on a **concurrency
+      predicate** — *any admitted request in flight on that connection* — which is a state
+      question about a shared connection, not a frame property. `tla/Reentry.tla`'s subject
+      exactly. What arrived is a crisp invariant to check where there was a judgement call:
+      **`refused(f) /\ inflight(r) => eventually responded(r) /\ ~closed`.**
+   3. **It is still a `D18` question before it is a model.** `Reentry.tla` has `Gate(p) == TRUE`
+      and every frame in it is an admitted request, so a refused frame is **inexpressible** rather
+      than merely unmodeled. `docs/LEAN-SEAM.md` **O24** is already booked, written before the
+      modelling rather than after it. The retarget is a `model_pins` move like `conncodes` and
+      `resolution` — ⚠ **and `.26`–`.32` are NOT vendored**, so this needs a new snapshot first
+      (`spec-data/v0.8.2.32/`), which is mechanical and hash-verifiable and is *not* a pin move.
 
 0*********. ✅ **DONE 2026-09-15 — THE KEYSTONE LEAN SEAM IS RE-READ AND RE-PINNED. `make lean`
    IS GREEN ON ALL 12 RUNS.** *(Kept in place rather than archived, because both of its written-down
@@ -1012,7 +1248,12 @@ item 4.
        §4.11 says in as many words *"Whether the peer closes the connection afterwards is its own
        choice."* So the discriminator tests a property the section does not state, and **go has
        already routed an ask to arch to split arm (a) into (a1) whole-but-undecodable [survives] and
-       (a2) truncated [forced close]** so that it would. **That ask is OPEN.**
+       (a2) truncated [forced close]** so that it would. ~~**That ask is OPEN.**~~ ⭐ **GRANTED BY
+       THE SPEC, 2026-09-17 — `0.8.2.26` makes exactly that split** (*"the close is a CHOICE where
+       the frame was consumed whole, and is FORCED where it was not `[MUST]`"*), and `0.8.2.29`
+       then bounds the surviving choice: **where any admitted request is in flight, the peer MUST
+       NOT close.** Re-read the ask before pressing it; see the inverted block in item
+       `0**********`.
      - ⭐ **Which makes arm (f) the `ECP-R24` shape**: a binding obligation whose decisive distinction
        — *the admitted request kept its response* vs *the peer drained and closed* — is **not
        wire-decidable under the text as it stands**. `entity-system-conformance`'s `GUIDE-CONFORMANCE`
@@ -1465,13 +1706,13 @@ item 4.
      *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
      §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
      attribution. Derived now, **by `make ledgercount` rather than by hand**: the ledger is
-     **42 rows** — 13 Class L, 5 Class T, 24 Class O — of which **14 CLOSED**, 3 CLOSED —
+     **43 rows** — 13 Class L, 5 Class T, 25 Class O — of which **14 CLOSED**, 3 CLOSED —
      ASSUMPTION FALSE (T4; O21 and O22, 2026-09-09), 2 CLOSED — ASSUMPTION ISOLATED (O6; O20,
      2026-09-09), 1 CLOSED — ASSUMPTION ISOLATED AND CORRECTED (O10, 2026-09-08),
      **2 CLOSED-MODULO-H (L1; L5, 2026-09-15 — T5a became conditional on an undischarged
      `IdPatternTrans` when keystone adopted our own `K-6`/`K-7` packet, so this figure moved
      with NO commit here and no model touched)**,
-     2 N/A-device, 3 BY-DESIGN, and **15 OPEN** (O5, O7–O9 from the attestation track,
+     2 N/A-device, 3 BY-DESIGN, and **16 OPEN** (O5, O7–O9 from the attestation track,
      O11–O15 from quorum, O16–O19 from identity — all added 2026-09-07 with
      those tracks' first nine modules). **O20 was added 2026-09-08 by a rule rather than by a
      model** (`AGENTS.md` D15 tenth shape) and closed the next day by the experiment it asked

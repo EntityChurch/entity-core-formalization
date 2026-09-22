@@ -191,6 +191,8 @@ models = [
   "tamarin/UnforgeBug.spthy",
   "tla/Authority.tla",
   "tla/AuthorityApalache.tla",
+  "tla/AuthoritySelect.tla",
+  "tla/AuthoritySelectApalache.tla",
   "tla/Bootstrap.tla",
   "tla/BootstrapApalache.tla",
   "tla/Bounds.tla",
@@ -247,6 +249,8 @@ models = [
 # be a statement about a snapshot that does not contain it. All eight files move together —
 # both green theories, both controls, both engines — for the reason stated above.
 [track.core.model_pins]
+"tla/AuthoritySelect.tla"            = "v0.8.2.25"
+"tla/AuthoritySelectApalache.tla"    = "v0.8.2.25"
 "tla/ConnCodes.tla"                  = "v0.8.2.25"
 "tla/ConnCodesApalache.tla"          = "v0.8.2.25"
 "spin/conncodes.pml"                 = "v0.8.2.25"

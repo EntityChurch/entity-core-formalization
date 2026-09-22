@@ -10,13 +10,126 @@ accompanies protocol `0.8.2`, so the two line up when read side by side.
 
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
-**`v0.8.2`**. The live protocol has since advanced to **0.8.2.25** and `make specdrift`
-reports **14 of 29 cited sections moved**. That gap is deliberate and visible rather than
+**`v0.8.2`**. The live protocol has since advanced to **0.8.2.32** and `make specdrift`
+reports **15 of 29 cited sections moved**. That gap is deliberate and visible rather than
 hidden: the pin moves only as the last step of re-validating the models, never on a file
 copy, so between a spec release and a re-validation this repository is *behind on purpose*.
 `docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance section by section.
 
 ## [Unreleased]
+
+### Added — §6.8's authority-selection MUST is modeled, and the ceiling turns out to be what makes a discriminator error fail-closed (2026-09-16)
+
+A new `core` subject, **`authority-select`** — `tla/AuthoritySelect.tla` and
+`tla/AuthoritySelectApalache.tla` — in `make matrix` (641 → **687 runs**): 1 green sweep over 8
+invariants, 8 negative controls, **2 finding rows**, 4 non-vacuity witnesses, and all 8 invariants
+proved **inductive** on Apalache with the strengthening's closure checked.
+
+**It is `model_pins`-targeted at `spec-data/v0.8.2.25`, because the rule does not exist at the
+core pin.** At `v0.8.2` §6.8 carries one direction of the selection — the confused-deputy
+prohibition — and calls the caller-specified-path check one a handler performs *"voluntarily"*.
+The three-row table, the `[MUST]`, the discriminator, its 0.8.2.22 correction and row 1's ceiling
+all arrive after the pin. A **new subject** rather than an addition to `authority`, whose three
+engines are statements about §5.2 **at the pin**: three engines over two texts is one reading per
+snapshot presented as agreement.
+
+**Why a model and not a vector.** §6.8 says of its own defect, in the document, that it is
+**wire-invisible** — *"both readings produce a well-formed response and differ only in which
+authority was consulted"* — so no conformance probe can grade it.
+`PROPOSAL-THE-REFUSAL-…` §11 says the same thing from the other side: *"`N5` is the only item in
+this round that cannot be checked by anything that exists."* `WitnessSilentSubstitution` exhibits
+precisely that state — correct reading and propagated-field reading both ALLOW, different
+authorities consulted.
+
+**Two findings routed** (`docs/status/ROUTING-2026-09-16-f-…`, `P-9`/`P-10`):
+
+- **`P-9`** — row 1 is a `[MUST]` over **two** authorities and §6.3's
+  `check_path_permission(operation, path, authority, …)` takes **one**; `filter_listing`, whose own
+  prose states the two-authority rule, calls it **once**. The pin shows this is a **residue**: at
+  `v0.8.2` the listing filter read *"checked against the request's capability"*, singular, and the
+  signature matched exactly. The rule gained a conjunct; the arity did not move.
+- **`P-10`** — with the ceiling present, a discriminator error is **fail-closed** (row 1 demands
+  strictly more than row 2, so a misclassification can only refuse). Remove the ceiling and the
+  same misreading is a **confused-deputy escalation**. ⛔ **Neither half alone does it** — both
+  "holds" halves were run, not reasoned — and the shortest counterexample is one hop with a live
+  caller, no continuation and no stale token.
+
+**The `N5` cohort census moved**: `entity-core-py` has built the ceiling (two checks, citing
+0.8.2.24 N5 by name) where the proposal recorded *"unbuilt at all three"*; go and rust have not,
+and **rust's listing-filter doc comment quotes the pin-era singular sentence verbatim**.
+
+**A fourth shape for `tla/Makefile:TLC_FINDING`: a COMPOSITION row**, whose two flipped constants
+are of different kinds (one finding, one control) and which is violated under neither alone.
+
+### Changed — three published quantifiers and two hand-maintained figures, each corrected at the site
+
+- *"Every `core` module is covered by all three engines of its family"*
+  (`docs/COVERAGE-MATRIX.md` §4) went **false** the moment this subject was declared — a core
+  module on TLC + Apalache with no Spin — with `make enginecount` **green throughout**, correctly,
+  because it reads the declared per-subject engine sets and never reads that sentence. D14's sixth
+  instance. Repaired at three sites by **naming the module that fails the quantifier** rather than
+  incrementing a count.
+- `AGENTS.md`'s matrix paragraph lost two hand-maintained figures (*"100 negative controls and 13
+  non-vacuity witnesses"*) to the same rule that retired *"the 277"*: the values are **deleted and
+  the subject named**, because this change made a knowingly-uncorrected figure a knowingly-wrong
+  one.
+- *"none of the fourteen now contradicts a model"* — a spelled-out second copy of a gated count,
+  invisible to `make driftclaim`, which was green over the sentence containing it.
+
+### Fixed — four documents said a spec section contradicted a model two days after it stopped doing so (2026-09-17)
+
+`README.md`, `docs/ASSURANCE-MAP.md`, `docs/FINAL-ASSURANCE-SUMMARY.md` and
+**`docs/SPEC-DRIFT-ASSESSMENT.md`'s own summary table** still asserted that **§4.7's movement
+contradicts a model**. It stopped being true on **2026-09-15**, when `tla/ConnCodes.tla`, its
+Apalache port and `spin/conncodes.pml` were retargeted to `spec-data/v0.8.2.25/` under
+`[track.core.model_pins]` — §4.7 is now measured against its own snapshot and no capstone here
+makes a §4.7 claim to contradict. The correction reached two documents that day and stopped at
+four others; the drift assessment's summary table disagreed with its **own §4.7 subsection**
+(`✅ CLOSED 2026-09-15`) inside one file.
+
+**Each of the four states the count in its own words and at its own vintage** — *"eleven of the
+twelve"* in `README.md`, *"fifteen of the sixteen"* in the two capstones, a table cell in the
+third — which is why the gate anchored on the canonical phrasing `N of 29 cited sections moved` saw
+none of them. ⛔ **And three were found before the fourth: the first sweep matched the newer
+paraphrase and missed the README's older one**, which is the most-read published file here. *When a
+figure is restated in prose, each restatement ages independently — grep the OLD VALUES, plural, not
+the current sentence.* All four repaired by **deleting the value and naming the subject**.
+
+### Changed — the live protocol advanced to **0.8.2.32**, and the count did not move
+
+`0.8.2.31` and `0.8.2.32` changed **§9.1 and nothing else** — 10 lines between them, the version
+header included — and **no model here cites §9.1**, so the measurement is **15 of 29 cited sections
+moved** before and after. `make driftclaim` went red anyway, on the **live-version** facet, which is
+gated only because nine sites once read `0.8.2.11` while it was `0.8.2.15` with the count unchanged
+and the gate green.
+
+⭐ **`0.8.2.31` corrected the §9.1 conformance floor to the rule this release models.** That row had
+published *"the handler-level check's authority is selected by **who named the path**"* — the
+discriminator §6.8 corrected at `0.8.2.22` — for **eight revisions**, in the MUST-implement list an
+implementer builds from. It now carries §6.8's discriminator and states row 1's conjunction in as
+many words: *"the caller's verified capability **AND** the executing handler's own grant, and
+**BOTH MUST pass**."* The finding this release routed against that rule is **unaffected and better
+evidenced**: §6.3's `check_path_permission` still takes **one** `authority` and §6.3 is
+byte-identical, so the floor gained the conjunction and the arity did not.
+
+**§6.3 and §6.8 are byte-identical between `spec-data/v0.8.2.25/` and live `0.8.2.32`**, compared by
+section span rather than inferred from the unchanged count.
+
+### Changed — the drift measurement, re-derived: 14 → **15 of 29**, live 0.8.2.25 → **0.8.2.30**
+
+The fifteenth is **§7.3** (0.8.2.26), which makes that section *"the single normative home for the
+signature message"* — the target's `content_hash` **in full**, format code as domain separator. It
+is cited by **26** model files and contradicts none of them: every citation is the **crypto wall**,
+so *which bytes the message is* is exactly what those theories abstract. ⚠ One adjacency is
+recorded rather than waved past — the clause's own argument is a **cross-format** confusion, and
+`tamarin/Resolution*` models a single hash constructor.
+
+⛔ **And the §6.8 row of `docs/SPEC-DRIFT-ASSESSMENT.md` stated the discriminator in the refuted
+0.8.2.21 wording** (*"by who named the path"*), the same defect `docs/STATUS.md` §Next carried, in
+a second document. Corrected — and the correction is now **measured**: the superseded reading is a
+negative control and a witness exhibits an access on which the two readings disagree, so the
+.21 → .22 change is semantic rather than editorial.
+
 
 ### Added — the adversary now gets the ADDRESS as well as the term, and the forgery is exhibited (2026-09-16)
 
@@ -277,7 +390,7 @@ to be carried by **at least two structurally different engines**, and a result c
 must say so by name. **`docs/CORROBORATION.md`** is the ledger — per modeled subject, which
 engines have a *green* result on it, and every subject that rests on a single engine listed
 individually with the reason — and **`make enginecount`** derives the whole thing from the gate
-tables and fails when any published figure disagrees. It is **34 of 36** subjects on two or more
+tables and fails when any published figure disagrees. It is **35 of 37** subjects on two or more
 engines, **9 of 9** on the three extension protocols.
 
 The ledger says in its own text what a second engine does **not** buy, because the number is
