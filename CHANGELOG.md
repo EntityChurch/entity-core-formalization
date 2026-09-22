@@ -18,6 +18,54 @@ copy, so between a spec release and a re-validation this repository is *behind o
 
 ## [Unreleased]
 
+### Added — proof tracks: which protocol a result is about is now declared and gated
+
+This repository verifies **more than one protocol**, and until now nothing said so. Every
+model file, spec pin and coverage number is assigned to exactly one **track** in the new
+root-level **`TRACKS.toml`**, gated by **`make trackcheck`** (in `check` and `matrix`). Four
+tracks: **`core`** — the Entity Core Protocol, the only **modeled** one, and therefore what
+every published number here is about — plus **`attestation`**, **`quorum`** and
+**`identity`**, each **scoped**: spec landed, nothing vendored, no model.
+
+**The structure was built before the first extension model, because two existing gates would
+have absorbed it rather than rejected it.** The coverage number is derived from `§(\d+\.\d+)`,
+which is *document-blind*: `EXTENSION-ATTESTATION §5.7` and core `§5.7` are the same token and
+core already carries a `5.7` row, so the first attestation citation would have been credited
+to core's grid with `make coverage` reporting OK — a phantom row produced *by* the gate that
+exists to prevent phantom rows. Separately, that gate and `spec-drift` both globbed
+`tla/*.tla` **non-recursively**, so the obvious first reorganization (models into
+`tla/attestation/`) would have hidden those files from both while both stayed green. Citations
+are now extracted per track, a cross-track reference is written sigil-first (`§CORE:6.2`) and
+excluded from every track's coverage set, and both tools read the registry instead of globbing.
+
+`scoped` is a gated state rather than a note: a scoped track must declare no models and no
+pin, so assigning a model file to one fails the build until the track is promoted **with** a
+spec pin — the step where someone states which snapshot the results are about. Per-track
+subdirectories are a deliberate later step, safe only now that a file falling out of a gate's
+view is a build failure rather than a silent green. Ten teeth-tests on `trackcheck` and seven
+on the track-aware `coverage`, each required to fail for its own stated reason.
+
+Two defects surfaced while building it, both found by running rather than reading.
+`spec-drift`'s per-engine exposure line had been publishing **"15/1169 model files"** — the
+denominator was the flat glob counting gitignored TLC `_TTrace_` artifacts as models; it is
+15/24. And the cross-track citation form's first draft, `CORE §6.2`, matched **23 lines of
+ordinary prose** and then excluded each from that line's citation set, so a guard against
+citations being miscredited was silently dropping them; the published `28 of 85` held only
+because every affected section is cited elsewhere too.
+
+### Fixed — a corrected bind-mount defect left its retracted reason in five places
+
+The `:Z`→`:z` SELinux relabel fix reached the two `MOUNT` lines and `AGENTS.md` and stopped
+there. The withdrawn justification — *"run the engines serially because concurrent `:Z`
+relabels race"* — survived in `docs/COVERAGE-MATRIX.md` and `docs/STATUS.md` as live guidance,
+in `docs/FINAL-ASSURANCE-SUMMARY.md` as history with no resolution, in `tla/Makefile`'s own
+header contradicting the corrected line below it, and — the sharpest — in
+`docs/CROSSCHECK-RESULTS.md`'s **copy-pasteable reproduce command**, which handed a reader the
+removed flag on the exact directory and image the bug involved. Serial execution remains the
+rule, for the `caps.mk` memory ceiling. *A corrected defect survives longest in a command a
+reader runs*, and grepping the withdrawn **phrasing** rather than the subject is what found
+all five.
+
 ### Fixed — eight documents claimed "no drift" while all three pinned spec files differed
 
 The live protocol reached **0.8.2.11** with the models pinned at **0.8.2**, and `make

@@ -1,9 +1,39 @@
 # entity-core-formalization
 
-**Formal design assurance for the Entity Core Protocol.** Machine-checked verification of
-the *protocol design* on the two layers Lean structurally cannot reach: **distributed
-correctness + liveness under concurrency** (TLA+) and **active-attacker protocol
+**Formal design assurance for the Entity Core Protocol and its extensions.** Machine-checked
+verification of the *protocol design* on the two layers Lean structurally cannot reach:
+**distributed correctness + liveness under concurrency** (TLA+) and **active-attacker protocol
 security** (Tamarin / ProVerif).
+
+## Proof tracks — read this before any number on this page
+
+This repo verifies **more than one protocol**, and a result is only meaningful once you know
+which one it is about. Every model file, every coverage number and every spec pin belongs to
+exactly one **track**, declared in [`TRACKS.toml`](TRACKS.toml) and gated by `make trackcheck`.
+
+**4 proof tracks** — **1 modeled**, **3 scoped**:
+
+| Track | Subject | Spec owner | Status |
+|---|---|---|---|
+| **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 95 model files, 277 runs, pinned at `spec-data/v0.8.2` |
+| **attestation** | The signed-edge substrate: `attesting → attested`, four mandatory indexes, the supersedes chain | `entity-system-architecture` | **scoped** — spec landed, nothing vendored, no model |
+| **quorum** | K-of-N signer rosters; `quorum-update` / `quorum-publish`; `current_signer_set(as_of)` | `entity-system-architecture` | **scoped** — spec landed, nothing vendored, no model |
+| **identity** | Cert chains, rotation by handoff, rotation by recovery, retirement | `entity-system-architecture` | **scoped** — spec landed, nothing vendored, no model |
+
+**Everything else in this README is about the `core` track**, because it is the only modeled
+one. The three extension tracks are declared rather than merely planned: `scoped` is a gated
+state, and assigning a model file to a scoped track **fails the build** until the track is
+promoted with a spec pin — which is the step where someone has to say which snapshot the
+results are about.
+
+> **Why the tracks are declared before any extension model exists.** The coverage number here
+> is derived from the `§`-citations the models carry, via a pattern that is *document-blind*:
+> `EXTENSION-ATTESTATION §5.7` and core `§5.7` produce the same token, and core already has a
+> `5.7` row. Without a track dimension, the first attestation model's citations would be
+> silently absorbed into a **core** coverage claim, and the gate would report OK — a phantom
+> row arriving *through* the gate that exists to prevent phantom rows. Scoping is declared
+> first for the same reason the spec pin moves last: the honest order costs nothing up front
+> and is unrecoverable afterwards.
 
 > **Which spec version is verified here is a property of the pin, not of this sentence.**
 > The models are written against the SHA-pinned snapshot in `spec-data/`, and
@@ -140,6 +170,7 @@ make smoke    # prove every containerized toolchain runs end-to-end
 make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (277 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
+make trackcheck # which proof track is each model file on? (TRACKS.toml)
 make coverage  # does the coverage claim match what the models actually cite?
 make lean      # the Lean seam tier: the cited Lean text has not moved (leanseam) AND
                # the cited proofs still hold (leanproof, + 5 controls). Needs the
@@ -162,6 +193,8 @@ Makefile                  ← the door: build / smoke / matrix / check / clean (
 caps.mk                   ← shared podman resource caps (per-container ceilings)
 VERSION                   ← 0.8.2
 CANONICAL-DOCS.toml        ← declared canonical doc/spec surface (content ingest)
+TRACKS.toml               ← THE PROOF TRACKS: which protocol each model file is about,
+                            each track's spec pin and citation prefix (`make trackcheck`)
 CLAUDE.md                 ← shim that loads the agent guidance (AGENTS-STANDARD.md + AGENTS.md)
 AGENTS.md                 ← repo-specific agent guidance (build/test, layout, boundaries)
 docs/
@@ -183,11 +216,19 @@ spin/                     ← Spin/Promela independent re-encoding (cross-check)
 tamarin/                  ← Tamarin/ProVerif (active-attacker, Dolev-Yao)
 lean/                     ← the Lean seam tier: NO Lean source, only the gate that builds
                             the keystone peer's proof track and grades its axiom sets
-tools/spec-drift.py       ← the pin-vs-live-spec detector behind `make specdrift`
+tools/spec-drift.py       ← the pin-vs-live-spec detector behind `make specdrift` / `driftclaim`
 tools/lean-seam.py        ← the assumption-ledger drift check behind `make leanseam`
 tools/lean-proof.py       ← the proof-still-holds gate behind `make leanproof`
 tools/coverage-check.py   ← the coverage-claim check behind `make coverage`
+tools/runcount.py         ← the matrix run-total check behind `make runcount`
+tools/ledgercount.py      ← the assumption-ledger shape check behind `make ledgercount`
+tools/trackcheck.py       ← the proof-track membership gate behind `make trackcheck`
 ```
+
+`tla/`, `spin/` and `tamarin/` are organized **by engine**, not by track: today every model
+in them is on the `core` track, and `TRACKS.toml` is what says so. Per-track subdirectories
+are a deliberate later step — safe to take only now that a model file falling out of a gate's
+view is a build failure rather than a silent green.
 
 ## Where the spec lives
 

@@ -160,9 +160,17 @@ and `Register`'s `SafeSys` (the user-at-system handler never enters an active li
 bounds it. The §4.8 race / §4.9 bound / §6.10 emit invariants were near-immediate given `TypeOK`.
 
 **Reproduce:** `cd tla` then (example — `Store` race step)
-`podman run --rm -v "$PWD":/work:Z -w /work entity-apalache check --cinit=ConstInitOK --init=IndInitRace --next=Next --inv=InvRace --length=1 StoreApalache.tla`
+`podman run --rm -v "$PWD":/work:z -w /work entity-apalache check --cinit=ConstInitOK --init=IndInitRace --next=Next --inv=InvRace --length=1 StoreApalache.tla`
 — each module's `ConstInit*` / `IndInit*` / `Inv*` operator names are in its header comment;
 use `--init=Init --length=0` for the base case and `--cinit=ConstInitBug*` for the controls.
+
+**The relabel flag is lowercase `:z` and that is load-bearing, not cosmetic.** `tla/` is
+mounted by *two* images — `entity-tla` (TLC) and `entity-apalache` — and uppercase `:Z`
+relabels a volume private to one container, so the second image's relabel invalidates the
+first's and Apalache dies mid-run with `Could not find or create directory:
+/work/_apalache-out/…`, which reads like a model failure and is not one. *(This command said
+`:Z` until 2026-09-06, six days after the flag was fixed in `tla/Makefile` — a corrected
+defect left standing in the one place a reader would copy it from.)*
 
 ## Coverage — what is and isn't cross-checked (honest scope)
 

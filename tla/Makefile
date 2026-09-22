@@ -1,8 +1,11 @@
 # Spike A — TLA+ toolchain, make + podman only (no host java, no loose jar).
 #
 # All TLC/PlusCal invocations run inside the `entity-tla` podman image, which
-# carries the JRE + tla2tools.jar (see ./Containerfile). The repo dir is bind-
-# mounted at /work with :Z for SELinux relabeling (Fedora host).
+# carries the JRE + tla2tools.jar (see ./Containerfile). This dir is bind-mounted
+# at /work with LOWERCASE :z for SELinux relabeling (Fedora host) — see the MOUNT
+# note below for why uppercase :Z is wrong HERE specifically. (This line said ":Z"
+# until 2026-09-06, contradicting the MOUNT line 20 lines below it that was fixed
+# on 2026-08-30.)
 #
 # Usage:
 #   make image            build (or rebuild) the toolchain image

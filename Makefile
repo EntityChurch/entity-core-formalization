@@ -33,7 +33,7 @@ MAKE ?= make
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
         check-provers crosscheck matrix specdrift specdrift-gate driftclaim leanseam \
         lean lean-image lean-smoke leanproof leanproof-neg \
-        coverage runcount ledgercount clean caps
+        coverage runcount ledgercount trackcheck clean caps
 
 # Where the live spec lives, for `make specdrift`. Override per-host:
 #   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
@@ -58,6 +58,8 @@ help:
 	@echo "    make leanseam    has the cited Lean TEXT moved? (host python3 only)"
 	@echo "    make leanproof   do the cited PROOFS still hold? (needs entity-lean)"
 	@echo "    make lean-image  build the entity-lean toolchain image (network)"
+	@echo "  make trackcheck which proof track does each model file belong to?"
+	@echo "                  (core / attestation / quorum / identity -- TRACKS.toml)"
 	@echo "  make coverage   does COVERAGE-MATRIX.md match what the models actually cite?"
 	@echo "  make runcount   is the published run total still what the gate tables produce?"
 	@echo "  make clean    remove generated model-checker artifacts"
@@ -114,7 +116,7 @@ smoke:
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: coverage runcount ledgercount check-tla check-spin check-provers
+check: trackcheck coverage runcount ledgercount check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -129,7 +131,7 @@ check: coverage runcount ledgercount check-tla check-spin check-provers
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix: coverage runcount ledgercount
+matrix: trackcheck coverage runcount ledgercount
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
@@ -312,6 +314,38 @@ runcount:
 # a change-triggered gate covers. Host python3 only.
 ledgercount:
 	@python3 tools/ledgercount.py
+
+# --- trackcheck: which PROTOCOL is each model file about? --------------------------------
+# Until 2026-09-06 this repo had one subject and every artifact assumed it. Extension
+# protocols (attestation, quorum, identity) arrive with their own spec bodies and their own
+# section numbering, which turns that assumption into a claim. `TRACKS.toml` is the claim;
+# this is the gate.
+#
+# The failure it heads off is not hypothetical and it arrives THROUGH the existing gates.
+# `§(\d+\.\d+)` -- the pattern the published coverage number is derived from -- is
+# DOCUMENT-BLIND: `EXTENSION-ATTESTATION §5.7` and core `§5.7` are the same token, and core
+# already has a `5.7` row. The first extension model's citations would have been credited to
+# core's grid with `make coverage` reporting OK -- a phantom row produced by the gate built to
+# stop phantom rows. Second half, quieter: `coverage-check.py` and `spec-drift.py` globbed
+# `tla/*.tla` NON-RECURSIVELY, so moving models into `tla/attestation/` -- the obvious first
+# reorganization -- would have hidden them from both while both stayed green. Both now read
+# the registry; this asserts the registry is complete.
+#
+# D13 -- what does this assert? That every model file found by a RECURSIVE walk belongs to
+# exactly one track and that every declared file exists (both directions), that the walk
+# agrees with git and no unstaged-but-runnable model file exists, that each track is
+# well-formed for its status, and that the declared prose sites state the inventory. What
+# else satisfies it? Nothing silent: a track that stops publishing its count fails, and a
+# `scoped` track that acquires a model file fails until it is promoted WITH a pin -- the step
+# where someone states which snapshot the results are about.
+#
+# What it does NOT assert, said out loud: that a file is on the RIGHT track. Membership is a
+# human's declaration. Same standing caveat as the assumption ledger's.
+#
+# In `check` and `matrix`, unlike `driftclaim`: its inputs are entirely inside this repo, so a
+# change-triggered gate is sufficient in kind. Host python3 + git only.
+trackcheck:
+	@python3 tools/trackcheck.py
 
 clean:
 	$(MAKE) -C tla     clean

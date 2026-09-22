@@ -93,12 +93,34 @@ difference is the whole point.
 
 ## 3. Matrix A — protocol section × property class × engine
 
-Derived from the `§`-citations the models themselves carry, not from prose. Reproduce with
-`make specdrift` (which reads the same citations) or by grepping `§` in `tla/`, `spin/`,
-`tamarin/`.
+### Which protocol this matrix is about
+
+**4 proof tracks** are declared in `TRACKS.toml` — **1 modeled**, **3 scoped** — and
+**Matrix A is the `core` track's matrix and only that.** The other three
+(`attestation`, `quorum`, `identity`) have landed specs, no vendored snapshot and no model, so
+they have no grid here; a modeled track with no grid section fails `make trackcheck`, which is
+how a track cannot quietly acquire coverage nobody published.
+
+This distinction is load-bearing rather than tidy. The grid below is derived from a
+**document-blind** citation pattern: `EXTENSION-ATTESTATION §5.7` (the attestation index
+invariants) and core `§5.7` (delegation caveats) produce the identical token, and row `5.7`
+already exists. Absent a track dimension, the first extension model's citations would be
+credited to *this* matrix and `make coverage` would report OK — §3b's failure again, one spec
+body over, and arriving through the gate rather than past it. So citations are extracted
+**per track**, and a bare `§N.M` in a model means a section of *its own* track's spec. A
+cross-track claim carries the target's prefix (`§CORE:6.2` inside an attestation model);
+`TRACKS.toml` §"The citation convention" is the whole rule.
+
+### The matrix
+
+Derived from the `§`-citations the `core` models themselves carry, not from prose. Reproduce
+with `make specdrift` (which reads the same citations) or by grepping `§` in the files
+`TRACKS.toml` assigns to `core`.
 
 **Coverage: 28 of 85 numbered `§N.M` sections (33%).** Read by area, not as one number —
-see §5 for why the zeros are zeros.
+see §5 for why the zeros are zeros. **This is a statement about the `core` track**; there is
+no repo-wide coverage number and there deliberately will not be one, because averaging a
+verified protocol with three unmodeled ones produces a figure that is true of nothing.
 
 | § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
 |---|---|---|---|---|---|---|---|
@@ -301,7 +323,7 @@ would duplicate an owner, not add assurance.
 | §6.12, §6.13 | per-request transport error codes; handler origination path | open |
 | §3.5, §3.11, §3.12, §3.13 | discovery locality, chain_id/depth wire fields | partly reachable via §5.9 |
 | §6.11(c) | per-request deadlines | **named**: this is what would make Class-G a *liveness* bug rather than a crash |
-| `EXTENSION-*` protocols | continuation, subscription, compute, role, identity | **hard-gated**: not in `spec-data/`. Modeling from changelog mentions would violate the model-against-vendored-spec discipline. |
+| `EXTENSION-*` protocols | 26 extension specs; `attestation`, `quorum` and `identity` are the scoped next phase | **Not a gap in this matrix — a different track.** They are `scoped` tracks in `TRACKS.toml`, not uncovered core sections, and they get their own grid when they get a model. The specs are **landed and readable** (`entity-system-architecture/specs/extensions/`); nothing is vendored because `spec-data/` is held at the core pin until the keystone sibling converges, and the extension snapshots ride along with that re-vendoring pass. Modeling against a live checkout instead of a pinned snapshot is what the discipline forbids, and that has not changed. |
 
 ---
 
@@ -400,6 +422,7 @@ make build      # build all five toolchain images (the only network step)
 make matrix     # THE GATE: green + negative controls + non-vacuity witnesses
 make check      # the green-only slice (does NOT answer "could it have failed?")
 make specdrift  # is the pin still the live spec?
+make trackcheck # which proof track is each model file on? (TRACKS.toml)
 ```
 
 `make matrix` asks three questions, and passing all three is what the numbers in
@@ -412,8 +435,15 @@ make specdrift  # is the pin still the live spec?
    violated; a clean witness is a build failure.
 
 Per-engine: `make -C tla matrix`, `make -C spin green && make -C spin neg`,
-`make -C tamarin matrix`. Run the three **serially** — concurrent `:Z` bind-mount relabels
-race on SELinux hosts.
+`make -C tamarin matrix`. Run the three **serially** — each engine runs under the `caps.mk`
+memory ceiling, and three concurrent sweeps contend for it.
+
+*(This paragraph gave a different reason until 2026-09-06: "concurrent `:Z` bind-mount
+relabels race on SELinux hosts." That race was real but it was **our bug, not the platform's**
+— `tla/` and `tamarin/` are each mounted by two images, and uppercase `:Z` relabels a volume
+private to one container, so the second image's relabel invalidated the first's. Fixed
+2026-08-30 by dropping those two mounts to lowercase `:z`; `spin/` is owned by one image and
+correctly stays `:Z`. Serial execution survives the fix for the resource reason above.)*
 
 ---
 

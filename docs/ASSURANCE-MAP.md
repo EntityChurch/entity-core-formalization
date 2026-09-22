@@ -4,6 +4,12 @@ The point of this map: **nothing double-owned, nothing assumed without a named
 owner.** Each formal question about the Entity Core Protocol is answered by exactly
 one tool, on the layer it can actually reach.
 
+> **Which protocol: the `core` track.** This repo declares **4 proof tracks** in
+> `TRACKS.toml` (`make trackcheck`) — `core`, `attestation`, `quorum`, `identity` — and
+> `core` is the only **modeled** one. This map is about `core`. The three extension tracks
+> have landed specs, no vendored snapshot and no model, so they own no row here yet; when
+> they do, they get their own rows rather than being folded into these.
+
 > **Pinned at spec 0.8.2; the live spec is 0.8.2.11.** Rows 4 and 5 below — the two this
 > repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and
 > `make specdrift` reports **9 of 30 cited sections moved**. Eight of the nine are additive

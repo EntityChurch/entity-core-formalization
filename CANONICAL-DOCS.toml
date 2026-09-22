@@ -14,6 +14,13 @@ repo models), entity-core-keystone (peers + the Lean logic proof), and the
 reference implementations — it verifies the DESIGN, not the code and not any
 generated peer.
 
+The repo carries FOUR PROOF TRACKS, declared in TRACKS.toml and gated by `make
+trackcheck`: core (the Entity Core Protocol — the only MODELED one, and therefore
+what every number below is about) plus attestation, quorum and identity, each with
+a landed spec, no vendored snapshot and no model yet. There is deliberately no
+repo-wide coverage number; averaging a verified protocol with unmodeled ones
+produces a figure true of nothing.
+
 Honesty first (this is design assurance, off the release critical path): it is a
 strong DEMONSTRATOR, not a closed proof, and NOT a claim that "the protocol is
 proven correct." What is PROVEN unbounded vs only MODELED at a bound vs symbolic is
@@ -35,6 +42,12 @@ of taking the host down.
 path  = "README.md"
 title = "entity-core-formalization — overview"
 blurb = "What the repo is, where it sits in the family, and how it was gated (spike-first, demonstrator-altitude)."
+group = "Overview"
+
+[[doc]]
+path  = "TRACKS.toml"
+title = "Proof tracks — which protocol each model is about"
+blurb = "The registry: every model file, spec pin and coverage number belongs to exactly one track (core, attestation, quorum, identity), gated by `make trackcheck`. Read this before any coverage number — core is the only modeled track, and the citation pattern the numbers derive from is document-blind, so the split has to be declared rather than assumed."
 group = "Overview"
 
 [[doc]]

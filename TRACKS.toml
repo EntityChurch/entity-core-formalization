@@ -1,0 +1,318 @@
+# TRACKS.toml — the proof tracks in this repository, and which files belong to each.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# Until 2026-09-06 this repo had exactly one subject — the Entity Core Protocol — and every
+# artifact said so implicitly. Nothing had to declare it, because nothing else was here.
+# Extension protocols (attestation, quorum, identity) are the next phase, and they arrive
+# with their own spec bodies, their own section numbering and their own owner repo. That
+# turns an assumption into a claim, and a claim needs a home and a gate.
+#
+# THE FAILURE THIS PREVENTS, stated concretely because it is not hypothetical.
+# `tools/coverage-check.py` derives the published coverage number from the `§`-citations the
+# models carry, using the pattern `§(\d+\.\d+)`. That pattern is DOCUMENT-BLIND: it yields the
+# token `5.7` for `EXTENSION-ATTESTATION §5.7` (the index invariants) exactly as it does for
+# core `§5.7` (delegation caveats). The core grid already has a `5.7` row, so on the day an
+# attestation model lands, its citation is absorbed into a core coverage claim and the gate
+# reports OK. That is a phantom row arriving THROUGH the gate whose entire purpose is to
+# prevent phantom rows — the §4.7 / §6.9 failure again, one spec body over.
+#
+# The second half is worse and quieter: `coverage-check.py` and `spec-drift.py` both glob
+# `tla/*.tla` etc. NON-RECURSIVELY. Moving models into `tla/attestation/` — the obvious first
+# reorganization — makes them invisible to both gates, which then stay green while asserting
+# nothing at all about the new track. So the track dimension is declared and gated HERE,
+# before any model is written or any file moves. Physical subdirectories are a later and,
+# once `make trackcheck` exists, a checkable step.
+#
+# WHAT READS THIS
+#   tools/trackcheck.py     (`make trackcheck`)  — membership, both directions
+#   tools/coverage-check.py (`make coverage`)    — per-track citations, grid and denominator
+#   tools/spec-drift.py     (`make specdrift`)   — per-track pin and citation set
+#
+# WHAT THIS FILE DOES *NOT* ASSERT — stated here rather than left to be assumed. That a file
+# is on the RIGHT track. Membership is declared by a human and gated only for existence and
+# uniqueness; a core model listed under `attestation` passes every check in `trackcheck`.
+# Same standing caveat as docs/LEAN-SEAM.md's: the tool detects drift, not error.
+
+[registry]
+version = 1
+
+# Discovery: which files are model files at all. `trackcheck` walks the repo for these
+# extensions and requires every hit to belong to exactly one track below.
+model_extensions = [".tla", ".pml", ".pv", ".spthy"]
+model_roots      = ["tla", "spin", "tamarin"]
+
+# Generated artifacts that carry a model extension but are not models. Declared HERE rather
+# than hardcoded in the tool so the exclusion is visible to a reader: an exclusion buried in
+# code is how a real model file goes uncounted and nobody can see that it did.
+# `_apalache-out/` is Apalache's counterexample dump; `*_TTrace_*` is TLC's error-trace spec.
+# Both are gitignored, and `trackcheck` cross-checks against git for exactly that reason.
+exclude_globs = ["**/_apalache-out/**", "**/*_TTrace_*"]
+
+# ── The citation convention ─────────────────────────────────────────────────────────────
+# A bare `§N.M` in a model file means "section N.M of MY OWN track's primary_spec". It never
+# means another track's spec. To cite ACROSS tracks, write the sigil, the target track's
+# `cite_prefix`, a colon, then the section: an attestation model referring to the core
+# register lifecycle writes **`§CORE:6.2`**.
+#
+# Bare citations are the overwhelming majority and stay bare, so no existing model file
+# changes. A cross-track reference is EXCLUDED from every track's coverage set — it is a
+# reference, not a claim that the section is verified here, which is the same disposition
+# COVERAGE-MATRIX §3b already gives "a cross-reference to another DOCUMENT's section".
+# An unprefixed `§6.2` in an attestation model is therefore not a cross-reference: it is a
+# claim about EXTENSION-ATTESTATION §6.2, and if no such section exists the gate says so.
+#
+# THE SIGIL COMES FIRST, AND THAT IS A BUG FIX. The first draft of this notation was
+# `CORE §6.2` — prefix, space, sigil. Running the gate produced **23 false hits across 12
+# model files**, because prose puts capitalized words before citations constantly
+# (`WHAT §6.9 SAYS`, `LIVENESS §4.1`, `THE §5.8`) as do Spin's `-D` macro names
+# (`DSERIALIZED §6.11`) — and each false hit was then *excluded* from that line's citation
+# set, so the tripwire built to stop citations being miscredited was silently DROPPING them.
+# The count survived at 28 only because every affected section is cited on some other line
+# too. `§X:N.M` cannot collide: a bare citation is `§`+digit, and this repo's intra-document
+# forms are `§C.4`/`§D` — a dot or nothing, never a colon.
+#
+# The rule that makes this work is the one already in AGENTS.md, unchanged: cite a section
+# only where you make a claim about it. A section deliberately NOT modeled is named in prose
+# without the `§` sigil.
+
+# ════════════════════════════════════════════════════════════════════════════════════════
+# CORE — the Entity Core Protocol. Everything in this repo today.
+# ════════════════════════════════════════════════════════════════════════════════════════
+[track.core]
+kind         = "protocol"
+status       = "modeled"
+title        = "Entity Core Protocol"
+owner_repo   = "entity-core-protocol"
+cite_prefix  = "CORE"
+
+# The pin is NOT restated here. `spec-data/MODELING-PIN` is its one canonical home and its
+# meaning is unchanged by this file: it names the snapshot the core models transcribe, and
+# every published core result is a statement about it. One canonical home per fact.
+pin_file     = "spec-data/MODELING-PIN"
+
+# The denominator of core's coverage claim is counted from this file's numbered `§N.M`
+# headings, inside whatever snapshot pin_file names.
+primary_spec = "ENTITY-CORE-PROTOCOL.md"
+specs        = [
+  "ENTITY-CORE-PROTOCOL.md",
+  "ENTITY-CBOR-ENCODING.md",
+  "ENTITY-NATIVE-TYPE-SYSTEM.md",
+]
+
+# Where core's coverage claim is published. `coverage-check` reads the grid under this
+# heading; a track with no grid section fails rather than being skipped.
+coverage_doc     = "docs/COVERAGE-MATRIX.md"
+coverage_heading = "Matrix A — protocol section × property class × engine"
+
+models = [
+  "spin/authority.pml",
+  "spin/bootstrap.pml",
+  "spin/bounds.pml",
+  "spin/conn.pml",
+  "spin/conncodes.pml",
+  "spin/core.pml",
+  "spin/emit.pml",
+  "spin/reentry.pml",
+  "spin/register.pml",
+  "spin/revoke.pml",
+  "spin/store.pml",
+  "tamarin/Binding.pv",
+  "tamarin/Binding.spthy",
+  "tamarin/BindingBug.pv",
+  "tamarin/BindingBug.spthy",
+  "tamarin/BindingReplay.pv",
+  "tamarin/BindingReplayBug.pv",
+  "tamarin/BindingReplayBug.spthy",
+  "tamarin/Caveats.pv",
+  "tamarin/Caveats.spthy",
+  "tamarin/CaveatsBug.pv",
+  "tamarin/CaveatsBug.spthy",
+  "tamarin/ChainTopology.pv",
+  "tamarin/ChainTopology.spthy",
+  "tamarin/ChainTopologyBug.pv",
+  "tamarin/ChainTopologyBug.spthy",
+  "tamarin/DeepChain.pv",
+  "tamarin/DeepChain.spthy",
+  "tamarin/DeepChainBug.pv",
+  "tamarin/DeepChainBug.spthy",
+  "tamarin/DeepChainN.pv",
+  "tamarin/DeepChainN.spthy",
+  "tamarin/DeepChainNBug.pv",
+  "tamarin/DeepChainNBug.spthy",
+  "tamarin/DepthBound.pv",
+  "tamarin/DepthBound.spthy",
+  "tamarin/DepthBoundBug.pv",
+  "tamarin/DepthBoundBug.spthy",
+  "tamarin/Expiry.pv",
+  "tamarin/Expiry.spthy",
+  "tamarin/ExpiryBug.pv",
+  "tamarin/ExpiryBug.spthy",
+  "tamarin/Malformed.pv",
+  "tamarin/Malformed.spthy",
+  "tamarin/MalformedBug.pv",
+  "tamarin/MalformedBug.spthy",
+  "tamarin/Multisig.pv",
+  "tamarin/Multisig.spthy",
+  "tamarin/MultisigBug.pv",
+  "tamarin/MultisigBug.spthy",
+  "tamarin/MultisigKN.pv",
+  "tamarin/MultisigKN.spthy",
+  "tamarin/MultisigKNBug.pv",
+  "tamarin/MultisigKNBug.spthy",
+  "tamarin/NoEscalation.pv",
+  "tamarin/NoEscalation.spthy",
+  "tamarin/NoEscalationBug.pv",
+  "tamarin/NoEscalationBug.spthy",
+  "tamarin/PersistentRecheck.pv",
+  "tamarin/PersistentRecheck.spthy",
+  "tamarin/PersistentRecheckBug.pv",
+  "tamarin/PersistentRecheckBug.spthy",
+  "tamarin/Revoke.pv",
+  "tamarin/Revoke.spthy",
+  "tamarin/RevokeBug.pv",
+  "tamarin/RevokeBug.spthy",
+  "tamarin/RevokeMech.spthy",
+  "tamarin/Unforge.pv",
+  "tamarin/Unforge.spthy",
+  "tamarin/UnforgeBug.pv",
+  "tamarin/UnforgeBug.spthy",
+  "tla/Authority.tla",
+  "tla/AuthorityApalache.tla",
+  "tla/Bootstrap.tla",
+  "tla/BootstrapApalache.tla",
+  "tla/Bounds.tla",
+  "tla/BoundsApalache.tla",
+  "tla/Conn.tla",
+  "tla/ConnApalache.tla",
+  "tla/ConnCodes.tla",
+  "tla/ConnCodesApalache.tla",
+  "tla/Core.tla",
+  "tla/CoreApalache.tla",
+  "tla/CoreMapFree.tla",
+  "tla/Emit.tla",
+  "tla/EmitApalache.tla",
+  "tla/Reentry.tla",
+  "tla/ReentryApalache.tla",
+  "tla/RefMap.tla",
+  "tla/Register.tla",
+  "tla/RegisterApalache.tla",
+  "tla/Revoke.tla",
+  "tla/RevokeApalache.tla",
+  "tla/Store.tla",
+  "tla/StoreApalache.tla",
+]
+
+# ════════════════════════════════════════════════════════════════════════════════════════
+# EXTENSION TRACKS — declared, not yet modeled.
+#
+# `status = "scoped"` is a real state with a gated meaning, not a placeholder: a scoped track
+# MUST carry no models and no pin. The moment a model file is assigned to one of these,
+# `trackcheck` fails until the track is promoted to "modeled" WITH a pin — which is the point.
+# Promotion is the step where someone has to say out loud which snapshot the results are about,
+# and it cannot be skipped by quietly adding a file.
+#
+# All three specs are LANDED and readable today in
+# `../entity-system-architecture/specs/extensions/` (26 extension specs live there; the three
+# below are the scoped phase). Nothing here is blocked on anyone writing anything — nothing is
+# vendored yet only because `spec-data/` is held at the core pin until the keystone sibling
+# converges, and the extension snapshots ride along with that same re-vendoring pass.
+#
+# Scoping and the ranked targets: docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md.
+# Start at attestation's substrate, not identity's 1,617 lines.
+# ════════════════════════════════════════════════════════════════════════════════════════
+
+[track.attestation]
+kind         = "protocol"
+status       = "scoped"
+title        = "Attestation extension — the signed-edge substrate"
+owner_repo   = "entity-system-architecture"
+cite_prefix  = "ATTEST"
+pin_file     = ""
+primary_spec = "EXTENSION-ATTESTATION.md"
+specs        = ["EXTENSION-ATTESTATION.md"]
+coverage_doc = ""
+coverage_heading = ""
+models       = []
+note = """
+The substrate the other two consume: a system/attestation is a signed edge attesting→attested
+with a properties.kind, plus a supersedes chain. Owns four mandatory indexes and the
+chain-walk family. First target because every identity property is stated in terms of it, and
+because two of its shapes reuse models this repo already trusts: index invariant I2
+("partial-index states are NOT permitted") is RegisterAllOrNothing with four indexes instead
+of five facets, and the chain walks are DeepChain/Bounds' termination question.
+"""
+
+[track.quorum]
+kind         = "protocol"
+status       = "scoped"
+title        = "Quorum extension — K-of-N signer rosters"
+owner_repo   = "entity-system-architecture"
+cite_prefix  = "QUORUM"
+pin_file     = ""
+primary_spec = "EXTENSION-QUORUM.md"
+specs        = ["EXTENSION-QUORUM.md"]
+coverage_doc = ""
+coverage_heading = ""
+models       = []
+note = """
+A system/quorum is a signer roster + threshold whose own membership changes are attestations
+(quorum-update, quorum-publish). Carries the sharpest attacker question on the surface: a
+quorum-update is validated at ARRIVAL and then trusted on every read — end-to-end
+re-validation "NOT performed and NOT required", cold start "trusts the existing tree state".
+So the whole live signer set rests on every write path running arrival-time validation, and
+nothing states that every path does. That is an unstated closure assumption and belongs in
+docs/LEAN-SEAM.md the day a model exists, whatever the answer turns out to be.
+Also carries current_signer_set(as_of) — verdict determinism over a declared temporal input,
+which is the exact shape where §5.10's δ turned out to be missing from Revoke.tla and the
+invariant was accidentally true. Model not_before and the clock explicitly from the start.
+"""
+
+[track.identity]
+kind         = "protocol"
+status       = "scoped"
+title        = "Identity extension — cert chains, rotation, recovery"
+owner_repo   = "entity-system-architecture"
+cite_prefix  = "IDENT"
+pin_file     = ""
+primary_spec = "EXTENSION-IDENTITY.md"
+specs        = ["EXTENSION-IDENTITY.md"]
+coverage_doc = ""
+coverage_heading = ""
+models       = []
+note = """
+Built on both of the above: certs, rotation by handoff (dual-sig), rotation by recovery
+(K-of-N, old key compromised — so the adversary is assumed to hold the old key), retirement.
+Deliberately LAST: 1,617 lines, and it consumes the other two.
+Two things to settle before a model abstracts anything away. (1) The cross-peer recovery rule
+is a NEGATIVE REACHABILITY claim ("fail-closed if no quorum-publish is cached"), which is the
+highest vacuity risk there is — a peer that does nothing satisfies it. Write the witness
+before the prohibition; this is the same advice this repo routed to keystone about H3.
+(2) Identity's chain-walk predicates (identity_confers_function,
+identity_is_authorized_revoker) are authority-logic interior — the layer entity-core-keystone's
+Lean owns for core. Whether it owns these too is the first Class-L question and should be
+asked BEFORE a model reduces them to a predicate, not after.
+"Recovery cluster" is the pre-v3.3 name for an identity quorum (SYSTEM-IDENTITY-COMPOSITION §7).
+"""
+
+# ════════════════════════════════════════════════════════════════════════════════════════
+# NOT A PROTOCOL TRACK — toolchain smoke files. They model no protocol and make no §-claim;
+# they exist to prove a containerized engine runs at all (`make smoke`). Declared explicitly
+# so they are accounted for rather than silently excluded, and given kind = "toolchain" so
+# `coverage-check` skips them by declaration instead of by their happening to cite nothing.
+# ════════════════════════════════════════════════════════════════════════════════════════
+[track.toolchain]
+kind         = "toolchain"
+status       = "n/a"
+title        = "Toolchain smoke models"
+owner_repo   = ""
+cite_prefix  = ""
+pin_file     = ""
+primary_spec = ""
+specs        = []
+coverage_doc = ""
+coverage_heading = ""
+models = [
+  "spin/smoke.pml",
+  "tla/SmokeApalache.tla",
+]

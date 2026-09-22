@@ -12,6 +12,31 @@ for inductive/unbounded invariants and **Spin** as an independent cross-check) a
 no escalation, no replay/reflection/confused-deputy). Models the current core; may
 extend to extension protocols once they are vendored.
 
+## Proof tracks — know which protocol your claim is about
+
+**`TRACKS.toml` is the registry and `make trackcheck` is its gate.** **4 proof tracks** —
+**1 modeled** (`core`), **3 scoped** (`attestation`, `quorum`, `identity`). Every model file
+belongs to exactly one; an unregistered file, a declared-but-missing file, or a file claimed
+by two tracks fails the build. **Unless a statement names a track, it is about `core`** — the
+only modeled one.
+
+Two things to internalize before writing an extension model. **The `§N.M` citation pattern
+behind the coverage number is document-blind**, so `EXTENSION-ATTESTATION §5.7` and core `§5.7`
+are the same token and core already has that row — extension citations would have been absorbed
+into a *core* claim with `make coverage` green. Hence: a bare `§N.M` means a section of **your
+own track's** `primary_spec`; a cross-track reference writes the sigil first (**`§CORE:6.2`**
+inside an attestation model) and is excluded from every track's coverage set. *The sigil-first
+order is a bug fix, not a style call: the draft form `CORE §6.2` matched 23 lines of ordinary
+prose (`WHAT §6.9 SAYS`, `LIVENESS §4.1`) and silently dropped those citations.* And
+**the file globs were non-recursive** (`tla/*.tla`), so
+moving models into `tla/attestation/` would have hidden them from `coverage` and `specdrift`
+while both stayed green — `trackcheck` walks recursively and cross-checks against git.
+Subdirectories per track are a later step, deliberately taken *after* the gate exists.
+
+`scoped` is gated, not decorative: a scoped track must have no models and no pin, so adding a
+model file fails until the track is promoted **with** a pin. That promotion is where someone
+says which snapshot the results are about, and it is not skippable by adding a file.
+
 ## How we work here — tier **AUTHORING**
 
 This repo runs the entity-OS methodology at the **Authoring** tier — the framework is
@@ -225,6 +250,20 @@ tool behaviour) must list every site of that mechanism and its disposition in
 `docs/PROPERTIES.md` §C or `docs/STATUS.md`. `grep -n 'dev/null' */Makefile` is the specific
 tripwire for this family: discarded output is the tell.
 
+*Fifth instance, 2026-09-06 — and it names the site class that gets missed.* The `:Z`→`:z`
+bind-mount fix (2026-08-30) reached the two `MOUNT` lines and this file, and left the
+**retracted reason** — "run the engines serially because concurrent `:Z` relabels race" —
+standing in **five** places: `COVERAGE-MATRIX.md` §7 and `STATUS.md` as live guidance (the
+latter under *"Known, documented non-issues (not bugs)"*, where it named as a platform quirk
+what was our own defect); `FINAL-ASSURANCE-SUMMARY.md` as history with no resolution;
+`tla/Makefile`'s own **header**, contradicting the `MOUNT` line twenty lines below it that the
+same fix had corrected; and worst, **`CROSSCHECK-RESULTS.md`'s copy-pasteable reproduce
+command**, which handed a reader `-v "$PWD":/work:Z` on the exact directory and image the bug
+involved. **Add to the grep list: a corrected defect survives longest in a command a reader
+runs**, because a code fix feels finished and a documented invocation does not look like code.
+Grepping the withdrawn phrasing (`:Z`, "relabel", "race") found all five; grepping the subject
+would not have.
+
 *It applies to retractions too, learned 2026-08-30.* The L7 correction — that ProVerif and
 Lean do **not** share an undischarged `hframed` — was written into `LEAN-SEAM.md` and
 `STATUS.md` and left standing in `ASSURANCE-MAP.md`, `FINAL-ASSURANCE-SUMMARY.md` and the
@@ -297,6 +336,37 @@ assert any correspondence is correct. This is the strongest argument on record f
 put a machine on this half of the seam. Until then the ledger is a human reading, and its own
 rows say so.
 
+*The input set a number is derived over is itself a claim — 2026-09-06, twice in one session.*
+D15 says derive the figure from the artifacts and gate it. It does not say what defines
+*which artifacts*, and in every tool here that was a **glob**, written once and never
+re-asked. Two failures, same mechanism, opposite directions:
+- **Too many.** `spec-drift`'s per-engine exposure line published **"15/1169 model files"** for
+  a release. `tla/*.tla` matches the hundreds of gitignored `_TTrace_` specs TLC drops beside
+  the real ones, so the denominator was mostly build artifacts. Nobody looked at it because it
+  is not the headline number — and a derived figure nobody reads is exactly where this hides.
+  It is 15/24.
+- **Too few, and latent.** The same globs are **non-recursive**, so the first per-track
+  reorganization (`tla/attestation/`) would have removed those files from `coverage` and
+  `specdrift` **while both stayed green** — a gate silently narrowing its own subject.
+
+Both are D15's mechanism one level down: *what does this number assert, and what else
+produces it?* asked of the **file set** rather than the arithmetic. **`make trackcheck`
+(`tools/trackcheck.py`) is the fourth enforcement point**: `TRACKS.toml` declares every model
+file's proof track, the walk is recursive, and it is cross-checked against git — because
+`make matrix` reads the engine Makefiles rather than git and can therefore *run* a file that
+no claim-checking gate can see. Not promoted to its own discipline: it is the same mechanism
+as D15, earned in a second medium. **If it bites in a third shape, give it a number.**
+
+*And its own tripwire failed the same way, in the same hour.* The cross-track citation form
+was drafted as `CORE §6.2` — prefix, space, sigil — which matched **23 lines of ordinary
+prose** (`WHAT §6.9 SAYS`, `LIVENESS §4.1`, `THE §5.8`, every Spin `-D` macro name) and then
+excluded each from that line's citation set: a guard against citations being *miscredited*
+that silently **dropped** them. The published 28 survived only because every affected section
+is cited on some other line too. The notation is `§CORE:6.2` now — sigil first, which cannot
+collide with `§`+digit. Reading the regex did not catch it; running it did. **That is now four
+consecutive sessions in which a new gate's first draft was wrong and only running it found
+out.** Budget for it: writing the gate is half the work, breaking it is the other half.
+
 *Third and fourth enforcement points, 2026-09-06 — and the third one changes what "gate" has
 to mean here.* `make driftclaim` (`tools/spec-drift.py --check-claims`) and `make ledgercount`
 (`tools/ledgercount.py`). Both are the `runcount` shape applied one artifact over. What is new
@@ -336,15 +406,13 @@ corollary, again, at a rate of two per session.
   *(This rule previously said "the architecture repo re-vendors." That named
   `entity-core-architecture`, which no longer exists — the same stale reference corrected
   elsewhere in this file. There is no external owner to wait on.)*
-  **`entity-core-protocol/specs/` is the source for the THREE CORE SPECS ONLY.** The
-  extension specs are **not** there and never were: all 26, including
-  `EXTENSION-IDENTITY.md` and `EXTENSION-ATTESTATION.md`, live in
-  **`../entity-system-architecture/specs/extensions/`**. This sentence used to imply one
-  upstream, and following it to vendor an extension finds nothing — which reads as *"the
-  spec is not written yet"* when in fact it is. `docs/STATUS.md` §Next item 12's Phase-3
-  blocker is therefore a **vendoring decision**, not an authorship dependency, and whether
-  this repo should pin from a second upstream at all is an open question to answer
-  deliberately rather than by copying files.
+  **Vendor each spec from the repo that owns it.** `entity-core-protocol/specs/` owns the
+  three core specs. **The extension specs are owned by `entity-system-architecture`** — all
+  26, including `EXTENSION-IDENTITY.md` and `EXTENSION-ATTESTATION.md`, in
+  `../entity-system-architecture/specs/extensions/`. That is the ecosystem's ordinary layout
+  and vendoring from both is the ordinary thing to do; the sentence above previously named
+  only the core repo, so following it to vendor an extension finds nothing and the absence
+  reads as *"the spec is not written yet"* when it is written and landed.
 - **`spec-data/MODELING-PIN` names the snapshot the models actually transcribe** — the one
   every published result is a statement about. Vendoring a newer snapshot does **not**
   move it. It moves only when the models have been re-validated against the new text, and

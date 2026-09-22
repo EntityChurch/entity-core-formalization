@@ -7,6 +7,13 @@ independently cross-checked. It is written so a future reader (or a returning ag
 understand *what was proved, how far it goes, and what it deliberately does not say*
 without re-reading the underlying reports.
 
+> **Which protocol: the `core` track.** `TRACKS.toml` declares **4 proof tracks**
+> (`make trackcheck`) and `core` — the Entity Core Protocol — is the only **modeled** one.
+> Everything capstoned here is about `core`. `attestation`, `quorum` and `identity` are
+> **scoped**: landed specs, no vendored snapshot, no model, and so nothing in this summary
+> speaks for them. There is deliberately no repo-wide assurance figure — averaging a
+> verified protocol with three unmodeled ones produces a number true of nothing.
+
 > *On version names.* Live documents say **"the design"** or cite the pin
 > (`spec-data/v0.8.2/`). The phase reports below say **"V7"** because they were written
 > against the V7 line and are historical record; 0.8.0 was the de-versioned cutover of that
@@ -174,6 +181,12 @@ failures from an SELinux `:Z` bind-mount relabel race (three concurrent containe
 overlapping trees → transient "file not found" / empty output). Re-running those four
 theories serially (ProVerif `MultisigKN`; Tamarin `BindingBug`, `Caveats`,
 `CaveatsBug`) confirmed every one passes. No real regressions.
+**That race was diagnosed and fixed on 2026-08-30, and this paragraph is kept as the
+record of when it bit rather than as live guidance.** It was not a platform quirk but a
+defect here: `tla/` and `tamarin/` are each bind-mounted by two images, and uppercase `:Z`
+relabels a volume *private to one container*, so the second image's relabel invalidated the
+first's. Both are lowercase `:z` now; `spin/`, owned by a single image, correctly keeps `:Z`.
+Running the engines serially is still the rule, for the `caps.mk` memory ceiling.
 
 ## 4. What is proved — and the walls (honest scope)
 

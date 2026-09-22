@@ -63,17 +63,27 @@ import glob
 import os
 import re
 import sys
+import tomllib
 from collections import defaultdict
 
 HEADING = re.compile(r"^#{1,6}\s+\S", re.M)
 NUMBERED = re.compile(r"^#{1,6}\s+(\d+(?:\.\d+)*[a-z]?)\s+.*$", re.M)
 CITATION = re.compile(r"§\s*(\d+(?:\.\d+)*[a-z]?)")
 
-MODEL_GLOBS = ("tla/*.tla", "tamarin/*.pv", "tamarin/*.spthy", "spin/*.pml")
-TRACKS = {
-    "TLA+/Apalache": ("tla/*.tla",),
-    "Spin": ("spin/*.pml",),
-    "Tamarin/ProVerif": ("tamarin/*.pv", "tamarin/*.spthy"),
+# A CROSS-TRACK citation, `§CORE:6.2` — see TRACKS.toml §"The citation convention". It is
+# excluded from the citing track's COVERAGE set (it is a reference, not a claim) but it IS a
+# dependency for drift: a model that reads core §6.2 is exposed when core §6.2 moves. The
+# conservative direction, deliberately — under-reporting exposure is the failure that matters.
+PREFIXED = re.compile(r"§([A-Z][A-Z0-9]{1,11}):(\d+(?:\.\d+)*[a-z]?)")
+
+# ENGINES, not "tracks". This grouping is by MODEL CHECKER, and since 2026-09-06 "track" means
+# something else in this repo — a proof track (core / attestation / quorum / identity,
+# TRACKS.toml). The two were about to be one word for two things in the same output. Renamed
+# rather than left to be disambiguated by a reader who has no reason to suspect the collision.
+ENGINES = {
+    "TLA+/Apalache": ("tla",),
+    "Spin": ("spin",),
+    "Tamarin/ProVerif": ("tamarin",),
 }
 
 # ── WHERE THE DRIFT STATUS IS CLAIMED IN PROSE (--check-claims) ─────────────────────────
@@ -138,12 +148,64 @@ def spec_version(text: str) -> str:
     return m.group(1) if m else "?"
 
 
-def model_citations(root: str) -> dict[str, set[str]]:
+def track_models(root: str, track: str = "core") -> list[str]:
+    """Repo-relative model files of one proof track, from TRACKS.toml.
+
+    Was four non-recursive globs (`tla/*.tla`, ...). Two problems, both fixed by reading the
+    registry instead. (1) `tla/*.tla` does not descend, so the obvious first reorganization —
+    models into `tla/attestation/` — would have made them invisible here while this gate kept
+    reporting a drift number, i.e. a number about a shrinking set nobody was told had shrunk.
+    (2) A glob has no notion of WHICH protocol a file models, and this tool measures drift
+    against the CORE pin; an extension model's citations resolved against the core spec would
+    be noise at best. `make trackcheck` is what keeps the registry honest in both directions.
+    """
+    with open(os.path.join(root, "TRACKS.toml"), "rb") as fh:
+        cfg = tomllib.load(fh)
+    return list(cfg.get("track", {}).get(track, {}).get("models", []))
+
+
+def track_prefix(root: str, track: str = "core") -> str:
+    with open(os.path.join(root, "TRACKS.toml"), "rb") as fh:
+        cfg = tomllib.load(fh)
+    return cfg.get("track", {}).get(track, {}).get("cite_prefix", "")
+
+
+def model_citations(root: str, paths: list[str], prefix: str = "") -> dict[str, set[str]]:
+    """Sections each model file depends on: its own bare `§N.M`, plus any `§<prefix>:N.M`
+    written by a model on ANOTHER track that reads this one."""
     cites: dict[str, set[str]] = defaultdict(set)
-    for pattern in MODEL_GLOBS:
-        for path in sorted(glob.glob(os.path.join(root, pattern))):
-            for m in CITATION.finditer(read(path)):
-                cites[m.group(1)].add(os.path.relpath(path, root))
+    for rel in sorted(paths):
+        text = read(os.path.join(root, rel))
+        for m in CITATION.finditer(text):
+            cites[m.group(1)].add(rel)
+        if prefix:
+            for p, sec in PREFIXED.findall(text):
+                if p == prefix:
+                    cites[sec].add(rel)
+    return cites
+
+
+def core_citations(root: str) -> dict[str, set[str]]:
+    """Every section of the CORE spec any model in this repo depends on.
+
+    Bare `§N.M` from core's own models, plus `§CORE:N.M` written by a model on another proof
+    track. Those cross-track references are excluded from coverage (a reference is not a
+    claim) but they ARE drift exposure: a model that reads core §6.2 is exposed when core
+    §6.2 moves, whichever track it belongs to.
+    """
+    with open(os.path.join(root, "TRACKS.toml"), "rb") as fh:
+        cfg = tomllib.load(fh)
+    tracks = cfg.get("track", {})
+    core = tracks.get("core", {})
+    cites = model_citations(root, list(core.get("models", [])))
+    prefix = core.get("cite_prefix", "")
+    others = [
+        f for n, t in tracks.items() if n != "core" and t.get("kind") == "protocol"
+        for f in t.get("models", [])
+    ]
+    if others and prefix:
+        for sec, files in model_citations(root, others, prefix).items():
+            cites.setdefault(sec, set()).update(files)
     return cites
 
 
@@ -300,7 +362,7 @@ def main() -> int:
         # wrong in the same way as one denying drift that does, and only one of the two
         # feels like a failure. (The leanproof both-directions lesson, D13.)
         if args.check_claims and core_pin is not None:
-            total = len([s for s in model_citations(args.root)
+            total = len([s for s in core_citations(args.root)
                          if section_block(core_pin, s) is not None])
             problems = check_claims(args.root, 0, total)
             emit("")
@@ -315,7 +377,7 @@ def main() -> int:
         return 1
 
     # ---- 2. sections the models cite ---------------------------------------
-    cites = model_citations(args.root)
+    cites = core_citations(args.root)
     resolved = {}
     for sec in cites:
         blk = section_block(core_pin, sec)
@@ -340,26 +402,26 @@ def main() -> int:
             emit(f"  §{sec:<7} unchanged  cited by {len(cites[sec])} model file(s)")
 
     # ---- 3. per-track exposure ---------------------------------------------
-    emit("\n## Exposure by track\n" if args.format == "md" else "\nExposure by track")
+    # "by ENGINE", not "by track": since 2026-09-06 a *track* is a proof track
+    # (core / attestation / quorum / identity, TRACKS.toml). This grouping is by model checker.
+    emit("\n## Exposure by engine\n" if args.format == "md" else "\nExposure by engine")
     if args.format == "md":
-        emit("| track | model files | cited § | moved | files touching a moved § |")
+        emit("| engine | model files | cited § | moved | files touching a moved § |")
         emit("|---|---|---|---|---|")
-    for track, patterns in TRACKS.items():
-        paths = []
-        for pat in patterns:
-            paths += sorted(glob.glob(os.path.join(args.root, pat)))
+    core_files = track_models(args.root, "core")
+    for engine, roots in ENGINES.items():
+        paths = [f for f in core_files if f.split("/")[0] in roots]
         tcites: dict[str, set[str]] = defaultdict(set)
-        for path in paths:
-            rel = os.path.relpath(path, args.root)
-            for m in CITATION.finditer(read(path)):
+        for rel in paths:
+            for m in CITATION.finditer(read(os.path.join(args.root, rel))):
                 if m.group(1) in resolved:
                     tcites[m.group(1)].add(rel)
         tmoved = [s for s in tcites if resolved[s]]
         affected = set().union(*(tcites[s] for s in tmoved)) if tmoved else set()
         if args.format == "md":
-            emit(f"| {track} | {len(paths)} | {len(tcites)} | {len(tmoved)} | {len(affected)}/{len(paths)} |")
+            emit(f"| {engine} | {len(paths)} | {len(tcites)} | {len(tmoved)} | {len(affected)}/{len(paths)} |")
         else:
-            emit(f"  {track:<18} {len(tmoved)}/{len(tcites)} cited § moved; "
+            emit(f"  {engine:<18} {len(tmoved)}/{len(tcites)} cited § moved; "
                  f"{len(affected)}/{len(paths)} model files affected")
 
     emit("\nEvery result in this repo remains a reproducible statement about the PIN.")

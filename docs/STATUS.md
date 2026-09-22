@@ -14,6 +14,36 @@ _Updated: 2026-09-06 · this line: 0.8.2_
 > §Next item 14 for why that is a different failure mode from every previous stale claim
 > here, and `docs/SPEC-DRIFT-ASSESSMENT.md` for what the drift actually costs.
 
+## Proof tracks
+
+**4 proof tracks** — **1 modeled**, **3 scoped** — declared in `TRACKS.toml`, gated by
+`make trackcheck`. **`core` is the only modeled one, so every number below is a statement
+about `core` unless it says otherwise.**
+
+| Track | Subject | Status |
+|---|---|---|
+| `core` | Entity Core Protocol | **modeled** — 95 model files, 277 runs, pinned at `spec-data/v0.8.2` |
+| `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **scoped** — spec landed in `entity-system-architecture`, nothing vendored |
+| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **scoped** — same |
+| `identity` | cert chains; rotation by handoff and by recovery; retirement | **scoped** — same |
+
+Added 2026-09-06, **before** any extension model exists, and that order is the point. The
+coverage number is derived from a *document-blind* `§N.M` pattern, so an
+`EXTENSION-ATTESTATION §5.7` citation is indistinguishable from core `§5.7` — which already
+has a grid row. The first extension model would have had its citations absorbed into a **core**
+coverage claim with `make coverage` reporting OK: a phantom row arriving *through* the gate
+built to stop phantom rows (§3b's failure, one spec body over). The second half was quieter —
+`coverage-check.py` and `spec-drift.py` globbed `tla/*.tla` **non-recursively**, so the obvious
+first reorganization (models into `tla/attestation/`) would have made them invisible to both
+gates, which would then stay green while asserting nothing. `trackcheck` walks recursively and
+cross-checks the walk against git for exactly that reason.
+
+`scoped` is a **gated state, not a note**: a scoped track must carry no models and no pin, so
+assigning a model file to one fails the build until it is promoted *with* a spec pin — the step
+where someone states which snapshot the results are about. Physical subdirectories per track
+are a deliberate follow-up, and are safe to do once a file that falls out of the gate's view is
+a build failure rather than a silent green.
+
 ## Where it is
 
 The **formal design-assurance layer** of the Entity Core Protocol. It machine-checks
@@ -294,9 +324,21 @@ Never spec edits here — proposals in the sibling repo.
   Tamarin's backward search on a regenerated `Valid` fact. It stays ProVerif's lane; Tamarin
   uses a terminating trace-restriction idiom. An irreducible tool-capability finding,
   **excluded from `make check`** — run it standalone with a kill switch.
-- Concurrent toolchain runs can hit a transient SELinux `:Z` bind-mount relabel race
-  ("file not found"); run the three engines **serially**. Reclaim a hung container with
-  `podman kill` (a `timeout`-wrapped `podman run` only kills the client).
+- Run the three engines **serially** — each runs under the `caps.mk` memory ceiling and three
+  concurrent sweeps contend for it. Reclaim a hung container with `podman kill` (a
+  `timeout`-wrapped `podman run` only kills the client).
+
+  *(This bullet read "concurrent toolchain runs can hit a transient SELinux `:Z` bind-mount
+  relabel race (file not found)" until 2026-09-06, and it did not belong in a **non-issues**
+  list: that race was a **bug in this repo**, fixed 2026-08-30. `tla/` and `tamarin/` are each
+  mounted by two images, and uppercase `:Z` relabels a volume private to one container, so the
+  second image's relabel invalidated the first's — Apalache died mid-sweep with a
+  directory error that read like a model failure. Both dropped to lowercase `:z`; `spin/` is
+  owned by one image and correctly stays `:Z`. **The fix reached the mount flags and
+  `AGENTS.md` and stopped there**, leaving the retracted reason standing here, in
+  `COVERAGE-MATRIX.md` §7 and in `tla/Makefile`'s own header — which contradicted its own
+  `MOUNT` line. D14 applied to a retraction, the L7 shape again: what finds these is grepping
+  the withdrawn **phrasing** (`:Z`, "relabel", "race"), not the subject.)*
 - TLC's liveness graph exhausts the 2 GB cap at `Store`'s safety bound of `NReq = 4`, so
   `Store` runs safety at 4 and liveness at 3 in two configs rather than one config that
   silently drops a property. Stated in both cfg headers.
@@ -741,12 +783,72 @@ item 4.
     rule finds nothing and the absence reads as authorship rather than location. `AGENTS.md`
     is corrected.
 
-    So the gate is a **vendoring decision**, not a dependency on anyone writing anything:
-    whether this repo should SHA-pin from a **second upstream repo** is a real question — the
-    pin discipline, `make specdrift` and `MODELING-PIN` all currently assume one — and it
-    should be answered deliberately, not by discovering the files and copying them. Nothing
-    has been vendored. If identity/attestation formalization is wanted, **that decision is
-    step one**, and it is an architecture question rather than a modeling one.
+    So nothing is blocked on anyone writing anything: the specs are landed, and vendoring
+    each spec from the repo that owns it — core from `entity-core-protocol`, extensions from
+    `entity-system-architecture` — is the ordinary operation this repo already performs.
+    Nothing has been vendored yet only because **`spec-data/` is being held at `v0.8.2`
+    until keystone converges**; the extension snapshot rides along with that same
+    re-vendoring pass. The mechanical work is `spec-data/<pin>/MANIFEST.md`
+    §"Re-vendor discipline", unchanged.
+
+    *(An earlier draft of this item called it "a decision about whether to pin from a second
+    upstream". There is no such decision — extension specs live in the architecture repo,
+    which is simply where they live. Struck rather than left, because a manufactured
+    architectural question is a worse artifact than the stale sentence it replaced.)*
+
+    **Structured 2026-09-06 — `TRACKS.toml` + `make trackcheck`, and the reason it had to
+    come first is the finding.** Before any extension model exists, two of this repo's own
+    gates were shaped so that the first one would have been *absorbed* rather than rejected:
+
+    - **The coverage number is derived from a document-blind pattern.** `§(\d+\.\d+)` yields
+      the same token for `EXTENSION-ATTESTATION §5.7` (attestation's index invariants) and
+      core `§5.7` (delegation caveats) — and core **already has a `5.7` row**. The first
+      attestation citation would have been credited to core's grid and `make coverage` would
+      have reported OK. That is a phantom row arriving **through** the gate whose entire
+      purpose is to prevent phantom rows: §4.7/§6.9 again, one spec body over. Citations are
+      extracted per track now, and a cross-track reference is written sigil-first
+      (`§CORE:6.2`) and excluded from every track's coverage set.
+    - **And the file globs were non-recursive.** `coverage-check.py` and `spec-drift.py` both
+      globbed `tla/*.tla`, so the obvious first reorganization — models into
+      `tla/attestation/` — would have made them **invisible to both gates, which would then
+      stay green while asserting nothing**. Both read the registry now; `trackcheck` walks
+      recursively and cross-checks the walk against git, because `make matrix` reads the
+      engine Makefiles rather than git and can therefore *run* a file no claim-gate can see.
+
+    **Two things fell out of building it, and both are the usual shape.** The cross-track
+    notation's first draft was `CORE §6.2` — prefix, space, sigil — which matched **23 lines
+    of ordinary prose** across 12 files (`WHAT §6.9 SAYS`, `LIVENESS §4.1`, `THE §5.8`, every
+    Spin `-D` macro name) and then *excluded* each match from that line's citation set: a
+    tripwire against miscrediting citations that silently **dropped** them instead. The count
+    held at 28 only because every affected section is cited on some other line too. And
+    `spec-drift`'s per-engine exposure line had been reporting **"15/1169 model files"** — the
+    denominator was the flat glob counting hundreds of gitignored TLC `_TTrace_` artifacts as
+    models. It is 15/24. Neither was found by reading the code.
+
+    `scoped` is a **gated state**: a scoped track must carry no models and no pin, so adding a
+    model file fails the build until the track is promoted *with* a pin — the step where
+    someone states which snapshot the results are about. Per-track subdirectories are the
+    deliberate next step, and are now safe: a file that falls out of a gate's view is a build
+    failure rather than a silent green.
+
+    **Scoped 2026-09-06: `docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md`.** Identity
+    + attestation + quorum is the next phase, and it is a better target than core was: a
+    signed graph with **mutable membership, cached trust, and a temporal query**. Four shapes
+    map onto machinery this repo already has — K-of-N onto `MultisigKN`, chain-walk
+    termination onto `DeepChain`/`Bounds`, the attestation index invariant **I2** onto
+    `Register`'s sequenced writes (*"partial-index states are NOT permitted"* is
+    `RegisterAllOrNothing` with four indexes instead of five facets), and
+    `current_signer_set(as_of)` onto `Revoke`'s verdict determinism over a declared temporal
+    input — **the exact shape where §5.10's `δ` turned out to be missing from the model.**
+
+    Two explicitly stated closure assumptions are already visible in the spec text and are
+    the sharpest targets: quorum's **cached trust** (a validated `quorum-update` is trusted on
+    every subsequent read, with no end-to-end re-validation and none required at cold start —
+    so the whole live signer set rests on *every* write path running arrival-time validation),
+    and the **"previous quorum" pinning rule**, which names its own wrong answer and is
+    therefore a negative control already written for us. Start at `EXTENSION-ATTESTATION`'s
+    substrate, not at identity's 1,617 lines. **"Recovery cluster" is the pre-v3.3 name for an
+    identity quorum** (`SYSTEM-IDENTITY-COMPOSITION.md` §7).
 13. **~~Vacuity, the last of it.~~ DONE 2026-09-06 — no thin positive remains.**
     `Register`'s correct-model atomicity was near-tautological because the five §6.2 writes
     landed in **one assignment**: `tree[h] \in {{}, FACETS}` restated the assignment and could

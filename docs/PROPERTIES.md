@@ -6,6 +6,13 @@ This is the load-bearing honesty document for the release. A formal-methods repo
 that overclaims is the worst kind of overclaim, so this states — per property,
 exactly — the *strength* of each result and where it stops.
 
+> **Which protocol: the `core` track, and only it.** `TRACKS.toml` declares **4 proof
+> tracks** (`make trackcheck`); `core` is the only **modeled** one, and every property
+> below is a statement about it. `attestation`, `quorum` and `identity` are **scoped** —
+> spec landed, nothing vendored, no model, therefore no property on this scorecard. A
+> scoped track that acquires a model file fails the build until it is promoted with a spec
+> pin, so it cannot arrive here without someone stating which snapshot it is about.
+
 > **Which spec version this scorecard is about.** Everything below is machine-checked
 > against the SHA-pinned snapshot named by `spec-data/MODELING-PIN`, currently
 > `spec-data/v0.8.2/` — the Entity Core Protocol at spec version **0.8.2**, which is the
