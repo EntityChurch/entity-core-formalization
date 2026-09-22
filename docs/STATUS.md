@@ -73,7 +73,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 258 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 268 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -98,7 +98,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   gates, exact set per declaration in both directions, tied to the ledger's own pin block,
   with five controls (`neg-sorry`, `neg-axiom`, `neg-ungate`, `neg-dropfile`, `neg-broken`)
   each required to fail for its own reason on the declarations it names. **6 runs, separate
-  from the 258** — they need the sibling
+  from the 268** — they need the sibling
   checkout, and every published number here is reproducible from a bare clone.
   `docs/LEAN-SEAM.md` §7.
 - **The tier was then audited before it was committed, and the audit found five things.**
@@ -114,16 +114,16 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 
 | slice | runs |
 |---|---|
-| TLC green (11 modules + Store liveness slice + `Reentry3` + `Core3`) | 14 |
-| TLC negative controls | 39 |
-| TLC non-vacuity witnesses | 13 |
-| Apalache inductive (23 invariants × base+step, + 2 at N=3) | 50 |
-| Apalache negative controls | 23 |
-| Spin green (7 × safety+LTL, 4 safety-only, 2 × safety+LTL at N=3) | 22 |
-| Spin negative controls | 38 |
+| TLC green (11 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero`) | 15 |
+| TLC negative controls | 40 |
+| TLC non-vacuity witnesses | 15 |
+| Apalache inductive (24 invariants × base+step, + 2 at N=3) | 52 |
+| Apalache negative controls | 24 |
+| Spin green (7 × safety+LTL, 4 safety-only, 3 × safety+LTL variant rows) | 24 |
+| Spin negative controls | 39 |
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
-| **total** | **258** |
+| **total** | **268** |
 
 Plus **6 runs in the Lean seam tier** (`make lean`: 1 green + 5 negative controls), counted
 separately and deliberately: they require an `entity-core-keystone` checkout, so they are not
@@ -206,7 +206,7 @@ what the computation counts. Both now have gates, and both gates were teeth-test
 breaking them — which is how the coverage gate's first draft was caught matching
 `invalid end state` against pan's *search-options header* rather than its error line.
 
-### Two thin positives addressed, and one still open
+### All three thin positives retired
 
 - **Retired.** `Store`'s store-cardinality conjunct was **vacuous** — a single key against a
   bound of 2, so it could not fail (disclosed in `PROPERTIES.md` since Phase 1, never
@@ -221,8 +221,12 @@ breaking them — which is how the coverage gate's first draft was caught matchi
   conjunction. Removed as a structural exclusion rather than patched: the bound has no content
   in models whose servers serve once, so giving it teeth would mean duplicating `Store`.
   Disclosed as vacuous twice before being fixed, which is twice too many.
-- **Still open.** `Register`'s correct-model atomicity remains near-tautological; it has
-  teeth on the control side only. Sequenced-write `Register` is still backlog.
+- **~~Still open.~~ Retired 2026-09-06.** `Register`'s correct-model atomicity was
+  near-tautological; sequenced writes fixed it. The four non-committing §6.2 facets land one
+  per transition, the fifth plus the §6.6 index publish are one atomic commit, and
+  `RegisterSeqWitness` asserts the **pre-0.8.3** invariant and requires it to be violated —
+  which is what distinguishes real sequencing from sequencing-shaped source. Apalache
+  additionally proves `RegisterAllOrNothing` inductive, with its own control.
 - **Still open (new).** `DeepChainBug` / `DeepChainNBug` falsify their target lemma in a
   variant where the *honest* chain no longer runs (`legit_reachable`: `falsified - no trace
   found` at 2 steps). A defect that breaks the model demonstrates less than one that breaks
@@ -587,8 +591,8 @@ item 4.
    the one OPEN row in Class T). Alloy for `Register`'s index↔tree-walk coherence.
    CryptoVerif for computational-model results. §6.11(c) per-request deadlines, which are
    what would make Class-G a liveness bug rather than a crash.
-8. **Widen the TLA+ bounds** — 3-peer / churned-store, and sequenced-write `Register` to
-   retire the last near-tautological positive.
+8. **Widen the TLA+ bounds** — 3-peer / churned-store. *(The other half of this item,
+   ~~sequenced-write `Register`~~, is done — see item 13.)*
 9. **~~Nothing checks a number in prose.~~ CLOSED 2026-08-30 — `make coverage` **and**
    `make runcount`.** The remaining half named below is now gated: `tools/runcount.py` derives
    the per-target run counts from `TLC_*`/`APALACHE_*`/`SPIN_*`/`PV_*`/`TM_*` in the three
@@ -621,11 +625,39 @@ item 4.
    tables in `tla/`, `spin/` and `tamarin/Makefile` rather than copied forward:
    14 + 39 + 13 + 50 + 23 + 22 + 38 + 15 + 15 + 14 + 15 = **258**. That the derivation is
    easy to run by hand and was not run is the whole of item 9.
-10. **Model the §5.10 skew tolerance `δ`.** Found while writing the seam ledger (row **O4**):
-    §5.10's cross-clock temporal model makes `δ` a declared Layer-1 input *alongside* `t`, and
-    states the determinism argument in terms of both. `Revoke.tla` models `t` and not `δ`. The
-    shape is already there — two peers with different declared `δ` may permissibly differ,
-    exactly as with different `t` — so the extension is small.
+10. **~~Model the §5.10 skew tolerance `δ`.~~ DONE 2026-09-06, on all three engines — and the
+    reason it mattered is sharper than "an unmodeled input".** Found while writing the seam
+    ledger (row **O4**, now CLOSED). §5.10's cross-clock temporal model (0.8.1, W7 Knob 3)
+    makes `δ` a declared Layer-1 input *alongside* `t` and states the determinism argument in
+    terms of both. `Revoke.tla` modeled `t` and not `δ` — which means its `VerdictFnOfLayer1`
+    was **an accidentally-true statement about a model that could not express the case the
+    invariant was guarding**. That is the same shape as a vacuous invariant, arriving through
+    a missing variable rather than a missing state.
+
+    `δ` is now a per-peer declared tolerance in `tla/Revoke.tla`, `tla/RevokeApalache.tla` and
+    `spin/revoke.pml`; the temporal check is the clause's two DENY rules negated; and the
+    determinism antecedent carries `delta["A"] = delta["B"]` because §5.10 puts it there.
+    **Apalache proves the strengthened invariant inductive**, so the result is unbounded in
+    steps, not bounded-exhaustive. +6 runs (264 total).
+
+    Three runs, each answering a different question — and one of them was wrong first:
+    - **`RevokeDeltaBlindBug`** (control, TLC + Spin `-DDELTABLIND`) — the pre-0.8.3
+      antecedent, blind to `δ`. The defect it names is a verifier that *applies* a tolerance
+      without *declaring* it, which is the sole condition §5.10 attaches to `δ`: "it introduces
+      no concealed state."
+    - **`RevokeDeltaWitness`** (non-vacuity) — `δ` decides a verdict with every other Layer-1
+      input equal. **Its first draft omitted the `revObserved` conjunct**, and TLC satisfied it
+      immediately with a state where the two peers differed on *observed revocation* and `δ`
+      differed only incidentally. It fired, looked like success, and supported nothing. Caught
+      by reading the counterexample trace rather than the exit status. **A witness that fires
+      for the wrong reason is worse than a control that does, because firing is what a witness
+      is supposed to do** — there is no red to investigate.
+    - **`RevokeDeltaZero`** (green, TLC + Spin `-DDELTAZERO`) — the clause says *"`δ = 0`
+      reproduces today's exact behavior"*, which is an equivalence about any implementation of
+      it, so we run it instead of reading it. A sign error, a one-sided tolerance, or the
+      tolerance on the wrong operand all pass the default green — which admits `δ = 1` and
+      therefore *expects* a wider window — and fail here. **D13 asked of a green row:** "the
+      invariants hold" is satisfied by a model with the wrong validity window.
 11. **Tie models to conformance vectors.** Only the Class-G deadlock is currently grounded
     against a reference impl; where a sibling conformance vector exists for a modeled
     property, cite it to turn "spec says" into "spec says *and* a passing test exercises it."
@@ -634,7 +666,30 @@ item 4.
 12. **Phase 3 extension-protocol attacker models** stay gated on vendoring `EXTENSION-*`,
     which is still not in `spec-data/`. Note that §5.8's registry rows and §5.9's continuation
     depth brake are now modeled at the *core* level, so the gate is narrower than it was.
-13. **Vacuity, the last of it.** `Register`'s correct-model atomicity is still
-    near-tautological — teeth on the control side only — and sequenced-write `Register` is
-    what would retire it. This is the one thin positive left standing; see item 8 and
-    `docs/PROPERTIES.md` §C.4.
+13. **~~Vacuity, the last of it.~~ DONE 2026-09-06 — no thin positive remains.**
+    `Register`'s correct-model atomicity was near-tautological because the five §6.2 writes
+    landed in **one assignment**: `tree[h] \in {{}, FACETS}` restated the assignment and could
+    not fail, so every tooth was on the control side.
+
+    The four non-committing facets now land **one per transition, in any order**, with the
+    fifth write and the §6.6 index publish as a single atomic **commit point**; the teardown
+    mirrors it, because the stale-*positive* hazard runs the other way. `RegisterAllOrNothing`
+    and `IndexMatchesTree` now hold by a **discipline** rather than by the absence of any other
+    state, and Apalache proves `RegisterAllOrNothing` **inductive** — not worth doing while it
+    was a tautology — with its own negative control, since an inductive invariant with no
+    control is the same trap one level up.
+
+    **The evidence is a run, not a rewrite.** `RegisterSeqWitness` asserts the **pre-0.8.3**
+    invariant and requires it to be **violated**: the old positive is now false (the tree
+    reaches `{"manifest"}`) while the properties that matter still hold. That is the sharpest
+    form the claim could take, and it is what rules out the failure mode that would otherwise
+    replace the old one — **a "sequenced" model whose sequence is never reached is the same
+    vacuity in new source code.** Adding write-loop labels does not prove the loop is entered.
+
+    Two consequences, stated rather than absorbed:
+    - `NoPartialResidue` is now scoped to **settled** handlers. A partial tree in flight is the
+      model working; a partial tree at rest is the defect, and that is what §6.2 forbids.
+    - `RegisterAtomicBug` now fails on `RegisterAllOrNothing` — **in TLC and in Spin, agreeing**
+      — which is the defect its own header names. The old verdict was an incidental side effect
+      of the collapsed-write shape, so this is a control that went from failing for a
+      neighbouring reason to failing for its stated one.

@@ -85,7 +85,14 @@ SPIN_GREEN_SAFETY := authority bounds conncodes bootstrap
 # verdict, but it aborts, so the bound is carried explicitly instead of being discovered.
 SPIN_GREEN_N3 := \
   "reentry|-DNPEERS=3|$(LTLFLAGS)" \
-  "core|-DNPEERS=3|-DNFAIR=4"
+  "core|-DNPEERS=3|-DNFAIR=4" \
+  "revoke|-DDELTAZERO|$(LTLFLAGS)"
+
+# The revoke row above is not an N-peer variant — it reuses this table because it has the same
+# MODEL|DEFS|LTLFLAGS shape. It is §5.10 (0.8.1 W7 Knob 3) run at delta == 0, which the clause
+# states "reproduces today's exact behavior". A GREEN row whose job is to catch a wrong GREEN:
+# the default revoke build admits delta == 1 and therefore EXPECTS a wider validity window, so
+# a transcription with a sign error or a one-sided tolerance passes it and fails here.
 
 # NEGATIVE CONTROLS — each row MUST report errors > 0. Format: MODEL DEFS MODE.
 # MODE is `safety` (assertions / invalid-end) or `ltl` (acceptance cycles under -a -f).
@@ -127,6 +134,12 @@ SPIN_GREEN_N3 := \
 # assertion expression. The fragment names which property broke — which is what the check
 # has to establish — while pinning the full expression would make any cosmetic edit
 # elsewhere in the model read as a regression. Same trade as TLC_NEG's verdict line.
+# register -DNOATOMIC's signature changed at 0.8.3-dev, from the NoPartialResidue assertion
+# `(tree[0]==0)||(tree[0]==5)` to RegisterAllOrNothing's `!(disp[0])||(tree[0]==5)`. Sequenced
+# writes make a partial tree legitimate IN FLIGHT, so NoPartialResidue is now scoped to settled
+# handlers and no longer the assertion this control trips. The new signature is the defect the
+# control's own header names — "a half-built handler is dispatch-visible without its grant" —
+# and it matches what TLC's RegisterAtomicBug now reports, which is the cross-check working.
 SPIN_NEG := \
   "reentry|-DSERIALIZED|safety|invalid end state" \
   "reentry|-DNOATOMICFRAME|safety|assertion violated !(interleaved)" \
@@ -138,11 +151,12 @@ SPIN_NEG := \
   "store|-DSILENTDROP|ltl|acceptance cycle" \
   "revoke|-DNOHONOR|safety|!(revObserved[0])||" \
   "revoke|-DLEAKL1|safety|(t[0]!=t[1])||" \
+  "revoke|-DDELTABLIND|safety|(t[0]!=t[1])||(revObserved[0]!=revObserved[1])" \
   "revoke|-DNOCONVERGE|ltl|acceptance cycle" \
   "emit|-DEMITFIRE|safety|(sEvt==hashNew)&&(tEvt==changed)" \
   "emit|-DEMITMARKER|safety|!(tEvt)||(etype==" \
   "emit|-DEMITSTALL|ltl|acceptance cycle" \
-  "register|-DNOATOMIC|safety|(tree[0]==0)||(tree[0]==5)" \
+  "register|-DNOATOMIC|safety|!(disp[0])||(tree[0]==5)" \
   "register|-DNOSYSGUARD|safety|assertion violated (tree[1]==0)" \
   "register|-DWEDGE|ltl|acceptance cycle" \
   "authority|-DOPTALLOW|safety|(kind[d]==2)&& !(hasGrant[d])" \

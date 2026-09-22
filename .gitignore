@@ -1,9 +1,18 @@
+# NOTE ON SYNTAX, learned 2026-09-06: a `#` starts a comment ONLY at the start of a line.
+# Trailing text after a pattern is PART OF THE PATTERN, so `*.old   # backup` is a rule that
+# matches a file literally named that and therefore matches nothing. Two rules here were
+# written that way and had been inert since they were added — `*.st` and `*.old` — found when
+# `pcal.trans` left a Revoke.old that showed up as untracked despite an apparent rule for it.
+# Comments go on their own line. Verify a new rule with `git check-ignore -v <path>` rather
+# than by reading it: an ignore rule that does nothing looks exactly like one that works.
+#
 # Toolchain binaries — never commit jars/binaries; document how to fetch them instead
 tla2tools.jar
 *.jar
 tla/toolbox-state/
 tla/states/
-*.st                 # TLC state dumps
+# TLC state dumps
+*.st
 MC.out
 
 # TLA+ Toolbox / TLC scratch
@@ -11,7 +20,8 @@ MC.out
 metadir/
 *_TTrace_*.tla
 *_TTrace_*.bin
-*.old                 # pcal.trans pre-translation backup
+# pcal.trans pre-translation backup
+*.old
 
 # Tamarin / ProVerif build + proof artifacts
 tamarin/output/

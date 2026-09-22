@@ -17,6 +17,83 @@ moves only as the last step of re-validating the models, never on a file copy.
 
 ## [Unreleased]
 
+### Changed — `Register`'s writes are sequenced, and the last thin positive is retired
+
+`Register`'s correct-model atomicity was **near-tautological**, disclosed as such since 0.8.2
+and the only thin positive left in the repo. The five §6.2 writes landed in **one assignment**,
+so `tree[h] ∈ {{}, FACETS}` restated the assignment and could not fail. Every tooth was on the
+control side; the green side asserted the model's own shape back at itself.
+
+The four non-committing facets now land **one per transition, in any order**, with the fifth
+write and the §6.6 index publish as a single atomic **commit point**. The teardown mirrors it,
+because the stale-*positive* hazard — dispatching a handler whose grant is already gone — runs
+the other way. `RegisterAllOrNothing` and `IndexMatchesTree` now hold because of a
+**discipline**, not because the model has no other state to be in.
+
+**The evidence is a run, not a rewrite.** `RegisterSeqWitness` asserts the **pre-0.8.3**
+invariant and requires it to be **violated**: the old positive is now false — the tree really
+does reach `{"manifest"}` — while the properties that matter still hold. That rules out the
+failure mode which would otherwise have replaced the old one: **a "sequenced" model whose
+sequence is never reached is the same vacuity in new source code.** Adding write-loop labels
+does not prove the loop is entered.
+
+The property also got *stronger*, not merely honest: Apalache now proves `RegisterAllOrNothing`
+**inductive (unbounded in steps)**, which was not worth doing while it was a tautology, and it
+carries its own negative control — an inductive invariant with no control is the same trap one
+level up. The matrix is **268 runs**.
+
+Two consequences stated rather than absorbed:
+
+- **`NoPartialResidue` is scoped to *settled* handlers.** A partial tree in flight is the model
+  working; a partial tree at rest is the defect, and that is what §6.2 actually forbids.
+- **`RegisterAtomicBug` now fails on `RegisterAllOrNothing`** — in TLC *and* in Spin, agreeing,
+  which is the cross-check doing its job. That is the defect the control's own header names,
+  "a half-built handler is dispatch-visible without its grant". The previous verdict was an
+  incidental side effect of the collapsed-write shape, so this is a control that moved from
+  failing for a neighbouring reason to failing for its stated one.
+
+### Added — §5.10's skew tolerance `δ` is modeled, on all three engines
+
+Ledger row **O4** was the only OPEN row facing nothing: §5.10's cross-clock temporal model
+(0.8.1, W7 Knob 3) makes `δ` a declared Layer-1 input *alongside* the evaluation timestamp
+`t`, and `Revoke.tla` modeled `t` and not `δ`.
+
+The consequence was worse than "an input is missing". The module's cross-peer determinism
+invariant — same Layer-1 inputs ⇒ same verdict — **could not express the case it was
+guarding**, because the model had no way to make two peers differ on `δ`. It was
+accidentally true: the same shape as a vacuous invariant, arriving through a missing variable
+rather than a missing state.
+
+`δ` is now a per-peer declared tolerance in `tla/Revoke.tla`, `tla/RevokeApalache.tla` and
+`spin/revoke.pml`, transcribed as §5.10's two DENY rules negated (`expires_at + δ < t`,
+`t + δ < not_before`), and the determinism antecedent carries `delta["A"] = delta["B"]`
+because the clause puts it there: *"two peers with different declared `δ` may permissibly
+differ at the boundary, the same way different `t` does."* **Apalache proves the strengthened
+invariant inductive**, so this is unbounded in steps rather than bounded-exhaustive. The
+matrix is **264 runs**.
+
+Three runs, each answering a different question:
+
+- **`RevokeDeltaBlindBug`** — the pre-0.8.3 antecedent, blind to `δ`. The defect it names is a
+  verifier that *applies* a tolerance without *declaring* it, which is the only condition
+  §5.10 attaches to `δ`: "it introduces no concealed state."
+- **`RevokeDeltaWitness`** — `δ` decides a verdict with every other Layer-1 input held equal.
+- **`RevokeDeltaZero`** — the clause states *"`δ = 0` reproduces today's exact behavior"*, so
+  the equivalence is run rather than read. A sign error or a one-sided tolerance passes the
+  default green, which admits `δ = 1` and therefore expects a wider window, and fails here.
+  D13 applied to a green row: *"the invariants hold"* is satisfied by a model with the wrong
+  validity window.
+
+**The witness was wrong first, and that is the transferable part.** Its first draft did not
+pin `revObserved`, so TLC satisfied it with a state where the two peers differed on *observed
+revocation* and `δ` differed only incidentally — a witness firing for a claim it does not
+support. It was caught by reading the counterexample trace, not the exit status. **A witness
+that fires for the wrong reason is harder to notice than a control that does**, because
+firing is the outcome a witness is supposed to produce: there is no red to investigate.
+
+`make runcount` caught all 14 stale prose sites in one pass, including five per-slice table
+rows. That is the gate doing precisely the job it was built for two entries below.
+
 ### Closed — §5.5a has a theorem per pattern form, and the seam gate caught the movement
 
 The `hframed` finding this repo routed to `entity-core-keystone` was adopted. §5.5a admits

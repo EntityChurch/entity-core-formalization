@@ -202,7 +202,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
    Same trust boundaries Lean takes as axioms — not re-proven here.
 3. **Liveness is bounded-only** (see A2). Safety is lifted to unbounded by Apalache;
    liveness is not.
-4. **Vacuity — one thin positive retired, one remaining, and the gap now instrumented.**
+4. **Vacuity — all three thin positives now retired, and the gap instrumented.**
    - *Retired at 0.8.2:* `Store`'s store-cardinality conjunct was **vacuous** — the model
      held a single key while asserting a bound of 2, so `Cardinality(store) ≤ MaxStore`
      could not fail, and the Apalache port made it explicit as `store ⊆ {"k"}`. The store
@@ -220,9 +220,37 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      `Store`'s machinery and duplicating an owner. `Store`'s `ResourceBounded` is the real
      §4.8/§4.9(b) obligation. Declared as a structural exclusion in each model's header —
      this had been disclosed as vacuous twice without being fixed.
-   - *Still standing:* `Register`'s correct-model atomicity is **near-tautological** — teeth
-     on the control side only. Sequenced-write `Register` is what would retire it. This is
-     now the only thin positive left; see `docs/COVERAGE-MATRIX.md` §6.
+   - *~~Still standing:~~ **RETIRED 2026-09-06**, and the retirement is a run rather than a
+     rewrite.* `Register`'s correct-model atomicity was **near-tautological**: the five §6.2
+     writes landed in one assignment, so `tree[h] \in {{}, FACETS}` restated the assignment and
+     could not fail. All the teeth were on the control side.
+
+     The four non-committing facets now land **one per transition, in any order**, with the
+     fifth write and the §6.6 index publish as a single atomic **commit point** — and the
+     teardown mirrors it. So `RegisterAllOrNothing` and `IndexMatchesTree` hold because of a
+     *discipline*, not because no other state exists.
+
+     **`RegisterSeqWitness` is the proof that this is real, and it is the sharpest form the
+     evidence could take: it asserts the PRE-0.8.3 invariant, and requires it to be VIOLATED.**
+     The old positive is now false — the tree does reach `{"manifest"}` — while the properties
+     that matter still hold. A "sequenced" model whose sequence is never reached would be the
+     same vacuity in new source code, and only a violated reachability assertion rules that out.
+
+     Two consequences worth stating rather than absorbing:
+     - **`NoPartialResidue` is now scoped to *settled* handlers.** A partial tree in flight is
+       the model working; a partial tree at rest is the defect. §6.2's claim is about what a
+       handler comes to rest in.
+     - **`RegisterAtomicBug` now fails on `RegisterAllOrNothing`, not `NoPartialResidue`** — in
+       TLC *and* in Spin, which is the cross-check agreeing. That is the defect the control's
+       own header names ("a half-built handler is dispatch-visible without its grant"); the old
+       verdict was an incidental side effect of the collapsed-write shape. A control failing
+       for its stated reason rather than a neighbouring one is D13's whole point.
+
+     **And the property got stronger, not just honest.** `RegisterAllOrNothing` is now proven
+     **inductive (unbounded in steps)** by Apalache — which was not worth doing before, because
+     proving a tautology unbounded proves nothing. It carries its own negative control
+     (`ConstInitBugAoN`), since an inductive invariant with no control is the same trap one
+     level up. **No thin positive remains.**
    - *A trap in the tooling, recorded:* a bounded Apalache negative control that is too
      SHORT to reach its defect reports `NoError` — textually identical to "the invariant
      holds". One control was observed passing at length 4 and failing at 5. Lengths in
@@ -287,7 +315,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Eleven targets decide the 258 runs.
+     the finding is what made that discipline necessary). Eleven targets decide the 268 runs.
      **The counts below are re-derived from the gate tables in `tla/`, `spin/` and
      `tamarin/Makefile`, not carried forward:** this table read "Ten targets decide the 238
      runs" until 2026-08-30, two matrix growths after the fact, which is item 9 of
@@ -295,13 +323,13 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
 
      | Target | Runs | Grades on |
      |---|---|---|
-     | `tlc-green` | 14 | TLC's **completion line** *and* a cfg that declares at least one `INVARIANT`/`PROPERTY` — exit status alone is satisfied by a cfg that checks nothing, which TLC reports with the same success text |
-     | `tlc-neg` | 39 | declared verdict line per row |
-     | `tlc-witness` | 13 | declared violation line per row |
-     | `apalache-green` | 50 | Apalache exit status (25 rows × base + inductive step) — fail-safe: a green slice wants success, so a tool error correctly fails the build |
-     | `apalache-neg` | 23 | `EXITCODE: ERROR (12)`, not merely non-zero |
-     | `spin green` | 22 | explicit `errors: 0` |
-     | `spin neg` | 38 | the declared pan failure signature, matched against the `pan:N:` error line — a positive `errors: N` alone cannot tell a caught assertion from a deadlock |
+     | `tlc-green` | 15 | TLC's **completion line** *and* a cfg that declares at least one `INVARIANT`/`PROPERTY` — exit status alone is satisfied by a cfg that checks nothing, which TLC reports with the same success text |
+     | `tlc-neg` | 40 | declared verdict line per row |
+     | `tlc-witness` | 15 | declared violation line per row |
+     | `apalache-green` | 52 | Apalache exit status (25 rows × base + inductive step) — fail-safe: a green slice wants success, so a tool error correctly fails the build |
+     | `apalache-neg` | 24 | `EXITCODE: ERROR (12)`, not merely non-zero |
+     | `spin green` | 24 | explicit `errors: 0` |
+     | `spin neg` | 39 | the declared pan failure signature, matched against the `pan:N:` error line — a positive `errors: N` alone cannot tell a caught assertion from a deadlock |
      | `proverif-green` | 15 | `PV_EXPECT`, per query |
      | `proverif-neg` | 15 | `PV_NEG_EXPECT`, per query |
      | `tamarin-green` / `-neg` | 14 / 15 | `TM_EXPECT` / `TM_NEG_EXPECT`, per lemma, + wellformedness |
@@ -315,7 +343,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      moved.
 
      *A twelfth and thirteenth target, in a tier of their own* — `make lean`, **6 runs**,
-     excluded from the 258 because they need an `entity-core-keystone` checkout that a bare
+     excluded from the 268 because they need an `entity-core-keystone` checkout that a bare
      clone does not have (`docs/LEAN-SEAM.md` §7):
 
      | Target | Runs | Grades on |

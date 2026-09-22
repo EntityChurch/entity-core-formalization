@@ -152,7 +152,7 @@ The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**258 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**268 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
 surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
 audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a
@@ -262,9 +262,15 @@ bound.
 2. **Liveness is bounded; safety is now unbounded (TLA+).** As §4 — the inductive Apalache
    proofs lift the key *safety* invariants to all-N; *liveness* (deadlock-/stall-freedom,
    settling, convergence) remains small-scope exhaustive in TLC + Spin.
-3. **One thin positive left.** `Register`'s correct-model atomicity is near-tautological —
-   teeth on the control side only; sequenced writes would harden the green side. The other two
-   are retired: `Store`'s store-cardinality conjunct was de-vacuumed at 0.8.2 (multi-key,
+3. **~~One thin positive left.~~ None left — retired 2026-09-06.** `Register`'s correct-model
+   atomicity was near-tautological, with teeth on the control side only, because the five §6.2
+   writes landed in one assignment. They are now sequenced — four facets one per transition,
+   the fifth plus the §6.6 index publish as a single atomic commit — so the invariants hold by
+   a discipline rather than by the absence of any other state. The evidence is a run, not a
+   rewrite: `RegisterSeqWitness` asserts the **pre-0.8.3** invariant and requires it to be
+   violated, which is what rules out a sequencing that is never reached. `RegisterAllOrNothing`
+   is now also proven **inductive** in Apalache — worth doing only once it stopped being a
+   tautology. The other two were retired earlier: `Store`'s store-cardinality conjunct was de-vacuumed at 0.8.2 (multi-key,
    discharged by refcount correctness), and `Reentry`/`Core`'s inherited `StoreBounded` was
    **removed** in the follow-up pass — one literal key written once against a bound ≥ 1 could
    not fail, and `core.pml`'s Spin counterpart clamped the write at the bound it then asserted.

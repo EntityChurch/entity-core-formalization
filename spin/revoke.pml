@@ -31,6 +31,17 @@
  *                 VerdictFnOfLayer1 VIOLATED (matches TLA+ RevokeLeakBug).
  *   -DNOCONVERGE  NoConverge=TRUE — a peer may finish blind, never observing the marker ->
  *                 RevocationConverges (liveness) FAILS (matches TLA+ RevokeNoConvergeBug).
+ *   -DDELTABLIND  §5.10 W7 Knob 3 NEG CONTROL — the determinism assertion written with the
+ *                 PRE-0.8.3 antecedent, blind to the declared skew tolerance `delta`. The
+ *                 defect it names is a verifier that APPLIES a tolerance without DECLARING
+ *                 it as a Layer-1 input, which §5.10 admits `delta` only on condition of
+ *                 ("it introduces no concealed state") -> that assertion VIOLATED
+ *                 (matches TLA+ RevokeDeltaBlindBug).
+ *   -DDELTAZERO   §5.10 W7 Knob 3: pin every peer to delta == 0. The clause states
+ *                 "`delta = 0` reproduces today's exact behavior", so this re-runs the full
+ *                 property set against the pre-0.8.3 boundary and MUST be green. It catches
+ *                 a transcription that widened the window in a way the default build (which
+ *                 EXPECTS a wider window) cannot (matches TLA+ RevokeDeltaZero).
  *
  * Build/run (from spin/, image entity-spin): the ltl{} claim disables invalid-end/assert
  * detection in a default pan run, so safety compiles the claim OUT (-DNOCLAIM) and liveness
@@ -60,10 +71,27 @@ bool markerWritten = false;   /* §5.1: revocation marker written (put(path,null
 bool revObserved[2] = false;  /* §5.10: has peer p OBSERVED the marker? (async-convergent) */
 byte t[2] = 1;                /* §5.10: each peer's per-verdict evaluation timestamp (init 1) */
 bool banned[2] = false;       /* §5.10 Layer-2: a purely-local banlist bit (policy state) */
+byte delta[2] = 0;            /* §5.10 (0.8.1 W7 Knob 3): each peer's DECLARED skew tolerance —
+                               * a Layer-1 input ALONGSIDE t, per the clause's own words. Not
+                               * Layer-2 policy: unlike `banned`, it legitimately changes the
+                               * verdict, and that is why it belongs in the antecedent below. */
 
-/* §5.10 Layer-1 verdict: ChainValid (abstract true) /\ TTLok(t==1) /\ honor-revocation /\
+/* §5.10 cross-clock temporal model (0.8.1 W7 Knob 3), the two DENY rules negated:
+ *   `expires_at + delta < t -> DENY`   and   `t + delta < not_before -> DENY`
+ * giving the window [not_before - delta, expires_at + delta]. NOTBEFORE == EXPIRESAT == 1
+ * keeps the pre-0.8.3 boundary; at delta == 0 this reduces to (t[p] == 1) character for
+ * character, which -DDELTAZERO runs as the clause's own stated equivalence.
+ *
+ * Re-derived from the clause here rather than translated from Revoke.tla — the whole value of
+ * this file is that it is an INDEPENDENT encoding, so a shared transcription error is what it
+ * exists to catch. */
+#define NOTBEFORE 1
+#define EXPIRESAT 1
+#define ttlok(p)  ( (NOTBEFORE <= t[p] + delta[p]) && (t[p] <= EXPIRESAT + delta[p]) )
+
+/* §5.10 Layer-1 verdict: ChainValid (abstract true) /\ ttlok /\ honor-revocation /\
  * (only under the LEAK defect) the local banlist. Promela conditional-expr form (c -> a : b). */
-#define verdict(p) ( (t[p] == 1) \
+#define verdict(p) ( ttlok(p) \
                      && (HONORREV -> (!revObserved[p]) : true) \
                      && (LEAK     -> (!banned[p])      : true) )
 
@@ -71,7 +99,14 @@ bool banned[2] = false;       /* §5.10 Layer-2: a purely-local banlist bit (pol
  * (written as !antecedent || consequent). Checked at every state mutation. */
 inline checkInv() {
   assert( (!revObserved[A] || !verdict(A)) && (!revObserved[B] || !verdict(B)) );
+#ifdef DELTABLIND
+  /* NEG CONTROL: the pre-0.8.3 antecedent, blind to `delta`. MUST be violated once two peers
+   * can declare different tolerances — that is the point of the control. */
   assert( t[A] != t[B] || revObserved[A] != revObserved[B] || (verdict(A) == verdict(B)) );
+#else
+  assert( t[A] != t[B] || delta[A] != delta[B] || revObserved[A] != revObserved[B]
+          || (verdict(A) == verdict(B)) );
+#endif
 }
 
 /* Each peer samples its per-verdict `t` + (Layer-1-irrelevant) local policy, then asynchronously
@@ -81,6 +116,11 @@ proctype peer(byte id) {
   atomic {
     if :: t[id] = 1 :: t[id] = 2 fi;
     if :: banned[id] = true :: banned[id] = false fi;
+#ifdef DELTAZERO
+    delta[id] = 0;   /* the clause's own equivalence check: delta = 0 is pre-0.8.3 behaviour */
+#else
+    if :: delta[id] = 0 :: delta[id] = 1 fi;
+#endif
     checkInv();
   }
   /* PSync (§5.10): observation is async — converges once the marker exists. */

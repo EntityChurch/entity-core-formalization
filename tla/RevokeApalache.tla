@@ -31,13 +31,25 @@ VARIABLES
   \* @type: Str -> Int;
   t,
   \* @type: Str -> Bool;
-  banned
+  banned,
+  \* @type: Str -> Int;
+  \* §5.10 (0.8.1, W7 Knob 3): each peer's DECLARED skew tolerance — a Layer-1 input
+  \* alongside `t`, per the clause's own words ("it introduces no concealed state").
+  delta
 
-vars == << markerWritten, revObserved, t, banned >>
+vars == << markerWritten, revObserved, t, banned, delta >>
 
 \* ----- §5.10 verdict (transcribed verbatim from Revoke.tla) -----
 ChainValid == TRUE
-TTLok(p)   == t[p] = 1
+\* §5.10 cross-clock temporal model (0.8.1, W7 Knob 3), the two DENY rules negated:
+\*   `expires_at + delta < t -> DENY` and `t + delta < not_before -> DENY`,
+\* window [not_before - delta, expires_at + delta]. NotBefore = ExpiresAt = 1 keeps the
+\* pre-0.8.3 boundary; at delta = 0 this is `t[p] = 1` exactly, which is what the scalar
+\* TLC row RevokeDeltaZero runs as the clause's own equivalence check.
+NotBefore  == 1
+ExpiresAt  == 1
+TTLok(p)   == /\ NotBefore <= t[p] + delta[p]
+              /\ t[p] <= ExpiresAt + delta[p]
 Verdict1(p) == /\ ChainValid
                /\ TTLok(p)
                /\ (IF HonorRevocation THEN ~revObserved[p] ELSE TRUE)
@@ -47,8 +59,11 @@ Verdict1(p) == /\ ChainValid
 RevokedNeverPasses == \A p \in Peers : revObserved[p] => ~Verdict1(p)
 
 \* §5.10 cross-peer determinism MUST: same t and same observed-revocation => identical verdict.
+\* `delta` is in the antecedent because §5.10 puts it there: "two peers with different
+\* declared `delta` may permissibly differ at the boundary, the same way different `t` does."
 VerdictFnOfLayer1 ==
-  (t["A"] = t["B"] /\ revObserved["A"] = revObserved["B"]) => (Verdict1("A") = Verdict1("B"))
+  (t["A"] = t["B"] /\ delta["A"] = delta["B"] /\ revObserved["A"] = revObserved["B"])
+    => (Verdict1("A") = Verdict1("B"))
 
 \* ----- type/domain invariant (the inductive strengthening) -----
 TypeOK ==
@@ -56,6 +71,7 @@ TypeOK ==
   /\ revObserved \in [Peers -> BOOLEAN]
   /\ t \in [Peers -> {1, 2}]      \* reachable t domain (Init=1, Sample in {1,2}) — §5.10 boundary
   /\ banned \in [Peers -> BOOLEAN]
+  /\ delta \in [Peers -> {0, 1}]  \* reachable delta domain (Init=0, Sample in {0,1}) — W7 Knob 3
 
 \* The invariants we prove inductive (TypeOK strengthens each to be inductive).
 InvDet  == TypeOK /\ VerdictFnOfLayer1
@@ -67,21 +83,23 @@ Init ==
   /\ revObserved = [p \in Peers |-> FALSE]
   /\ t = [p \in Peers |-> 1]
   /\ banned = [p \in Peers |-> FALSE]
+  /\ delta = [p \in Peers |-> 0]
 
 Sample(p) ==
-  \E tv \in {1, 2} : \E bv \in BOOLEAN :
+  \E tv \in {1, 2} : \E bv \in BOOLEAN : \E dv \in {0, 1} :
     /\ t' = [t EXCEPT ![p] = tv]
     /\ banned' = [banned EXCEPT ![p] = bv]
+    /\ delta' = [delta EXCEPT ![p] = dv]
     /\ UNCHANGED << markerWritten, revObserved >>
 
 Observe(p) ==
   /\ markerWritten
   /\ revObserved' = [revObserved EXCEPT ![p] = TRUE]
-  /\ UNCHANGED << markerWritten, t, banned >>
+  /\ UNCHANGED << markerWritten, t, banned, delta >>
 
 Write ==
   /\ markerWritten' = TRUE
-  /\ UNCHANGED << revObserved, t, banned >>
+  /\ UNCHANGED << revObserved, t, banned, delta >>
 
 Next ==
   \/ Write

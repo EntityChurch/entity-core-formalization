@@ -346,8 +346,13 @@ bitten by it and treats it as a first-class hazard:
   **Removed**, not patched: the bound has no content in models whose servers serve once, so
   giving it teeth would mean duplicating `Store`. Declared as a structural exclusion in each
   model. It had been disclosed as vacuous twice without being fixed.
-- **Known and open:** `Register`'s correct-model atomicity is near-tautological; it has teeth
-  on the control side only. This is the last one.
+- **~~Known and open:~~ Retired 2026-09-06.** `Register`'s correct-model atomicity was
+  near-tautological — five §6.2 writes in one assignment, so the invariant restated it. The
+  four non-committing facets now land one per transition with the fifth write and the index
+  publish as a single atomic commit, and `RegisterSeqWitness` asserts the *pre-0.8.3* invariant
+  and requires it to be **violated** — so the sequencing is proven reached, not just written.
+  `RegisterAllOrNothing` is additionally proven **inductive** by Apalache, which was not worth
+  doing while it was a tautology. **No thin positive remains.**
 - **A trap in the tooling:** a bounded Apalache negative control that is too *short* to reach
   its defect reports `NoError`, which is textually identical to "the invariant holds". One
   control was observed passing at length 4 and failing at 5. Lengths in `tla/Makefile` now

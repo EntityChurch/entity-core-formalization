@@ -53,7 +53,7 @@ So what binds here is the honesty half of the framework:
   the gate that builds the *sibling keystone peer's* Lean proof track (`entity-lean` image,
   `make lean-image`) and grades its axiom sets. `make lean` = `leanseam` + `leanproof` +
   `leanproof-neg`; it needs the keystone checkout, so it is **excluded from `make matrix`**
-  rather than skipped inside it, and its 6 runs are counted separately from the 258. Maude 3.4 — Tamarin's required rewriting backend — is pinned via
+  rather than skipped inside it, and its 6 runs are counted separately from the 268. Maude 3.4 — Tamarin's required rewriting backend — is pinned via
   a Tamarin-blessed prebuilt binary in `tamarin/Containerfile.tamarin` (apt's 3.2 is too old).
 - Resource caps live in `caps.mk` (included by root + sub-Makefiles); `CAP_MEM=2g`,
   no swap (`CAP_SWAP == CAP_MEM` → the container is OOM-killed cleanly at the cap instead of
@@ -83,7 +83,7 @@ is the learning on-ramp; `docs/PROPERTIES.md` is the PROVEN/MODELED scorecard.
 **Status:** pinned at `v0.8.2` and `make specdrift` reports **no drift** — the models
 transcribe the live spec. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**258-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+**268-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
 (15 ProVerif / 14 Tamarin lemmas), 100 negative controls and 13 non-vacuity witnesses.
 No inductive invariant is deferred; no control is known-weak.

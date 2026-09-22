@@ -51,6 +51,22 @@
 #define PARTIAL  1     /* only manifest+iface written — dispatch-visible without its grant */
 #define FULL     5     /* all five §6.2 facets present -> §6.6 dispatchable */
 
+/* SEQUENCED WRITES (0.8.3-dev) — retiring a near-tautological positive.
+ *
+ * Until 0.8.3 both this model and the TLA+ one wrote all five §6.2 facets in ONE step, which
+ * made `tree[h] in {EMPTY, FULL}` unfalsifiable: it restated the assignment. All the teeth
+ * were on the control side (../docs/PROPERTIES.md §C.4).
+ *
+ * With sequencing the four non-committing facets land ONE PER TRANSITION, so the tree really
+ * does pass through partial counts, and what keeps the §6.2/§6.6 invariants true is a
+ * DISCIPLINE: the fifth write and the index publish are one atomic commit. `NoPartialResidue`
+ * is therefore rescoped to SETTLED handlers — a partial tree in flight is the model working,
+ * a partial tree at rest is the defect. */
+#define WRITING       7
+#define UNWRITING     8
+#define settled(h)    (rphase[h] != WRITING && rphase[h] != UNWRITING && \
+                       rphase[h] != REGISTERING && rphase[h] != UNREGISTERING)
+
 /* lifecycle phases (§6.2). */
 #define INIT          0
 #define REGISTERING   1
@@ -77,9 +93,11 @@ byte rphase[2] = INIT;
 /* §6.2/§6.6 invariants, checked at every observable (post-mutation) state — global over both
  * handlers, so asserting after any single atomic mutation validates the new state. */
 inline checkInv() {
-  /* NoPartialResidue (§6.2): always fully present or fully absent. */
-  assert(tree[hLocal] == EMPTY || tree[hLocal] == FULL);
-  assert(tree[hSys]   == EMPTY || tree[hSys]   == FULL);
+  /* NoPartialResidue (§6.2): a SETTLED handler is fully present or fully absent. Scoped to
+   * settled phases because sequenced writes make the in-flight partial states real — the
+   * property §6.2 states is that a handler never comes to REST half-built. */
+  assert(!settled(hLocal) || tree[hLocal] == EMPTY || tree[hLocal] == FULL);
+  assert(!settled(hSys)   || tree[hSys]   == EMPTY || tree[hSys]   == FULL);
   /* RegisterAllOrNothing (§6.2): nothing dispatch-visible is missing its grant. */
   assert(!disp[hLocal] || tree[hLocal] == FULL);
   assert(!disp[hSys]   || tree[hSys]   == FULL);
@@ -102,7 +120,16 @@ proctype reg(byte h) {
         * RFinish -> the handler is dispatch-visible without its grant. */
        atomic { tree[h] = PARTIAL; disp[h] = true; rphase[h] = REGISTERING; checkInv() }
 #else
-       /* §6.2 atomic w.r.t. dispatch: five facets + index publish in one visible transition. */
+       /* §6.2 SEQUENCED: the four non-committing facets land one per transition, each its own
+        * observable state, with the handler deliberately NOT in the index throughout. */
+       atomic { rphase[h] = WRITING; checkInv() };
+       do
+       :: (tree[h] < FULL - 1) -> atomic { tree[h]++; checkInv() }
+       :: (tree[h] == FULL - 1) -> break
+       od;
+       /* THE COMMIT POINT (§6.2/§6.6): final write + index publish, atomic w.r.t. dispatch.
+        * This single step is what makes RegisterAllOrNothing and IndexMatchesTree hold; split
+        * it and both fail, which is exactly the -DNOATOMIC control above. */
        atomic { tree[h] = FULL; disp[h] = true; rphase[h] = LIVE; checkInv() }
 #endif
   fi;
@@ -121,7 +148,15 @@ proctype reg(byte h) {
        /* NEG CONTROL: drop grant/sig first but leave dispatch-visible -> stale-positive. */
        atomic { tree[h] = PARTIAL; rphase[h] = UNREGISTERING; checkInv() }
 #else
-       atomic { tree[h] = EMPTY; disp[h] = false; rphase[h] = GONE; checkInv() }
+       /* DECOMMIT (§6.2), the exact mirror of the commit: leaving the index and dropping the
+        * first facet are one atomic step. Teardown is where the stale-POSITIVE hazard lives —
+        * dispatching a handler whose grant is already gone — so the order is reversed. */
+       atomic { tree[h] = FULL - 1; disp[h] = false; rphase[h] = UNWRITING; checkInv() };
+       do
+       :: (tree[h] > EMPTY) -> atomic { tree[h]--; checkInv() }
+       :: (tree[h] == EMPTY) -> break
+       od;
+       atomic { rphase[h] = GONE; checkInv() }
 #endif
   :: else -> skip
   fi;

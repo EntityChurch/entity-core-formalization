@@ -379,13 +379,32 @@ No tool in this repo, and no Lean theorem, reaches these. Each names who would.
 | O1 | CBOR decoding — the hostile byte space | `tamarin/Malformed.{pv,spthy}` (`tbad` is an opaque constant, not a decode) | Conformance suite + fuzzing; `entity-core-keystone` type-system work | **BY-DESIGN** |
 | O2 | Entity content, hashing, content-addressing | `tla/Emit.tla`, `spin/emit.pml` — opaque hash tokens | Type system + conformance vectors | **BY-DESIGN** |
 | O3 | Computational crypto (§7.3) | every Tamarin/ProVerif theory — symbolic `sign`/`verify` | Nobody. A computational-model result would need CryptoVerif; `docs/STATUS.md` §Next | **BY-DESIGN** |
-| O4 | Wall-clock skew tolerance `δ` (§5.10, W7 Knob 3) | unmodeled — `tla/Revoke.tla` models `t` but not `δ` | Nobody yet | **OPEN** |
+| O4 | Wall-clock skew tolerance `δ` (§5.10, W7 Knob 3) | ~~unmodeled~~ — **now modeled** in `tla/Revoke.tla`, `tla/RevokeApalache.tla` and `spin/revoke.pml` | this repo | **CLOSED** (2026-09-06) |
 
-O4 was found while writing L1 and is new: §5.10's cross-clock temporal model makes `δ` a
-declared Layer-1 input alongside `t`, and the determinism argument is stated in terms of
-both. `Revoke.tla` models `t` and not `δ`. Two peers with different declared `δ` may
-permissibly differ, exactly as with different `t` — so the shape is already in the model and
-the extension is small. Recorded, not fixed.
+O4 was found while writing L1: §5.10's cross-clock temporal model makes `δ` a declared
+Layer-1 input alongside `t`, and the determinism argument is stated in terms of both.
+`Revoke.tla` modeled `t` and not `δ` — so the module's determinism invariant was an
+accidentally-true statement about a model that **could not express the case it was guarding**.
+
+**Closed 2026-09-06, on all three engines.** `δ` is a per-peer declared tolerance; the
+temporal check is the clause's two DENY rules negated (`expires_at + δ < t`, `t + δ <
+not_before`); and `VerdictFnOfLayer1`'s antecedent now carries `delta["A"] = delta["B"]`,
+because §5.10 puts it there. Apalache proves the strengthened invariant **inductive**, so this
+is unbounded in steps rather than bounded-exhaustive. Three runs earn their place:
+
+- **`RevokeDeltaBlindBug`** (negative control) — the pre-0.8.3 antecedent, blind to `δ`. The
+  defect it names is a verifier that *applies* a tolerance without *declaring* it, which is
+  the only condition §5.10 attaches to `δ` ("it introduces no concealed state"). Must be
+  violated, and is.
+- **`RevokeDeltaWitness`** (non-vacuity) — `δ` actually decides a verdict, all other Layer-1
+  inputs equal. **Its first draft did not pin `revObserved`**, and TLC satisfied it with a
+  state where the peers differed on *observed revocation* and `δ` differed only incidentally —
+  a witness firing for a claim it does not support. Caught by reading the counterexample
+  trace, not the exit status. A firing witness looks like success, which is what makes this
+  failure mode worse than a control's.
+- **`RevokeDeltaZero`** (green) — the clause states *"`δ = 0` reproduces today's exact
+  behavior"*, so that equivalence is run rather than read. A sign error or a one-sided
+  tolerance passes the default green (which expects a wider window) and fails here.
 
 ---
 

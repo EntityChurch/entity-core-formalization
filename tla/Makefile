@@ -91,6 +91,11 @@ TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds \
 # exit 151) scored "ok (violated as required)" — identical to a real witnessed state. The
 # whole point of a witness is to prove the model is not inert; grading it by a criterion a
 # BROKEN CONFIG satisfies reintroduces exactly the vacuity it was added to rule out.
+# RegisterSeqWitness retires the last near-tautological positive (../docs/PROPERTIES.md §C.4,
+# STATUS item 13): WitnessTreePartial IS the pre-0.8.3 NoPartialResidue, and its violation is
+# the proof that §6.2's five writes are now genuinely sequenced rather than collapsed into one
+# assignment. A "sequenced" model whose sequence is never reached is the same vacuity in new
+# source code; only a violated reachability assertion rules that out.
 TLC_WITNESS := \
   "Reentry|ReentryWitness|Invariant WitnessBothComplete is violated" \
   "Reentry|ReentryWitness3|Invariant WitnessBothComplete is violated" \
@@ -98,8 +103,10 @@ TLC_WITNESS := \
   "Store|StoreWitness|Invariant WitnessStoreLive is violated" \
   "Conn|ConnWitness|Invariant WitnessDispatched is violated" \
   "Revoke|RevokeWitness|Invariant WitnessRevocationObserved is violated" \
+  "Revoke|RevokeDeltaWitness|Invariant WitnessDeltaDivergence is violated" \
   "Emit|EmitWitness|Invariant WitnessEventFired is violated" \
   "Register|RegisterWitness|Invariant WitnessHandlerLive is violated" \
+  "Register|RegisterSeqWitness|Invariant WitnessTreePartial is violated" \
   "Core|CoreWitness|Invariant WitnessExchangeComplete is violated" \
   "Authority|AuthorityWitness|Invariant WitnessSubAllowed is violated" \
   "Bounds|BoundsWitness|Invariant WitnessDepthBrakeFires is violated" \
@@ -116,6 +123,11 @@ TLC_WITNESS := \
 # the one it targets scored the same. That is the repo's recurring failure mode (a Spin control
 # that compiled out its own detector; an Apalache control too short to reach its defect): a
 # green, or a red, that means something other than what it appears to.
+# RegisterAtomicBug's expected verdict changed at 0.8.3-dev, from "NoPartialResidue" to
+# "RegisterAllOrNothing". Under sequenced writes NoPartialResidue is scoped to SETTLED
+# handlers, because the tree is partial in flight BY DESIGN — so the control now fails on the
+# defect its own header names, "a half-built handler is dispatch-visible without its grant".
+# The old verdict was an incidental side effect of the collapsed-write shape.
 TLC_NEG := \
   "Reentry|ReentryBug|Deadlock reached" \
   "Reentry|ReentryFrameBug|Invariant FramesNotInterleaved is violated" \
@@ -132,10 +144,11 @@ TLC_NEG := \
   "Revoke|RevokeLeakBug|Invariant VerdictFnOfLayer1 is violated" \
   "Revoke|RevokeNoConvergeBug|Temporal property RevocationConverges was violated" \
   "Revoke|RevokeUnboundedBug|Invariant BoundHonored is violated" \
+  "Revoke|RevokeDeltaBlindBug|Invariant VerdictFnOfLayer1_DeltaBlind is violated" \
   "Emit|EmitFireBug|Invariant EventIffRealWork is violated" \
   "Emit|EmitMarkerBug|Invariant EventTypeCorrect is violated" \
   "Emit|EmitStallBug|Temporal property EmitTerminates was violated" \
-  "Register|RegisterAtomicBug|Invariant NoPartialResidue is violated" \
+  "Register|RegisterAtomicBug|Invariant RegisterAllOrNothing is violated" \
   "Register|RegisterSysGuardBug|Invariant NoUserAtSystem is violated" \
   "Register|RegisterWedgeBug|Temporal property RegisterSettles was violated" \
   "Core|CoreBug|Deadlock reached" \
@@ -176,10 +189,21 @@ tlc_asserts = grep -qE '^[[:space:]]*(INVARIANT|PROPERTY)' $(1).cfg || { \
 	    exit 1; }
 
 # Green rows whose CFG name differs from the module name (module|cfg). The scalar TLC_GREEN
-# list above assumes cfg == module; these are the N-peer variants, which share one module.
+# list above assumes cfg == module; these are the N-peer variants, which share one module,
+# plus RevokeDeltaZero.
+#
+# RevokeDeltaZero is a GREEN row that exists to catch a wrong GREEN. §5.10's cross-clock
+# clause (W7 Knob 3) ends "`delta = 0` reproduces today's exact behavior", which is an
+# equivalence the spec states about any implementation of it — so it can be RUN rather than
+# read. Pinning DeltaVals = {0} re-checks the full invariant set against the pre-0.8.3
+# boundary; a transcription that got a sign wrong, applied the tolerance to one side of the
+# window only, or attached it to the wrong operand still passes Revoke.cfg (which admits
+# delta = 1 and therefore EXPECTS a wider window) and fails here. D13 applied to a green
+# row: "the invariants hold" is satisfied by a model with the wrong window.
 TLC_GREEN_PAIRS := \
   "Reentry|Reentry3" \
-  "Core|Core3"
+  "Core|Core3" \
+  "Revoke|RevokeDeltaZero"
 
 tlc-green:
 	@for s in $(TLC_GREEN); do \
@@ -277,6 +301,7 @@ APALACHE_GREEN := \
   "EmitApalache   ConstInitOK InvIff IndInitIff" \
   "EmitApalache   ConstInitOK InvType IndInitType" \
   "RegisterApalache ConstInitOK Inv IndInit" \
+  "RegisterApalache ConstInitOK InvAoN IndInitAoN" \
   "ReentryApalache ConstInitOK InvFrame IndInitFrame" \
   "ReentryApalache ConstInitOK3 InvFrame IndInitFrame" \
   "AuthorityApalache ConstInitOK InvGrantless IndInitGrantless" \
@@ -324,6 +349,7 @@ APALACHE_NEG := \
   "CoreApalache ConstInitBugFrame  FramesNotInterleaved     Init 8" \
   "CoreApalache ConstInitBugFrame3 FramesNotInterleaved     Init 8" \
   "CoreApalache ConstInitBugEstab  DispatchNeedsEstablished Init 6" \
+  "RegisterApalache ConstInitBugAoN RegisterAllOrNothing Init 6" \
   "CoreApalache ConstInitBugRevoke NoServeWhenRevoked       Init 8" \
   "ConnCodesApalache ConstInitBugCollapse ReasonCodesDistinct Init 6" \
   "ConnCodesApalache ConstInitBugStatus   StatusMatchesCode   Init 6" \
