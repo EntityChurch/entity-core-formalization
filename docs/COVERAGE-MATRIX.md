@@ -95,11 +95,12 @@ difference is the whole point.
 
 ### Which protocol this matrix is about
 
-**4 proof tracks** are declared in `TRACKS.toml` — **1 modeled**, **3 scoped** — and
-**Matrix A is the `core` track's matrix and only that.** The other three
-(`attestation`, `quorum`, `identity`) have landed specs, no vendored snapshot and no model, so
-they have no grid here; a modeled track with no grid section fails `make trackcheck`, which is
-how a track cannot quietly acquire coverage nobody published.
+**4 proof tracks** are declared in `TRACKS.toml` — **4 modeled**, **0 scoped** — and
+**Matrix A is the `core` track's matrix and only that.** The `attestation`, `quorum` and
+`identity` tracks have their own grids and their own denominators in **§3c**, **§3d** and **§3e**
+below. A modeled track with no grid section fails `make trackcheck`, which is how a track cannot
+quietly acquire coverage nobody published — and with `identity` promoted there is no `scoped`
+track left, so that half of the gate now has no subject in this registry.
 
 This distinction is load-bearing rather than tidy. The grid below is derived from a
 **document-blind** citation pattern: `EXTENSION-ATTESTATION §5.7` (the attestation index
@@ -117,7 +118,7 @@ Derived from the `§`-citations the `core` models themselves carry, not from pro
 with `make specdrift` (which reads the same citations) or by grepping `§` in the files
 `TRACKS.toml` assigns to `core`.
 
-**Coverage: 28 of 85 numbered `§N.M` sections (33%).** Read by area, not as one number —
+**Coverage: 29 of 91 numbered `§N.M` sections (32%).** Read by area, not as one number —
 see §5 for why the zeros are zeros. **This is a statement about the `core` track**; there is
 no repo-wide coverage number and there deliberately will not be one, because averaging a
 verified protocol with three unmodeled ones produces a figure that is true of nothing.
@@ -136,6 +137,7 @@ verified protocol with three unmodeled ones produces a figure that is true of no
 | 4.10 | resource bounds / admission | clean reject; bounded in-flight; chain depth | ● | ● | ● | | |
 | 5.1 | revocation | revoked never passes | ● | ● | ● | ● | ● |
 | **5.2** | **verification + dispatch authority** | **three-valued authority; resource binding** | ● | ● | ● | ● | ● |
+| **5.2a** | **verdict-to-status enumeration** | **the §4.7-vs-§5.2a disagreement on a pre-hello nonce; reason codes distinct** | ● | ● | ● | | |
 | 5.4 | pattern matching | no escalation via attenuation | | | | ● | ● |
 | 5.5 | chain verification | linkage; unforgeability; caveats | ● | | ● | ● | ● |
 | **5.6** | **attenuation + temporal ingest** | **expiry; malformed-field fail-open** | ● | | ● | ● | ● |
@@ -225,12 +227,293 @@ deliberately does *not* model is named in prose without the `§` sigil.
 
 ---
 
+## 3c. Matrix A-ATT — attestation section × property class × engine
+
+**Track `attestation`, pinned at `spec-data/ext-attestation-v1.3/`** — a different protocol
+and a different denominator from Matrix A above. `EXTENSION-ATTESTATION.md` is owned by
+`entity-system-architecture`; its pin is `spec-data/MODELING-PIN-ATTESTATION` and moves
+independently of core's.
+
+**Coverage: 9 of 25 numbered `§N.M` sections (36%).** This track is three modules old. The
+number is low because the work is three modules old, not because 16 sections were judged out of
+scope — do not read it as the core grid's is read.
+
+| § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
+|---|---|---|---|---|---|---|---|
+| 3.1 | attestation entity shape | which fields are optional, hence which indexes are conditional | ● | | | | |
+| 3.2 | the `properties.kind` convention | `kind` is a recommended key, not a required field | ● | | | | |
+| 3.3 | revocation as attestation | only a matching-`attesting` revocation affects liveness in the primitive | ● | | | | |
+| 4.3 | `is_attestation_live` | transitive supersession; a live attestation has no live descendant; a dead revocation does not kill; **`is_self_revoked` is undefined and its two readings disagree — finding** | ● | | | | |
+| 4.4 | authority-revocation is the consumer's | the substrate does self-revocation only; a third party's revocation does not kill | ● | | | | |
+| 5.1 | `default_find_authorizing` | the head-resolution step is an identity map over the live candidates | ● | | | | |
+| 5.2 | `walk_supersedes_chain` | terminates **iff** the supersedes graph is acyclic — the assumption isolated | ● | | | | |
+| 5.3 | `find_live_head` | the forward walk cannot traverse a chain of three; **finding**, see below | ● | | | | |
+| **5.7** | **index invariants I1–I5** | **write-then-read; all-or-nothing across the eligible index set; no residue on handler failure; retention under revocation; kind-index eligibility** | ● | | | | |
+
+### Four rows carry FINDINGS, not coverage — read them that way
+
+`§5.2` and `§5.3` are cited because `tla/AttestLive.tla` makes claims about them, which is
+what puts a row here. But two of those claims are **negative**, and a grid cell is a poor
+place to say so:
+
+- **§5.3 `find_live_head` does not compute its own stated contract.** It filters successors by
+  the full `is_attestation_live` predicate, and that predicate is false for any attestation
+  that *has* a live descendant — so the link that leads to the head is never itself "live" and
+  the walk cannot pass through it. On a three-link chain it returns null where the head is the
+  third link. `SpecHeadFindsLiveHead` is asserted and violated, on a model with nothing
+  weakened. Routed to `entity-system-architecture`; `docs/LEAN-SEAM.md` O8.
+- **§4.3's `is_self_revoked` is used and never defined.** One occurrence in the document, and
+  it is the use site inside `has_live_transitive_descendant`; `not_expired` likewise. The two
+  natural readings — the main path's recursive one, and the structural "a matching revocation
+  exists" — give `is_attestation_live` **different answers about the same attestation**.
+  `SelfRevReadingsAgree` and `LiveReadingsAgree` are both asserted and violated. This is the
+  class v1.0 Amendment 1 already fixed twice in this same function. `docs/LEAN-SEAM.md` O9.
+- **§5.1's head-resolution step is an identity map.** `default_find_authorizing` filters
+  candidates to live ones and *then* resolves each through `find_live_head` — but a live
+  attestation has no live descendant, so the resolution returns its input every time.
+  `HeadResolutionIsIdentity` is green, and the green is the finding. This is why the
+  cross-impl vectors do not catch the bullet above: the composite gets the right answer
+  because the liveness filter already did the work, and the broken step is invisible from
+  outside. Row T4's lesson, on a different composition.
+
+**A cohort result, and it is green.** `DescReadingsCoincide` proves that the descendant check
+one implementation computes (any *fully live* descendant, walking past dead links) and the one
+§4.3 words (any *weakly live* descendant) are the same predicate on every acyclic graph. It is
+a checked invariant rather than a paragraph of reasoning deliberately: §D.1 is the record of
+this repo reasoning its way to an impact claim about an implementation cohort and being wrong.
+
+**One engine.** All three modules are checked by TLC only. The core track's standard is all three
+engines of the concurrency family, and this track does not meet it yet — an Apalache unbounded
+proof of `IndexExactOnBound` and an independent Spin re-encoding are the next two pieces, and
+until they exist the corroboration argument in §1 does **not** cover these rows. Disclosed
+here rather than left for a reader to infer from Matrix B's absence. `AttestLive` in
+particular is an exhaustive enumeration over every graph on **three** nodes, `AttestRevoke` over
+every graph on **four** — small enough to be complete, small enough that a defect needing one
+more node is invisible.
+
+**Not modeled at all:** the §4 validation helpers and their signature checks (a prover-track
+question, and this track has no prover — `docs/LEAN-SEAM.md` O5), `§5.1`'s `walk_attesting_chain`
+itself as opposed to the head-resolution step inside it, and the §6 handler operations beyond
+the index effects of a write.
+
+**One of those gaps has since been closed from the other side, and it mattered.** This list
+read "the `as_of` time-travel parameter and the `not_before` clock it orders" until 2026-09-07,
+when the quorum track modeled that clock because §QUORUM:4.2 makes a normative MUST out of it.
+With `not_before` present, §4.3's undefined `not_expired` separates into two readings that
+disagree — and `DescReadingsCoincide` above, which is green, is scoped to a model in which
+`not_before` does not exist and does **not** cover the separated case. A declared abstraction is
+a to-do list, not an absolution (`docs/LEAN-SEAM.md` O9), and here the to-do was discharged by a
+different track. See §3d and `tla/QuorumSignerSet.tla`.
+
+**A reading, not a fact.** §5.7's I2 says partial-index states are "NOT permitted", with the
+parenthetical "entity in one index but not another". Taken literally that forbids the state
+I5 *requires* for a kind-less attestation. The model reads I2 as atomicity of one write
+transaction over the entity's **eligible** set, and I5 as determining eligibility. That
+reading is stated in `tla/AttestIndex.tla`'s header and is the first thing a reviewer should
+push on; if it is wrong, the module is measuring the wrong thing and no gate here would say so.
+
+## 3d. Matrix A-QRM — quorum section × property class × engine
+
+**Track `quorum`, pinned at `spec-data/ext-quorum-v1.2/`** — a third protocol and a third
+denominator. `EXTENSION-QUORUM.md` is owned by `entity-system-architecture`; its pin is
+`spec-data/MODELING-PIN-QUORUM` and moves independently of core's and of attestation's.
+
+**Coverage: 8 of 18 numbered `§N.M` sections (44%).** This track is three modules and one day
+old. Read the number the way the attestation one is read, not the way the core one is: the
+uncited half is uncited because nobody has modeled it, not because it was judged out of scope.
+
+| § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
+|---|---|---|---|---|---|---|---|
+| 3.1 | `system/quorum` entity shape | `threshold` is typed `primitive/uint` and constrained nowhere — the input to the finding below | ● | | | | |
+| 3.2 | the `quorum-update` convention | the per-quorum supersedes chain, and that its single-chain shape is a convention no operation enforces | ● | | | | |
+| 4.1 | `verify_k_of_n_signatures` | the defensive dedupe (one key cannot fill two slots); the `resolve_peer` null check; **threshold 0 authorizes with no signature — finding** | ● | | | | |
+| **4.2** | **`current_signer_set` + the §4.2.1 cache contract** | **the invalidation trigger/non-trigger set is exactly sufficient *given* validated-only reads; per-quorum scoping; and four findings — see below** | ● | | | | |
+| 5.1 | built-in `concrete` mode | resolution as the identity map — the case in which the dedupe and soundness greens are unconditional | ● | | | | |
+| 5.2 | resolver registration | a non-injective resolution collapses the effective N below the validated bound | ● | | | | |
+| 6.1 | `system/quorum:create` | states no structural validation — the other half of the threshold finding | ● | | | | |
+| 6.2 | `system/quorum:update` | validates `new_threshold >= 1` and `<= |new_signers|`, against the pre-resolution array length | ● | | | | |
+
+### Six rows carry FINDINGS, not coverage — read them that way
+
+This track's first three modules produced more findings than results, and the grid cell is a
+poor place to say which is which.
+
+- **§4.2 returns the creation-time roster while a membership change is in force.** When
+  `find_live_head` yields null, §4.2 does not error and does not return empty — `signers` still
+  holds `quorum.data.signers`. On a plain chain of three updates with nothing expired and
+  nothing scheduled, that is what happens. `SpecNeverSilentlyReverts`, violated on a model with
+  nothing weakened.
+- **§4.2's answer depends on index iteration order.** It walks from `updates[0]`, and
+  §ATTEST:5.4 returns a list out of a field index with no stated order. Composed with the
+  §ATTEST:5.3 defect this repo already routed, different elements give different rosters.
+  `ResultIndependentOfProbe`.
+- **§4.2's algorithm does not compute §4.2's own normative sentence.** The MUST names "the most
+  recent `quorum-update` whose `not_before <= as_of` … with no successor that was itself live";
+  the algorithm is `find_live_head(updates[0])` with a silent fall-through.
+  `SpecMatchesNormative`.
+- **A scheduled membership change destroys the current signer set** — under the literal reading
+  of §ATTEST:4.3's undefined `not_expired`. `NotExpiredReadingsAgree`. This is the routed
+  attestation finding F4 with a consumer-level consequence attached.
+- **§4.2.1's own sentence "the cache reflects validated quorum state, not raw tree state" is
+  false of §4.2's algorithm.** Two steps: an attestation that fails K-of-N is tree-bound
+  (§4.2.1 permits it explicitly), and the next read walks the index and caches it as
+  authoritative. `CacheMatchesValidated`, violated with §8's `tree:put` bypass switched **off**.
+- **§4.1 with `threshold = 0` returns true over an empty signature set**, and §6.1 — unlike
+  §6.2 — writes no constraint excluding it. `KofNRequiresASignature`.
+
+### Two greens here are cohort results, not spec results
+
+`CohortMatchesNormativeOnChain` and `CohortNeverSilentlyReverts` are checked under constants
+that describe what `entity-core-{go,rust,py}` each independently implemented, **not** what the
+document says. All three probe every candidate rather than `updates[0]`; all three read
+`not_expired` as full temporal validity. The spec's own constants are checked in the finding
+configs, where they fail. Same disposition as `DescReadingsCoincide` in §3c, and stated here
+because a green whose constants are not the spec's would otherwise be read as one that is.
+
+### What is not covered
+
+**One engine, again.** TLC only — no Apalache, no Spin, no prover. §4.1 is a K-of-N *signature*
+validator and its unforgeability is a Dolev–Yao question this track does not touch at all
+(`docs/LEAN-SEAM.md` O5, now spanning two extension tracks). `MultisigKN.{pv,spthy}` proves
+K-of-N for the **core capability** surface, which is a different validator over different
+inputs.
+
+**Not modeled at all:** §3.3 / §3.4 (`quorum-publish` and its previous-quorum pinning rule,
+closed-namespace ownership), §4.3 `is_quorum_id`, §5.3 and its fail-closed resolver cases,
+§6.3–§6.5, and the whole of the conformance and cross-extension-invariant sections. The
+resolver's own recursion — the depth bound and cycle detection §5.2 makes normative — is named
+in `tla/QuorumKofN.tla`'s scope note and **not** modeled; the resolution map there is an
+arbitrary total function, which is strictly more permissive than a bounded resolver, so the
+greens hold over it but nothing checks the bound itself.
+
+## 3e. Matrix A-IDN — identity section × property class × engine
+
+**Track `identity`, pinned at `spec-data/ext-identity-v3.10/`** — a fourth protocol and a fourth
+denominator. `EXTENSION-IDENTITY.md` is owned by `entity-system-architecture`; its pin is
+`spec-data/MODELING-PIN-IDENTITY` and moves independently of the other three. It is the last
+track `TRACKS.toml` had scoped, so **no `scoped` track remains** and that gate now has no
+subject in the live registry.
+
+**Coverage: 22 of 73 numbered `§N.M` sections (30%).** Three modules and one day old. Read the
+number the way the attestation and quorum ones are read, not the way the core one is: the uncited
+three-quarters is uncited because nobody has modeled it.
+
+**The citation set was audited down before it was published.** The first pass cited **30**
+sections; nine of those were background, impact or scope-disclaimer mentions — the shape §6.9
+had in the core grid, which is what `make coverage` exists to catch. Sections 3.2, 5.2, 7.1, 7.2,
+9.6, 9.7, 10.2, 11.3 and 12.4 are now named **without the sigil** in the model headers, because
+nothing here verifies them. Two that look like the same shape were kept: 6.0b and 6.0c are cited
+because the claim "no operation validates §4.3's `attesting = target.attested`" is modeled as a
+constant (`HandoffIdentityEnforced`), which is the same disposition §6.1 already has on the
+quorum grid.
+
+| § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
+|---|---|---|---|---|---|---|---|
+| 2.2 | three entity-validation classes | identity does not dispatch side effects for a kind it does not own | ● | | | | |
+| 2.3 | function correspondence | who signs each cert kind — the input to the §9.2 finding | ● | | | | |
+| 3.3 | identity attestation conventions | the four owned kinds, and that `revocation` / `quorum-*` are not among them | ● | | | | |
+| **3.6** | **the validators** | **`identity_verify_cert` step 1's gate, `identity_topology_for` arm by arm; three findings — see below** | ● | | | | |
+| 4.1 | kind table | the signature topology column, per kind | ● | | | | |
+| 4.2 | `identity-cert` + valid-modes table | the per-function admissible (function, mode) set — one cell of it contradicts §9.2 | ● | | | | |
+| 4.2a | publication modes | mode as the storage-path selector; `agent` + `public` is the contested cell | ● | | | | |
+| 4.2b | sub-controller chains | a sub-controller cert dispatches single-sig, not a second K-of-N | ● | | | | |
+| 4.3 | `identity-rotation-handoff` | dual-sig; and the unenforced `attesting = target.attested` — **finding** | ● | | | | |
+| 4.4 | `identity-rotation-recovery` | K-of-N from quorum, always; the §9.4 antecedent | ● | | | | |
+| 4.5 | `identity-retirement` | K-of-N from quorum, always | ● | | | | |
+| 4.6 | `revocation` | identity's authority-revocation rules — and that the kind cannot arrive — **finding** | ● | | | | |
+| 5.1 | path layout + cache lifetime | where each kind is stored; the retention floor that ends at accept — **finding** | ● | | | | |
+| 5.2 | audience and sync | *(cited for the tier separation only; no ordering property is verified)* | ● | | | | |
+| 5.3 | canonical storage path | the `public/` question only — whether a cert's mode puts it there | ● | | | | |
+| 6.0b | `:supersede_attestation` | the REBIND_KINDS split, as the other half of "nothing validates the handoff identity" | ● | | | | |
+| 6.0c | `:create_attestation` | validates (kind, function, mode) and the required properties fields — and not that identity | ● | | | | |
+| **6.3** | **`process_attestation`** | **phase 1 / phase 2a / phase 2 dispatch / phase 3 emission; three findings — see below** | ● | | | | |
+| 9.2 | operational-key confinement | the MUST, over exactly the cert shapes §4.2 admits — **finding** | ● | | | | |
+| **9.4** | **compromise-recovery validation** | **fail-closed holds; and it holds vacuously — two findings** | ● | | | | |
+| 10.1 | MUST-implement list | topology-first dispatch; dual-sig handoff; the phase-2a scope rule | ● | | | | |
+| 12.3 | three algorithms, one direction | the no-shared-validator wall at the arrival path | ● | | | | |
+
+### Seven rows carry FINDINGS, not coverage — read them that way
+
+Like the quorum track, this one produced more findings than results, and a grid cell is a poor
+place to say which is which.
+
+- **§6.3's phase-2 dispatch table has a row phase 1 makes unreachable.** Phase 1 is unconditional
+  `identity_verify_cert`, whose step 1 admits four kinds; the table has seven rows and one names
+  `quorum-publish`. `SeedRowReachable`, violated with nothing weakened.
+- **A `revocation` arriving over sync is unbound by phase 2a** — while §4.6 gives identity
+  authority rules over the kind, §5.1 stores it at synced paths, and §3.6 step 3 reads it back
+  out of the tree. `RevocationSurvivesArrival`.
+- **A `quorum-update` arriving over sync is unbound by phase 2a**, at the path §5.1 gives it.
+  Composed with the routed Q1, the roster cannot change because the updates do not survive to be
+  walked. `QuorumUpdateSurvivesArrival`.
+- **§9.4's fail-closed rule is satisfied vacuously.** The anchor it requires is filled only by the
+  unreachable dispatch row above, so a genuine compromise-recovery signed by the identity's real
+  quorum is rejected at a contact that has received that identity's genuine `quorum-publish`.
+  `RecoveryAttainable`. **`RecoveryFailClosed` is green on the same constants** — which is the
+  whole point of the pair.
+- **Nothing says what may become §9.4's trust anchor.** §9.4 names the cache "the trust anchor"
+  and neither it nor §6.3 specifies validation on the way in. `AnchorWasValidated`, and its
+  security consequence `AcceptedRecoveryIsQuorumSigned`.
+- **§5.1's retention floor ends one instant too early.** "Retained at least ... until the verifier
+  accepts the new handle" expires at accept, so a duplicate delivery of one recovery attestation
+  gets a second, different verdict. `RecoveryIdempotent`.
+- **§9.2's MUST and §4.2's valid-modes table cannot both be satisfied** in the three-key default:
+  an `agent` cert at `mode="public"` is signed by the controller and lives under `public/`, which
+  §9.2 requires rejecting. `PublicPathNeverControllerSigned`.
+- **§3.6's handoff arm dereferences an unresolved target**, in the same section where
+  `identity_confers_function` guards the same helper. `HandoffTargetGuarded`.
+
+**One of these is cross-spec and exists only in a pair of documents.** `EXTENSION-ATTESTATION`'s
+TV-A8 delegates the rejection of an invalid-signature revocation to *"identity's
+`identity_verify_cert` … at topology-dispatch step"*, and `identity_verify_cert` rejects every
+`kind="revocation"` before topology dispatch is reached. Neither document is wrong read alone.
+`RevocationReachesTopology`.
+
+### One green here is a declared assumption about another track
+
+`KofNAnswerIsTrustworthy` says every K-of-N verdict identity reaches is taken against whatever
+`§QUORUM:4.2 current_signer_set` hands back — and its negative control
+(`IdentityCertChainSubstrateBug`, `SignerSetIsSound = FALSE`) is the already-routed Q1. It is a
+control rather than a finding on purpose: re-routing Q1 wearing an identity section number would
+be a double-count. `docs/LEAN-SEAM.md` O16 is the row.
+
+### What is not covered
+
+**One engine, for the third time.** TLC only — no Apalache, no Spin, no prover.
+`docs/LEAN-SEAM.md` O5's gap now spans **three** extension tracks. Identity's authority-logic
+predicates (`identity_confers_function`, `identity_is_authorized_revoker`) are *not* discharged by
+the keystone sibling's Lean and deliberately so — §2.2 and §12.3 make identity attestations a
+structurally distinct validation class from capability tokens, so routing them to the layer that
+owns cap-chain attenuation would be the conflation §9.1 calls "the natural implementation
+mistake". O17 is that row.
+
+**Not modeled at all:** §3.1, §3.2 (`resolve_controller_for_grants` and its content-hash
+tie-break), §3.4, §3.5, §4.2c, §5.1.1, §5.4, §6 and §6.0a / §6.0d / §6.0e / §6.0f / §6.1 / §6.2 /
+§6.4, §7 and its custody variants, §8, §9.1 / §9.3 / §9.5 / §9.6 / §9.7, §10.2–§10.4, all of §11,
+§12.1 / §12.2 / §12.4 / §12.5, and §13–§15. The recursive chain walk in `identity_verify_cert`
+step 5 and its depth bound are named in `tla/IdentityCertChain.tla`'s scope note and **not**
+modeled — that is `DeepChain`/`Bounds`' question and it is not re-asked here.
+
 ## 4. Matrix B — the corroboration grid
 
 Matrix A shows *what* is covered. This shows *how independently* — the answer to "who
-checks the checker". **Every module is covered by all three engines of its family.**
+checks the checker". **Every `core` module is covered by all three engines of its family.**
 
-### Concurrency family (TLA+ / Promela)
+**Read the word `core` in that sentence — it was not there until 2026-09-07 and its absence was
+a false claim.** This section said *"Every module is covered by all three engines of its
+family"*, unqualified, and it was written when `core` was the only track. Since 2026-09-07 there
+are **nine extension modules on three tracks and every one of them is TLC-only** — no Apalache,
+no Spin, no prover. Each track's own grid (§3c, §3d, §3e) said "one engine" plainly; this
+headline did not, and a reader arriving here first would have taken the strongest corroboration
+claim in the repo as covering modules it does not.
+
+Nothing was mis-derived: Matrix B has no row for any extension module and is accurate line by
+line. **The defect is in a summary sentence that quantifies over a set that grew underneath
+it** — the D15 mechanism (the input set is the claim) in prose rather than in a tool, and found
+by re-reading rather than by a gate, because no gate reads this sentence. The corroboration gap
+is `docs/LEAN-SEAM.md` O5, O14 and O19 and is item 2 on `docs/STATUS.md` §Next.
+
+### Concurrency family (TLA+ / Promela) — `core` track
 
 | Module | Protocol surface | TLC (bounded) | Apalache (unbounded) | Spin (independent) |
 |---|---|---|---|---|
@@ -286,7 +569,7 @@ refers to `Revoke.pv`'s private-channel token — there is no `RevokeMech.pv`.
 
 ## 5. What is NOT covered — three different kinds of "no"
 
-Conflating these is how a coverage number becomes dishonest. **57 of 85 sections are not
+Conflating these is how a coverage number becomes dishonest. **62 of 91 sections are not
 cited by any model.** They fall into three groups and only the third is a backlog.
 
 ### (a) Out of scope by design — another layer owns it
@@ -323,7 +606,7 @@ would duplicate an owner, not add assurance.
 | §6.12, §6.13 | per-request transport error codes; handler origination path | open |
 | §3.5, §3.11, §3.12, §3.13 | discovery locality, chain_id/depth wire fields | partly reachable via §5.9 |
 | §6.11(c) | per-request deadlines | **named**: this is what would make Class-G a *liveness* bug rather than a crash |
-| `EXTENSION-*` protocols | 26 extension specs; `attestation`, `quorum` and `identity` are the scoped next phase | **Not a gap in this matrix — a different track.** They are `scoped` tracks in `TRACKS.toml`, not uncovered core sections, and they get their own grid when they get a model. The specs are **landed and readable** (`entity-system-architecture/specs/extensions/`); nothing is vendored because `spec-data/` is held at the core pin until the keystone sibling converges, and the extension snapshots ride along with that re-vendoring pass. Modeling against a live checkout instead of a pinned snapshot is what the discipline forbids, and that has not changed. |
+| `EXTENSION-*` protocols | 26 extension specs; `attestation` and `quorum` are **modeled** (§3c and §3d above), `identity` is `scoped` | **Not a gap in this matrix — a different track.** They are separate tracks in `TRACKS.toml`, not uncovered core sections, and each gets its own grid when it gets a model. All three are **vendored** (`spec-data/ext-attestation-v1.3`, `ext-quorum-v1.2`, `ext-identity-v3.10`) and pin independently of core. *(This cell said "nothing is vendored because `spec-data/` is held at the core pin until the keystone sibling converges, and the extension snapshots ride along with that re-vendoring pass" until 2026-09-07. That was an inference nobody checked: each extension spec's `Depends` on the core protocol is a FLOOR the held pin already clears. Core's pin is still parked on keystone and that was never a constraint here.)* Modeling against a live checkout instead of a pinned snapshot is what the discipline forbids, and that has not changed — which is why vendoring came first. |
 
 ---
 

@@ -429,9 +429,41 @@ about that changed. What is *not* true, and was quietly assumed before today, is
 checking it also checks the components. It checks §4.2's dispatch gate and nothing else they
 own.
 
-**Ledger state — derived, and now gated.** As of 2026-09-06, after this row closed, the
-ledger is **22 rows** (13 Class L, 5 Class T, 4 Class O): **15 CLOSED**, 1 CLOSED — ASSUMPTION
-FALSE (this row), 1 CLOSED-MODULO-H (L1), 2 N/A — device, 3 BY-DESIGN, and **0 OPEN**.
+**Ledger state — derived, and now gated.** As of 2026-09-07, after the identity track landed,
+the ledger is **37 rows** (13 Class L, 5 Class T, 19 Class O): **15 CLOSED**, 1 CLOSED —
+ASSUMPTION FALSE (this row), 1 CLOSED — ASSUMPTION ISOLATED (O6), 1 CLOSED-MODULO-H (L1), 2 N/A
+— device, 3 BY-DESIGN, and **14 OPEN**.
+The Class-O rows went from four to ten in three commits on 2026-09-07, then to fifteen in three
+more, then to nineteen with the identity track the same day, because a new track arrives with
+its abstractions undischarged — the normal state, not a regression. The fourteen OPEN ones are
+O5, O7, O8, O9, O10, O11, O12, O13, O14, O15, O16, O17, O18 and O19; O6 closed the same day it
+was opened, by being measured rather than argued.
+
+**Three things to read off the Class-O column rather than the row count.** First, **O5, O14 and
+O19 are the same gap on three tracks**: no extension track has any prover model, so the
+adversarial property each substrate exists to provide — an attestation was validly signed; K
+distinct keys signed; a cert carries the signatures its topology demands — is discharged by
+nothing here. Every green on all three tracks is a statement about structure, made on the
+assumption that signatures work. They are counted per track rather than merged, deliberately:
+merging would hide that the gap grew twice.
+
+Second, **O15 is the row that was not visible until a second track existed**: two modules each
+declared the other's dimension abstracted, both disclosures were honest, and the composition
+nobody wrote is where a real interaction turned out to live (O12). That is O9's lesson — a
+declared abstraction is a to-do list, not an absolution — arriving a second time from a
+direction nobody was watching.
+
+Third, **O16 is a new SHAPE of row and the one to read before starting a fifth track.** The
+other eighteen say "no tool here reaches this". O16 says something sharper: the abstraction is
+`QUORUM §4.2`'s resolver, this repo has already MEASURED it and found it defective (Q1), and the
+identity models assume it works anyway. That is not an oversight — modelling identity on
+§4.2-as-written would have re-derived Q1–Q7 wearing identity section numbers and routed them
+twice. What makes it a ledger row rather than a footnote is that the assumption is a **constant
+with a negative control** (`IdentityCertChainSubstrateBug`), so the gate table shows what the
+identity greens rest on. **When a track consumes another track's known-defective output, make
+the assumption a constant and control it, then open the row.** The prior checkpoint predicted
+that this choice would otherwise be invisible afterwards; it was right, and this is the shape
+that keeps it visible.
 
 Those figures are produced by `make ledgercount`, which parses this file and fails if any
 declared prose site disagrees. It exists because **this count has been published wrong four
@@ -457,6 +489,21 @@ No tool in this repo, and no Lean theorem, reaches these. Each names who would.
 | O2 | Entity content, hashing, content-addressing | `tla/Emit.tla`, `spin/emit.pml` — opaque hash tokens | Type system + conformance vectors | **BY-DESIGN** |
 | O3 | Computational crypto (§7.3) | every Tamarin/ProVerif theory — symbolic `sign`/`verify` | Nobody. A computational-model result would need CryptoVerif; `docs/STATUS.md` §Next | **BY-DESIGN** |
 | O4 | Wall-clock skew tolerance `δ` (§5.10, W7 Knob 3) | ~~unmodeled~~ — **now modeled** in `tla/Revoke.tla`, `tla/RevokeApalache.tla` and `spin/revoke.pml` | this repo | **CLOSED** (2026-09-06) |
+| O5 | **Attestation signature validity** — that a `system/attestation` bound in the tree was validly signed by its `attesting` party | `tla/AttestIndex.tla` — an attestation is an opaque name; binding is unconditional, no signature is modeled | Nobody yet. This is a Dolev-Yao question and the **attestation track has no prover model at all** — `MultisigKN.{pv,spthy}` proves K-of-N for the core capability surface, not for `ATTEST §4.1`/`§4.2`'s validators | **OPEN** |
+| O6 | **Supersedes-chain acyclicity** — that `ATTEST §5.2`'s `walk_supersedes_chain` terminates | ~~not modeled~~ — **now modeled** in `tla/AttestLive.tla` (`BackWalkBoundedWhenAcyclic` green, `BackWalkBoundedAlways` violated) | **Nobody, and the assumption is now isolated rather than suspected.** The walk terminates exactly when the supersedes relation is acyclic; acyclicity itself follows from `supersedes` holding a content hash, which is O3's territory (computational crypto, owned by no tool here) and is **stated in no section of the spec** | **CLOSED — ASSUMPTION ISOLATED** |
+| O8 | **`ATTEST §5.3` `find_live_head` computes its own stated contract** | `tla/AttestLive.tla` — `SpecHeadFindsLiveHead` asserted and **violated** on a three-link chain; `DagHeadFindsLiveHead` green for the algorithm all three implementations run instead | Nobody — and this is not an abstraction the model relies on, it is the model REFUTING a spec claim. Routed to `entity-system-architecture`; until it is ruled, any consumer calling `find_live_head` directly rests on an algorithm that returns null where a head exists | **OPEN** |
+| O9 | **What `ATTEST §4.3`'s `is_self_revoked` means** | `tla/AttestRevoke.tla` — both readings computed side by side; `SelfRevReadingsAgree` and `LiveReadingsAgree` both **violated** | Nobody, and nothing here can: the helper is **used in normative pseudocode and defined nowhere in the document**, so there is no text to be faithful to. Not an abstraction the model relies on — the model shows the choice is observable in `is_attestation_live`'s answer. Routed | **OPEN** |
+| O10 | **Revocation-graph acyclicity** — that `ATTEST §4.3`'s revocation recursion terminates | `tla/AttestRevoke.tla` — assumed, not checked: `Init` restricts both pointers to lower indices, and every recursion terminates because of that restriction rather than because of the algorithm | Nobody. `has_live_transitive_descendant` carries a `visited` set and says it is cycle-safe; **the revocation recursion four lines above it has neither a visited set nor a depth bound**. The one place §4.3 defends against cycles defends one of its two recursions. Same discharge as O6 and unmeasured on this side | **OPEN** |
+| O11 | **The arrival-time closure** — that every path binding a `system/quorum` event into the tree also validates it, which is what `QUORUM §4.2`'s "trusted on subsequent reads" rests on | `tla/QuorumTrust.tla` — `CacheMatchesValidated` green **only** under `WalkClosedOverValidated`, and asserted-and-violated without it, in a two-step trace | Nobody, and the document argues against itself. `QUORUM §4.2`'s cold-start posture asserts the closure outright ("tree-bound only on validation success"); `QUORUM §4.2.1` non-trigger 1 says a K-of-N failure "may sit in the tree at a structurally-valid path", and `QUORUM §8` permits raw `tree:put`. Neither is filtered out on the read side — the walk is the `ATTEST §5.4` index, which `ATTEST §5.7` I4 keeps unfiltered by design. Routed | **OPEN** |
+| O12 | **What `ATTEST §4.3`'s `not_expired` means** — O9's sibling helper, and the one with a consumer-visible consequence | `tla/QuorumSignerSet.tla` — both readings computed side by side; `NotExpiredReadingsAgree` **violated** on a two-node chain with a scheduled successor | Nobody, same as O9: used in normative pseudocode, defined nowhere. Under the literal reading (the `expires_at` check, which is what the name says and what §4.3 writes four lines above as a *separate* check from `not_before`) a not-yet-effective successor kills its predecessor without being usable itself, and `QUORUM §4.2` drops to the genesis roster. All three implementations read it the other way. Routed | **OPEN** |
+| O13 | **`quorum-update` chain shape** — that a quorum's update graph is a single linear chain | `tla/QuorumSignerSet.tla` — `WellFormedChain` is the ANTECEDENT of both cohort greens, so off that shape they assert nothing | Nobody. `QUORUM §3.2` describes the shape in prose ("supersedes the previous `quorum-update` for the same quorum"); `QUORUM §6.2` validates `new_threshold` and **not** the shape, and `supersedes` is an optional caller-supplied hash. Off it the three implementations resolve differently from each other. Same standing as O6/O10: an unstated structural assumption a walk depends on | **OPEN** |
+| O14 | **K-of-N signature unforgeability** for `QUORUM §4.1` — that `verify_k_of_n_signatures` cannot be satisfied without K distinct private keys | `tla/QuorumKofN.tla` — whether a peer's signature verifies is a per-peer boolean; nothing is forged, nothing is signed | Nobody. O5 one track over, and the same reason: **the quorum track has no prover model either.** `QUORUM §2` calls this validator "the only mechanism that distinguishes quorum from a regular peer node", and its adversarial property is discharged by nothing in this repo | **OPEN** |
+| O15 | **Revocation and the clock, together** — that `ATTEST §4.3`'s revocation recursion does not interact with `not_before`/`expires_at`/`as_of` | Nowhere, and that is the row: `tla/AttestRevoke.tla` models revocation with the clock collapsed to one flag; `tla/QuorumSignerSet.tla` models the clock with revocation omitted. **No model covers both** | Nobody. Opened by noticing that `DescReadingsCoincide` — AttestRevoke's cohort green — is scoped to a model in which `not_before` does not exist, and O12 shows the two descendant readings separate precisely when it does. So the green is true and its scope is narrower than it reads. The composed model is the cheapest open item on either extension track | **OPEN** |
+| O7 | **The reading of `ATTEST §5.7` I2 that the model encodes** | `tla/AttestIndex.tla` — `IndexAllOrNothing` is over the entity's ELIGIBLE index set, not over all four indexes | Nobody, and nothing could: this is a human reading of spec prose, which is the 5th wall itself rather than a seam between tools | **OPEN** |
+| O16 | **`QUORUM §4.2 current_signer_set` returns the roster its own normative sentence asks for** — the input every K-of-N verdict in `IDENT §3.6` is taken against | `tla/IdentityCertChain.tla` — a CONSTANT (`SignerSetIsSound`), TRUE in the green sweep and FALSE in `IdentityCertChainSubstrateBug`, whose violation of `KofNAnswerIsTrustworthy` exhibits what identity's greens rest on | Nobody, and the assumption is known to be FALSE on the pinned text: this is the already-routed Q1, where §4.2 hands back the creation-time roster on a plain chain of three updates. **Held as a control rather than an identity finding on purpose** — re-routing Q1 wearing an identity section number would double-count it. The row exists so that the choice is visible in the gate table instead of invisible in a fidelity note, which is exactly what the prior checkpoint warned would otherwise happen | **OPEN** |
+| O17 | **Identity's authority-logic predicates** — `identity_confers_function` and `identity_is_authorized_revoker` (`IDENT §3.6`) compute the authority they claim to | `tla/IdentityCertChain.tla` — neither is modeled; topology dispatch is what is under test and the predicates are assumed | Nobody, **and deliberately not the keystone sibling's Lean.** This was the track's first Class-L question and it was asked before a model reduced anything: keystone's Lean owns CAPABILITY-CHAIN attenuation, and `IDENT §2.2` / `§12.3` make identity attestations a structurally distinct validation class from capability tokens with "no shared validator". Routing these to that layer would be the conflation `IDENT §9.1` calls "the natural implementation mistake". So Class L does not grow and this stays unowned | **OPEN** |
+| O18 | **That an arriving attestation reaches `IDENT §6.3 process_attestation` at all** — the premise under every finding on the identity track | `tla/IdentityProcess.tla` — the model begins at "an arrival that reaches `process_attestation`"; the hook that gets it there is read as prose and carries no sigil | Nobody, and the text is weaker than the models need. `IDENT §6.3` calls itself "the convergence point for any identity-context attestation entering the local tree at the named subtrees, regardless of source", but the sync hook that fires it is a **SHOULD** in `IDENT §10.2`, not a MUST. **Both branches lead to the same place**, which is why the findings survive the gap: with the hook installed, phase 1 rejects and phase 2a unbinds; without it, phase 2 never runs and the contacts cache is never seeded either way. Stated because a premise that holds by luck on both branches is still a premise | **OPEN** |
+| O19 | **Identity attestation signature validity** — that a cert, handoff, recovery or retirement bound in the tree carries the signatures `IDENT §3.6`'s topology dispatch demands | `tla/IdentityCertChain.tla`, `tla/IdentityRecovery.tla` — topology is dispatched and the signatures it names are never checked; in `IdentityRecovery` a signer set is a generation number and "verifies" is equality | Nobody. **O5 and O14 a third time**: the identity track has no prover model either, so all three extension tracks now share one undischarged adversarial premise. Counted per track rather than merged, because merging it would hide that the gap grew | **OPEN** |
 
 O4 was found while writing L1: §5.10's cross-clock temporal model makes `δ` a declared
 Layer-1 input alongside `t`, and the determinism argument is stated in terms of both.
@@ -482,6 +529,70 @@ is unbounded in steps rather than bounded-exhaustive. Three runs earn their plac
 - **`RevokeDeltaZero`** (green) — the clause states *"`δ = 0` reproduces today's exact
   behavior"*, so that equivalence is run rather than read. A sign error or a one-sided
   tolerance passes the default green (which expects a wider window) and fails here.
+
+
+### O5–O8 — the attestation track's rows, and why two of them are worth more than the models that produced them
+
+O5–O7 were added 2026-09-07 with `tla/AttestIndex.tla`, the attestation track's first module,
+all three **OPEN** — the honest state for a one-module-old track, stated rather than softened.
+`tla/AttestLive.tla` landed the same day and moved two of them: **O6 is CLOSED** (the
+assumption is isolated, not discharged — read the row) and **O8 is new**, and O8 is not an
+abstraction this repo relies on at all. It is the one row here that records the model
+*refuting* the spec rather than depending on it.
+
+`tla/AttestRevoke.tla` followed and added **O9** and **O10**, and O9 is a fourth kind again.
+O5 is "nothing discharges this". O6 was "the assumption is unstated". O8 is "the algorithm is
+wrong". **O9 is *there is no text*** — `is_self_revoked` is used in §4.3's normative pseudocode
+and defined nowhere in the document, so fidelity is not achievable rather than merely unchecked,
+and the model's contribution is to show that the choice is observable: the two natural readings
+give `is_attestation_live` different answers about the same attestation. That is worth
+distinguishing from O7, which is a reading of prose that EXISTS.
+
+**How O9 was found is the transferable part.** `AttestLive` declared self-revocation abstracted
+to a flag, in a D11 inventory-boundary note. Going back to close a declared abstraction — rather
+than moving on to the next section — is what surfaced it. A declared boundary is a to-do list,
+not an absolution, and this is the first time in this repo that reading one back has paid.
+
+**O5 is the shape of the whole track's gap.** `AttestIndex` proves things about *index
+bookkeeping* while treating the attestation itself as an opaque name that is simply bound. Every
+security property of the substrate — that the `attesting` party actually signed, that a
+revocation was authorized, that a K-of-N quorum attestation carries K real signatures — is
+outside it, and unlike the core track there is **no prover model on this track to hand it to**.
+Core's equivalent rows are BY-DESIGN because Tamarin/ProVerif own them; this one is OPEN
+because nobody does.
+
+**O6 was found by reading; it was CHANGED by running, and the change is the point.**
+`ATTEST §5.1`'s `walk_attesting_chain` takes `max_depth: uint = 32` and returns null when it is
+exceeded. Four sections later, `§5.2`'s `walk_supersedes_chain` is `while current.supersedes is
+not null` and `§5.3`'s `find_live_head` is `while True` — **neither has a depth bound, a visited
+set, or any other termination argument**. The reading-stage conclusion was "both rest on
+acyclicity, which is unstated". `tla/AttestLive.tla` was written to check that, and it holds
+for **one** of the two:
+
+- **§5.2 does rest on it, exactly.** `BackWalkBoundedWhenAcyclic` is green over every graph on
+  three nodes, cyclic ones included; `BackWalkBoundedAlways` is violated. So the assumption is
+  not merely suspected, it is *isolated* — the walk terminates iff the relation is acyclic, and
+  nothing weaker will do. That is what moves the row to CLOSED: not "we proved it terminates"
+  but "we found precisely what its termination is, and named who owns that" (nobody here; it is
+  the content-hash argument, which is O3's territory).
+- **§5.3 does NOT rest on it, and the reading-stage conclusion was wrong about why.**
+  `SpecWalkNeverExhausts` is green: the `while True` cannot iterate twice, because stepping to
+  a live successor proves that successor has no live successor of its own. The loop is bounded
+  by an accident of the predicate it filters on. **That is worse news than an unbounded loop,
+  and it is what turned into O8** — the same filter that bounds the walk also stops it
+  traversing, so §5.3 cannot reach a head three links away. A missing bound was the hypothesis;
+  a wrong answer was the defect. Reading found the smell and got the mechanism backwards;
+  only running it separated the two.
+
+**O7 records that the model encodes a READING.** §5.7 I2 forbids "partial-index states (entity
+in one index but not another)", and §5.7 I5 requires that a kind-less attestation appear in
+*no* kind index. Taken literally, I2's parenthetical forbids the state I5 requires. The model
+reads I2 as atomicity over the entity's **eligible** set and I5 as determining eligibility —
+which is almost certainly what is meant, and is a reading nonetheless. If it is wrong, every
+invariant in `AttestIndex` is measuring the wrong thing and **no gate in this repo would say
+so**: this is the 5th wall, not a seam between tools, and the only thing that closes it is a
+human reading the spec against the model or the spec being sharpened. Routed as a wording
+question rather than a defect, because the intent is clear and only the sentence is loose.
 
 ---
 

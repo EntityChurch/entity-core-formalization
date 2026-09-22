@@ -5,10 +5,15 @@ owner.** Each formal question about the Entity Core Protocol is answered by exac
 one tool, on the layer it can actually reach.
 
 > **Which protocol: the `core` track.** This repo declares **4 proof tracks** in
-> `TRACKS.toml` (`make trackcheck`) — `core`, `attestation`, `quorum`, `identity` — and
-> `core` is the only **modeled** one. This map is about `core`. The three extension tracks
-> have landed specs, no vendored snapshot and no model, so they own no row here yet; when
-> they do, they get their own rows rather than being folded into these.
+> `TRACKS.toml` (`make trackcheck`) — `core`, `attestation`, `quorum`, `identity`. **This map
+> is about `core` and only `core`.** All four are modeled as of 2026-09-07 (nine TLC modules
+> across the three extension tracks, `docs/COVERAGE-MATRIX.md` §3c–§3e) and **none of the three
+> owns a row here yet**: this map's whole claim is that every formal question has exactly one
+> named owner, and no extension track has that structure — each has one engine and no prover,
+> which `docs/LEAN-SEAM.md` O5, O14 and O19 record one row per track. They get their own rows
+> when they earn them rather than being folded into these. *(This paragraph said `quorum` and
+> `identity` were "vendored, unpinned and unmodeled" until 2026-09-07; both were promoted the
+> same day, hours apart.)*
 
 > **Pinned at spec 0.8.2; the live spec is 0.8.2.11.** Rows 4 and 5 below — the two this
 > repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and

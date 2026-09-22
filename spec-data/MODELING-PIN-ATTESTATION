@@ -1,0 +1,22 @@
+# The snapshot the `attestation` track's models actually transcribe.
+#
+# Every published result about the attestation track is a statement about THIS snapshot and
+# no other. It is the answer to "which version of EXTENSION-ATTESTATION was verified?", and
+# it is deliberately a separate fact from "which snapshots have been vendored."
+#
+# Vendoring a newer snapshot does NOT move this. It moves only after the models have been
+# re-validated against the newer text, and moving it is the LAST step of that work. A pin
+# that advances when someone copies files in would quietly convert "we vendored the new
+# spec" into "we verified the new spec," which are not the same claim.
+#
+# This is the attestation track's pin. The CORE track's pin is spec-data/MODELING-PIN and is
+# entirely independent: core is held at v0.8.2 pending the keystone sibling's convergence,
+# and that has no bearing here. EXTENSION-ATTESTATION v1.3 declares
+# `Depends: ENTITY-CORE-PROTOCOL.md (v7.40+)`, a FLOOR, which spec-data/v0.8.2 meets — it
+# carries v7.62-v7.76 clause tags. The two tracks pin independently by design.
+#
+# Read by tools/coverage-check.py and tools/trackcheck.py via TRACKS.toml.
+#
+# One line, the directory name under spec-data/, no leading path.
+
+ext-attestation-v1.3

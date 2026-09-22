@@ -15,11 +15,13 @@ reference implementations — it verifies the DESIGN, not the code and not any
 generated peer.
 
 The repo carries FOUR PROOF TRACKS, declared in TRACKS.toml and gated by `make
-trackcheck`: core (the Entity Core Protocol — the only MODELED one, and therefore
-what every number below is about) plus attestation, quorum and identity, each with
-a landed spec, no vendored snapshot and no model yet. There is deliberately no
-repo-wide coverage number; averaging a verified protocol with unmodeled ones
-produces a figure true of nothing.
+trackcheck`: core (the Entity Core Protocol), attestation, quorum and identity.
+All four are MODELED, each against its own frozen, separately pinned spec
+snapshot. Unless a statement names a track it is about core, which is where all
+but nine of the modules live. There is deliberately no repo-wide coverage number and no single
+headline result: averaging a heavily verified protocol with a one-module-old one
+produces a figure true of neither. Coverage, run counts and spec pins are all
+reported per track.
 
 Honesty first (this is design assurance, off the release critical path): it is a
 strong DEMONSTRATOR, not a closed proof, and NOT a claim that "the protocol is
@@ -47,7 +49,7 @@ group = "Overview"
 [[doc]]
 path  = "TRACKS.toml"
 title = "Proof tracks — which protocol each model is about"
-blurb = "The registry: every model file, spec pin and coverage number belongs to exactly one track (core, attestation, quorum, identity), gated by `make trackcheck`. Read this before any coverage number — core is the only modeled track, and the citation pattern the numbers derive from is document-blind, so the split has to be declared rather than assumed."
+blurb = "The registry: every model file, spec pin and coverage number belongs to exactly one track (core, attestation, quorum, identity), gated by `make trackcheck`. Read this before any coverage number — the tracks are different protocols with different spec pins and different denominators, and the citation pattern those numbers derive from is document-blind, so the split has to be declared rather than assumed."
 group = "Overview"
 
 [[doc]]
@@ -66,7 +68,7 @@ group = "Overview"
 [[doc]]
 path  = "docs/FINAL-ASSURANCE-SUMMARY.md"
 title = "Final Assurance Summary (capstone)"
-blurb = "What was proved, how far it goes, what it deliberately does not say; the 277-run re-verification matrix."
+blurb = "What was proved, how far it goes, what it deliberately does not say; the 361-run re-verification matrix."
 group = "Assurance"
 
 [[doc]]

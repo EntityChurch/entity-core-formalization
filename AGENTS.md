@@ -9,16 +9,26 @@ the *protocol design at the pin* on the two layers Lean cannot structurally reac
 (distributed correctness under concurrency, safety + liveness — TLC, with **Apalache**
 for inductive/unbounded invariants and **Spin** as an independent cross-check) and
 **Tamarin / ProVerif** (active-attacker / Dolev-Yao security: capability unforgeability,
-no escalation, no replay/reflection/confused-deputy). Models the current core; may
-extend to extension protocols once they are vendored.
+no escalation, no replay/reflection/confused-deputy). Models the current core; **all three extension
+protocols — `attestation`, `quorum`, `identity` — are vendored, pinned and modeled too.**
 
 ## Proof tracks — know which protocol your claim is about
 
 **`TRACKS.toml` is the registry and `make trackcheck` is its gate.** **4 proof tracks** —
-**1 modeled** (`core`), **3 scoped** (`attestation`, `quorum`, `identity`). Every model file
+**4 modeled** (`core`, `attestation`, `quorum`, `identity`), **0 scoped**. Every model file
 belongs to exactly one; an unregistered file, a declared-but-missing file, or a file claimed
-by two tracks fails the build. **Unless a statement names a track, it is about `core`** — the
-only modeled one.
+by two tracks fails the build. **Unless a statement names a track, it is about `core`.**
+**Vendored is not pinned** — a track's `vendored` snapshot and its `pin_file` are separate
+fields. All four are now both, and each track pins independently: core is held at `v0.8.2`
+pending keystone, which has no bearing on the three extension pins.
+
+**With `identity` promoted, the `scoped` gate has no subject.** It fired as designed twice —
+`quorum` on 2026-09-07 and `identity` the same day, each forced to write its `MODELING-PIN-*`
+before a model file could be declared — and it now asserts nothing about the live registry,
+because there is nothing left in that state. Its teeth-test lives in `tools/trackcheck.py`'s
+own test path, not in `TRACKS.toml`. **A gate whose input set has gone empty is a gate that has
+stopped asserting**, which is the D15 mechanism (the input set is the claim) arriving by
+subtraction rather than by a glob. Recorded here rather than found later.
 
 Two things to internalize before writing an extension model. **The `§N.M` citation pattern
 behind the coverage number is document-blind**, so `EXTENSION-ATTESTATION §5.7` and core `§5.7`
@@ -105,6 +115,127 @@ is the learning on-ramp; `docs/PROPERTIES.md` is the PROVEN/MODELED scorecard.
 - Per-spike deliverable: a `FORMALIZATION-REPORT`-style note (properties proved /
   counterexamples / scope boundaries / on-ramp pain / go-no-go).
 
+**Attestation track, 2026-09-07 — three modules, and several of its rows are FINDINGS.**
+`tla/AttestIndex.tla` (§5.7 indexes) and `tla/AttestLive.tla` (§4.3 liveness, §5.2/§5.3 walks).
+The second one refutes the spec rather than transcribing it: **`§5.3 find_live_head` cannot
+traverse a chain of three** — it filters successors by the full liveness predicate, which is
+false for any attestation that has a live descendant, so the link leading to the head is never
+"live" and the walk returns null where a head exists. Corollary, green and more interesting
+than the bug: **§5.1's head-resolution step is an identity map**, which is *why the cross-impl
+vectors cannot catch it* — the composite is right because the liveness filter already did the
+work. T4's lesson on a different composition. Routed
+(`docs/status/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md`) with the cohort measured first:
+all three implementations diverge from the pseudocode identically, and `entity-core-rust`'s
+`SPEC-AMBIGUITIES.md` ATT-1 asked for a ruling on the neighbouring half in v1.0 — **v1.1
+adopted one of its two interim changes**, and this defect is the residue of the other.
+`tla/AttestRevoke.tla` closes the self-revocation abstraction `AttestLive` had declared, and
+finds that **§4.3's `is_self_revoked` is used in normative pseudocode and defined nowhere** —
+the class v1.0 Amendment 1 already fixed twice in that same function. The two natural readings
+give `is_attestation_live` different answers, so it is not editorial. **The transferable piece:
+a declared abstraction is a to-do list, not an absolution** — O9 exists because someone read a
+D11 inventory-boundary note back as work rather than as disclosure, and that was cheaper than
+finding a new section to model.
+
+**Quorum track, 2026-09-07 — promoted `scoped`→`modeled`, three modules, 28 runs, SEVEN
+findings.** `tla/QuorumSignerSet.tla` (§4.2 the resolver, with the clock), `tla/QuorumTrust.tla`
+(§4.2/§4.2.1 the arrival-time trust model), `tla/QuorumKofN.tla` (§4.1 the validator). Routed
+in `docs/status/ROUTING-2026-09-07-QUORUM.md`, indexed with attestation's in
+`docs/status/FINDINGS-INDEX.md`. Four things to carry forward.
+
+**A pre-model hypothesis is worth writing down PRECISELY SO you can find out how it was wrong.**
+`TRACKS.toml`'s quorum note carried two, written before a line was modeled. One was right and
+paid (*"model `not_before` and the clock explicitly from the start"* — with the clock in,
+§ATTEST:4.3's undefined `not_expired` splits into two readings that disagree about whether a
+**scheduled** membership change destroys the signer set). The other was right about the
+assumption and **wrong about its status**: the closure is not *unstated*, it is *asserted* by
+§4.2's cold-start posture and *falsified* by §4.2.1 non-trigger 1 and §8, three sentences in one
+document. Both notes are left in `TRACKS.toml` unrewritten, which is the O6 discipline.
+
+**The headline defect needs no attacker, and that is what makes it worth routing first.** On a
+plain chain of three `quorum-update`s — nothing expired, nothing scheduled, nothing revoked —
+§4.2 returns the roster the quorum was **created** with, because §ATTEST:5.3 returns null from
+the oldest element and §4.2's fall-through is silent. A `quorum-update` that removed a
+compromised signer is undone by the resolver that exists to apply it.
+
+**A FINDING ROW CAN FLIP A CONSTANT *TOWARD* THE SPEC, AND THE GATE CANNOT TELL.** On this
+track nothing is green under the spec's own constants, so the green sweep runs what the three
+implementations actually do and the finding rows restore the spec's reading. That is the exact
+inverse of a negative control, graded identically ("must fail, on this named invariant").
+`tla/Makefile:TLC_FINDING`'s header now names the four rows this applies to and says the
+distinction lives in each cfg's first line. **If you add a track where the spec-as-written is
+not green, expect this shape and declare it; do not let the constants be the only record.**
+
+**Measure the cohort, then measure it again for the next claim.** Three separate unanimous
+results — none of the three implementations uses `updates[0]`; all three read `not_expired` as
+full temporal validity; all three reject `threshold = 0` at `:create` when only §6.2 requires
+it, and Go's comment credits that rule to a §3.1 that does not contain it. Three authors
+deriving the same unwritten rule is the argument for writing it down. The exception is worth
+as much: on the trust-closure finding the cohort follows the text **faithfully** and the text
+is wrong, so "the impls work around it" is not a general law here either.
+
+**Read O6 before repeating its reasoning:** the written-down hypothesis ("both walks lack a
+bound, both rest on unstated acyclicity") was half right and *backwards on the interesting
+half*. Modelling it, not re-reading it, is what separated the two.
+
+**Identity track, 2026-09-07 — promoted `scoped`→`modeled`, three modules, 33 runs, NINE
+findings, and the LAST scoped track.** `tla/IdentityProcess.tla` (§6.3 the arrival convergence
+point), `tla/IdentityRecovery.tla` (§9.4 compromise-recovery validation), `tla/IdentityCertChain.tla`
+(§3.6 topology dispatch, §9.2 key confinement). Routed in
+`docs/status/ROUTING-2026-09-07-IDENTITY.md`, indexed with the other two in
+`docs/status/FINDINGS-INDEX.md` (21 findings across three notes, 18 machine-checked). Five things
+to carry forward.
+
+**"WRITE THE WITNESS BEFORE THE PROHIBITION" PAID, AND THE PRE-MODEL NOTE WAS RIGHT AND
+UNDER-SPECIFIC.** `TRACKS.toml` and the scoping doc both flagged §9.4 before a line was modeled:
+a negative-reachability claim is the highest vacuity risk there is, *a peer that does nothing
+satisfies it*. Followed literally. `RecoveryFailClosed` — the prohibition — is **GREEN**;
+`RecoveryAttainable` — the witness, written as a positive claim so a machine can check it — is
+**VIOLATED on the same constants**. The risk the note named was a MODEL with no paths. What it
+found is a **SPEC with no paths**: §6.3 phase 1 rejects `quorum-publish`, so §6.3's own phase-2
+row `(quorum-publish, *) → seed_contacts_cache` never runs, so §9.4's trust anchor is never
+stored, so cross-peer compromise recovery — §9.6's only remedy for a stolen key — cannot
+complete. **A conformance vector that checks only the fail-closed rejection passes on a peer
+that can never recover.**
+
+**A FINDING ROW'S CONSTANTS NAME THE SUBJECT ON TRIAL, AND THE SUBJECT IS NOT ALWAYS THE SPEC'S
+WORDS — SOMETIMES IT IS THEIR ABSENCE.** The quorum track added the second shape (a constant
+flipped *toward* the spec). This track adds a third: two rows flip toward **one implementation**,
+because on their question the spec says nothing and the three impls answer three different ways.
+`tla/Makefile:TLC_FINDING`'s header now carries all three shapes and names the rows. Also new
+there: **one invariant is the target of both a finding and a control**
+(`AcceptedRecoveryIsQuorumSigned`), which is a good sign about the property and a trap for anyone
+reading the table without the cfg headers.
+
+**WHEN A TRACK CONSUMES ANOTHER TRACK'S KNOWN-DEFECTIVE OUTPUT, MAKE THE ASSUMPTION A CONSTANT
+WITH A NEGATIVE CONTROL AND OPEN A LEDGER ROW.** Identity calls `§QUORUM:4.2 current_signer_set`,
+which this repo has already measured and refuted (Q1). Transcribing it would have re-derived
+Q1–Q7 wearing identity section numbers and routed them twice; assuming it silently would have
+made the choice invisible afterwards, which the prior checkpoint predicted. Neither:
+`SignerSetIsSound` is a constant, TRUE in the green sweep and FALSE in
+`IdentityCertChainSubstrateBug`, whose job is to exhibit what every identity K-of-N verdict rests
+on. **LEAN-SEAM O16 is a new SHAPE of Class-O row** — not "no tool here reaches this" but "we
+measured this input, found it defective, and assumed it anyway, on purpose, visibly."
+
+**THE COHORT CAN DISAGREE WITH ITSELF, AND THAT INVERTS THE ARGUMENT THE LAST TWO TRACKS RESTED
+ON.** On quorum, three authors independently derived the same unwritten rule three times and the
+unanimity was the argument for writing it down. Here all three added a kind branch before §6.3
+phase 1 that the spec does not have, and **no two did the same thing** — Go no-ops and caches
+nothing, Rust caches unvalidated, Python validates and caches both quorum kinds, and only Go
+admits `revocation`. §9.4 keys its fail-closed rule on exactly that cache, so **the peers do not
+interoperate on compromise recovery.** "The impls work around it" is not a mitigation available
+here; measure the cohort for *each* claim, and expect the census to sometimes be the finding.
+
+**TWO GATES BEHAVED AS THEIR OWN FIX PROMISED, AND ONE STILL DOES WORK THE DISCIPLINE HAS TO DO.**
+`make runcount`'s per-track widening (written the same day, on the quorum track) **failed
+immediately** on a fourth track with *"track(s) identity have runs but no group in
+TRACK_PROSE_SITES"* — the first evidence that fix was a fix and not a restatement. The `scoped`
+gate forced a `MODELING-PIN-*` before a model file could be declared, for the second time.
+**But `make coverage`'s tripwires did not catch what a human had to:** the first citation pass
+cited **30** sections and nine were background, impact or "the property this exists to provide"
+mentions. The scope-disclaimer tripwire passed all thirty — it matches *disclaimers*, not
+*background* — so the audit down to **22** was discipline, not gate. `docs/COVERAGE-MATRIX.md`
+§3e states which nine and why two of the same shape were kept.
+
 **Status:** pinned at `v0.8.2`; the live spec is **0.8.2.11** and `make specdrift` reports
 **9 of 30 cited sections moved**. Eight of the nine are additive clarification no model
 contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
@@ -112,7 +243,7 @@ contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 40
 (keystone has not upgraded yet); `docs/SPEC-DRIFT-ASSESSMENT.md` is the live measurement and
 `make driftclaim` gates every prose site that states the status. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**277-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+**361-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
 (15 ProVerif / 14 Tamarin lemmas), 100 negative controls and 13 non-vacuity witnesses.
 No inductive invariant is deferred; no control is known-weak.
@@ -126,7 +257,7 @@ the complementarity claim stops being prose. **It paid out on 2026-09-06:** the 
 residual it found was adopted by the keystone peer, §5.5a now has a theorem per pattern form,
 and both gates caught the movement — `leanseam` on the digests, `leanproof` on three new
 theorems **by name**, refusing to accept a re-declare without a re-read. **Do not trust a
-count of the ledger's rows that you did not derive:** it is 22 rows / 13 Class L, **0 OPEN**,
+count of the ledger's rows that you did not derive:** it is 37 rows / 13 Class L, **14 OPEN**,
 and a recalled figure has been published wrong here **four** times. Run **`make ledgercount`**
 — it parses the ledger and fails when a declared prose site disagrees. *Note what this line
 used to say and why it was wrong: "`leanseam` and `leanproof` print the live numbers." They do
@@ -207,6 +338,20 @@ refusal: re-declaring the new axiom set is how this gate would come to assert no
 proof arriving is a diff, exactly as a proof breaking is** — the asymmetry is easy to build in
 by accident, because only one of the two feels like a failure.
 
+*Sixth instance, 2026-09-07 — and it is about a gate table meaning TWO things.* The
+attestation chain-walk model produces rows that **must be violated on a model where nothing is
+weakened**: the transcribed spec algorithm fails a contract the spec itself writes. That grades
+identically to a negative control, so the mechanical argument was to add three `TLC_NEG` rows.
+Asked D13's question of the TABLE rather than the row — what does this table assert? — and
+`TLC_NEG`'s own header answers: *"every row MUST fail — a green here means the property has no
+teeth."* **That sentence is false of a finding row**, where a green would mean the defect had
+been fixed upstream and the row should be RETIRED, not repaired. Two opposite meanings behind
+one exit code, distinguishable only by prose nobody reads at failure time. Hence `TLC_FINDING`,
+with its retirement condition written into the target's own failure message. `TLC_NEG` already
+carried one such exception (`CoreMapFreeCarried`) explained in a paragraph; **a second
+exception is a table.** Teeth-tested both ways before use — a row that goes green, and a row
+naming an operator that does not exist.
+
 *Fifth instance, same day, on the fix for the fourth — the new tier's GREEN gate met D13 and
 its own CONTROLS did not.* Each of the four controls declared a reason-code **count**
 (`SORRY_AX: 3`). Asked "what else satisfies it?" and answered by running it: any three
@@ -263,6 +408,22 @@ involved. **Add to the grep list: a corrected defect survives longest in a comma
 runs**, because a code fix feels finished and a documented invocation does not look like code.
 Grepping the withdrawn phrasing (`:Z`, "relabel", "race") found all five; grepping the subject
 would not have.
+
+*Sixth instance, 2026-09-07, and the mechanism is a QUANTIFIER whose set grew underneath it.*
+`docs/COVERAGE-MATRIX.md` §4 opened with **"Every module is covered by all three engines of its
+family"** — true when written, when `core` was the only track, and false from the day the
+attestation track landed. It stayed false through two more track promotions and **nine TLC-only
+modules**. Nothing was mis-derived: Matrix B has no row for an extension module and is accurate
+line by line, and each extension grid says "one engine" plainly. The defect is entirely in a
+summary sentence that quantifies over a set someone else grew. Grepping the *subject* (Apalache,
+Spin, corroboration) finds hundreds of lines; grepping the **quantifier phrasing** — "every
+module", "all three engines" — found the class in one pass: **four sites**
+(`COVERAGE-MATRIX.md` §4, `README.md` §"What is verified", `FINAL-ASSURANCE-SUMMARY.md`, and
+`CROSSCHECK-RESULTS.md`'s historical blockquote, which is left as written with a dated scope
+note beside it because it is accurate history). **Add to the grep list: a bare universal
+quantifier over your own artifacts.** `every`, `all`, `no module`, `nothing is` — each one is a
+claim about an input set, and this repo's input sets have grown four times in two days. No gate
+reads prose like this, which is why it survived three promotions.
 
 *It applies to retractions too, learned 2026-08-30.* The L7 correction — that ProVerif and
 Lean do **not** share an undischarged `hframed` — was written into `LEAN-SEAM.md` and
@@ -366,6 +527,77 @@ is cited on some other line too. The notation is `§CORE:6.2` now — sigil firs
 collide with `§`+digit. Reading the regex did not catch it; running it did. **That is now four
 consecutive sessions in which a new gate's first draft was wrong and only running it found
 out.** Budget for it: writing the gate is half the work, breaking it is the other half.
+
+*The letter suffix, 2026-09-07 — and this one bit the DENOMINATOR, which nobody had asked the
+question of.* Writing the second attestation model produced a `§5.6a` citation.
+`coverage-check.py` matched `§(\d+\.\d+)` and yielded `5.6` — but `§5.6` and `§5.6a` are
+**sibling `###` sections** of that spec, so the citation would have been credited to a section
+the model says nothing about. The §4.7 range-endpoint miscredit, through a different door.
+Then the same question asked of the denominator: `SPEC_HEADING` excluded lettered headings
+entirely, so **six normative core sections had never been in it** (`1.2a`, `1.5a`, `4.5a`,
+`5.2a`, `6.9a`, `9.5a`). `28 of 85` was a fraction over a silently narrowed section set — and
+so were the by-area figures published next to it. It is **29 of 91**.
+**Two lessons worth more than the fix.** First: `tools/spec-drift.py` had `[a-z]?` in both its
+patterns and had been right all along, which is exactly why it reports **30** cited sections
+where `coverage` reported **28** — *two gates over one artifact, disagreeing by two, both
+numbers published in the same documents, and nobody had reconciled them.* When two tools
+derive a number from the same input, **make them disagree out loud or make them share the
+definition**; a quiet two-unit gap is a gate telling you something nobody is listening to.
+Second: `make coverage` checked the coverage pair at **one** site — the line inside the grid it
+derives from — while three more published it. All three were found by grep. Declared prose
+sites now, `runcount`-style. *(Still not its own discipline: same mechanism as D15, fourth
+medium. The rule stands — if it bites where the mechanism is genuinely different, number it.)*
+
+*Fifth medium, 2026-09-07, and BOTH instances were found by WIDENING a gate rather than by
+breaking one.* Promoting a third proof track did not fail anything, and that was the problem.
+- **A per-track gate that does not name every track is a per-SOME-tracks gate.** `runcount`'s
+  split patterns captured exactly two groups, `core` and `attestation`. With `quorum` modeled
+  the sentences still matched, both captured numbers were still right, and `make runcount` went
+  **green while asserting nothing whatever about 28 runs**. Same mechanism as the non-recursive
+  globs, one artifact over: the input set a gate checks, silently narrowed by an addition
+  elsewhere. It now derives the tuple from the modeled set and **fails on a modeled track it
+  does not read**, so a fourth track cannot repeat it.
+- **A stale number hides best in a sentence that states it in DIFFERENT WORDS.**
+  `make coverage` declared three prose sites; there was a fourth — `docs/STATUS.md` §Next
+  item 1, `"they reach **28 of the 85** numbered sections"`, the pre-letter-suffix pair. It
+  survived the grep that corrected the other three because that grep searched the canonical
+  phrasing (`Coverage: N of M`) and this site does not use it. **Add to D14's grep list from
+  the other end:** grep the retracted phrasing to find a withdrawn claim, and grep the *number*
+  to find a stale one, because a paraphrase of a live claim is invisible to both a search for
+  the subject and a search for the canonical words.
+Neither is numbered: this is D15's mechanism in a fifth and sixth shape, not a new one. The
+standing rule holds — if it bites where the mechanism is genuinely different, give it a number.
+
+*Seventh and eighth shapes, 2026-09-07, and the seventh is D15 arriving by SUBTRACTION.*
+Promoting `identity` emptied the `scoped` state: `TRACKS.toml` now has four modeled tracks and
+none scoped, so the gate that refuses a model file on a scoped track **has no subject in the live
+registry and asserts nothing about it**. Every prior instance of this mechanism was an input set
+silently NARROWED — non-recursive globs, a two-group regex, a glob matching build artifacts.
+This one went to **zero**, by an ordinary and correct addition elsewhere, and nothing failed.
+**Ask of a gate not only "what is in its input set" but "can that set become empty, and would
+anything say so."** Recorded in the §Proof-tracks section and in
+`spec-data/MODELING-PIN-IDENTITY`, so the next person to scope a fifth track knows the gate has
+been untested since.
+
+The eighth is the counterpart, and it is about a tripwire's REACH rather than its input. The
+identity models' first citation pass cited **30** sections; `make coverage`'s scope-disclaimer
+tripwire passed all thirty; a human audit removed **nine** — background, impact and "the property
+this section exists to provide" mentions, none of which is a *disclaimer*. The published pair is
+**22 of 73**. **A tripwire that matches one phantom idiom does not cover the class**, and the two
+that were kept (§6.0b, §6.0c) look like the same shape and are not — the claim "no operation
+validates this" is modeled as a constant there. `docs/COVERAGE-MATRIX.md` §3e names all eleven
+and says which way each went. The gate is worth having and the discipline still does work the
+gate does not; do not let a green `coverage` stand in for reading your own citations.
+
+*And the corollary held for a fifth consecutive session, twice in one module.*
+`IdentityRecovery`'s `RecoveryIdempotent` first read "two deliveries, one verdict" and the GREEN
+cfg violated it immediately — on a behaviour that is entirely correct (fail-closed before the
+anchor arrives, accept after). And `IdentityProcess`'s green sweep was VACUOUS on its first
+draft: under the union of the cohort's repairs every kind was either admitted or pre-routed, so
+the phase-2a unbind path was dead and two greens were true of a model that never unbinds
+anything. **Both were found by running, not by reading** — the second by a witness coming back
+clean, which is the whole reason witnesses exist. Budget for it: writing the model is half the
+work, breaking it is the other half.
 
 *Third and fourth enforcement points, 2026-09-06 — and the third one changes what "gate" has
 to mean here.* `make driftclaim` (`tools/spec-drift.py --check-claims`) and `make ledgercount`

@@ -7,11 +7,21 @@ that overclaims is the worst kind of overclaim, so this states — per property,
 exactly — the *strength* of each result and where it stops.
 
 > **Which protocol: the `core` track, and only it.** `TRACKS.toml` declares **4 proof
-> tracks** (`make trackcheck`); `core` is the only **modeled** one, and every property
-> below is a statement about it. `attestation`, `quorum` and `identity` are **scoped** —
-> spec landed, nothing vendored, no model, therefore no property on this scorecard. A
-> scoped track that acquires a model file fails the build until it is promoted with a spec
-> pin, so it cannot arrive here without someone stating which snapshot it is about.
+> tracks** (`make trackcheck`); **all four are modeled** — `core`, `attestation`, `quorum` and
+> `identity` — and every property below is a statement about **`core`**. The three extension
+> tracks have their own grids in `docs/COVERAGE-MATRIX.md` §3c, §3d and §3e and are
+> **deliberately not on this scorecard**: it is a PROVEN/MODELED scorecard, all three extension
+> tracks are TLC-only with no prover and no second engine, and listing them here would put
+> results of a different strength in the same table. Their findings are indexed in
+> `docs/status/FINDINGS-INDEX.md`. **No track is `scoped` any more**, so the gate that refuses
+> a model file on a scoped track has no subject in the live registry — which is worth knowing
+> before anyone relies on it to keep an unpinned track off this page.
+>
+> *(This paragraph said "`core` is the only modeled one" and "nothing vendored" until
+> 2026-09-07. Both were false when written — all three extension specs were already vendored
+> — which is the ordinary way a preamble goes stale: nothing derives it and no gate reads it.
+> `make trackcheck` checks the 4/3/1 inventory at four declared sites and this was not one of
+> them.)*
 
 > **Which spec version this scorecard is about.** Everything below is machine-checked
 > against the SHA-pinned snapshot named by `spec-data/MODELING-PIN`, currently
@@ -331,32 +341,39 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Eleven targets decide the 277 runs.
-     **The counts below are re-derived from the gate tables in `tla/`, `spin/` and
-     `tamarin/Makefile`, not carried forward:** this table read "Ten targets decide the 238
-     runs" until 2026-08-30, two matrix growths after the fact, which is item 9 of
-     `docs/STATUS.md` §Next demonstrating itself.
+     the finding is what made that discipline necessary). Twelve targets decide the 361 runs.
 
-     | Target | Runs | Grades on |
-     |---|---|---|
-     | `tlc-green` | 15 | TLC's **completion line** *and* a cfg that declares at least one `INVARIANT`/`PROPERTY` — exit status alone is satisfied by a cfg that checks nothing, which TLC reports with the same success text |
-     | `tlc-neg` | 40 | declared verdict line per row |
-     | `tlc-witness` | 15 | declared violation line per row |
-     | `apalache-green` | 52 | Apalache exit status (25 rows × base + inductive step) — fail-safe: a green slice wants success, so a tool error correctly fails the build |
-     | `apalache-neg` | 24 | `EXITCODE: ERROR (12)`, not merely non-zero |
-     | `spin green` | 24 | explicit `errors: 0` |
-     | `spin neg` | 39 | the declared pan failure signature, matched against the `pan:N:` error line — a positive `errors: N` alone cannot tell a caught assertion from a deadlock |
-     | `proverif-green` | 15 | `PV_EXPECT`, per query |
-     | `proverif-neg` | 15 | `PV_NEG_EXPECT`, per query |
-     | `tamarin-green` / `-neg` | 14 / 15 | `TM_EXPECT` / `TM_NEG_EXPECT`, per lemma, + wellformedness |
+     **This table carries no run counts, deliberately — corrected 2026-09-07.** It used to,
+     and they were stale: `tlc-neg` sat at 40 against a real 45, `tlc-green` at 15 against 24,
+     through several matrix growths. The header even claimed they were "re-derived from the
+     gate tables, not carried forward", which is how a duplicated number reads right up until
+     someone checks it. The per-target counts have exactly one canonical home — the slice
+     table in `docs/STATUS.md`, which **`make runcount` checks row by row** against the gate
+     tables. A second copy here could only ever be a hand-maintained shadow of a gated number,
+     which is the failure this very item is about. What this table owns is the last column.
 
-     Three targets grade a **number or a claim** rather than a run, and are not counted in the
-     258 because they verify no model: `make coverage` checks the coverage claim in
-     `COVERAGE-MATRIX.md` against the models' own `§`-citations (AGENTS.md D15); **`make
-     runcount`** derives this table's own totals from the gate tables and fails if any
-     declared prose site disagrees — the number you are reading is now checked rather than
-     transcribed; and `make leanseam` checks that the Lean text `LEAN-SEAM.md` cites has not
-     moved.
+     | Target | Grades on |
+     |---|---|
+     | `tlc-green` | TLC's **completion line** *and* a cfg that declares at least one `INVARIANT`/`PROPERTY` — exit status alone is satisfied by a cfg that checks nothing, which TLC reports with the same success text |
+     | `tlc-neg` | declared verdict line per row |
+     | `tlc-witness` | declared violation line per row |
+     | `tlc-finding` | declared violation line per row, on a model with **nothing weakened** — added 2026-09-07. Grades identically to `tlc-neg` and means the opposite: a green is not a toothless control but a spec defect fixed upstream, and the row must then be *retired* rather than repaired. The target says so in its own failure message |
+     | `apalache-green` | Apalache exit status (26 rows × base + inductive step) — fail-safe: a green slice wants success, so a tool error correctly fails the build |
+     | `apalache-neg` | `EXITCODE: ERROR (12)`, not merely non-zero |
+     | `spin green` | explicit `errors: 0` |
+     | `spin neg` | the declared pan failure signature, matched against the `pan:N:` error line — a positive `errors: N` alone cannot tell a caught assertion from a deadlock |
+     | `proverif-green` | `PV_EXPECT`, per query |
+     | `proverif-neg` | `PV_NEG_EXPECT`, per query |
+     | `tamarin-green` / `-neg` | `TM_EXPECT` / `TM_NEG_EXPECT`, per lemma, + wellformedness |
+
+     Several further targets grade a **number or a claim** rather than a run, and are counted
+     in no matrix total because they verify no model: `make coverage` (the coverage claim
+     against the models' own `§`-citations, and since 2026-09-07 the coverage pair at every
+     declared prose site); **`make runcount`** (this table's own totals, derived from the gate
+     tables, failing when a declared site disagrees); `make ledgercount`; `make trackcheck`;
+     `make specfreeze`; and `make leanseam`. `make driftclaim` is deliberately in neither
+     `check` nor `matrix` — its input is a sibling repo's tree, so a gate that runs on our
+     diffs cannot see it go stale.
 
      *A twelfth and thirteenth target, in a tier of their own* — `make lean`, **6 runs**,
      excluded from the 277 because they need an `entity-core-keystone` checkout that a bare
@@ -414,10 +431,12 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
    validate-peer (keystone) owns "impl conforms." Note the boundary carefully for
    §5.6 CAP-6a: `Malformed` proves the *verifier's disposition* of an unrepresentable
    temporal field; the CBOR decode that produces it is not modeled.
-7. **Extension protocols not modeled.** `EXTENSION-CONTINUATION/-SUBSCRIPTION/-COMPUTE`
-   are not in the vendored snapshot; only the core properties governing them are modeled
-   (§6.8 re-check, and now §5.8's conformance topology and §5.9's continuation depth
-   brake). Full protocols are **Phase 3, gated on vendoring**.
+7. **The async extension protocols are not modeled.** `EXTENSION-CONTINUATION/
+   -SUBSCRIPTION/-COMPUTE` are not vendored; only the core properties governing them are
+   modeled (§6.8 re-check, and now §5.8's conformance topology and §5.9's continuation
+   depth brake). Those three are **Phase 3, gated on vendoring**. Not a claim about
+   extensions generally: `attestation`, `quorum` and `identity` are all modeled tracks of
+   their own since 2026-09-07.
 8. **§6.11(a′) is proved per-connection *and* composed — the receiver's decode is the
    wall.** Frame-write atomicity is modeled in `Reentry` (TLC + Apalache) and `reentry.pml`
    (Spin), **and** in the composed `Core` model, where it is checked against interleavings

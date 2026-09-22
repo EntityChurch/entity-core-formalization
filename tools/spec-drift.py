@@ -170,14 +170,31 @@ def track_prefix(root: str, track: str = "core") -> str:
     return cfg.get("track", {}).get(track, {}).get("cite_prefix", "")
 
 
-def model_citations(root: str, paths: list[str], prefix: str = "") -> dict[str, set[str]]:
-    """Sections each model file depends on: its own bare `§N.M`, plus any `§<prefix>:N.M`
-    written by a model on ANOTHER track that reads this one."""
+def model_citations(root: str, paths: list[str], *, bare: bool, prefix: str = "") -> dict[str, set[str]]:
+    """Sections these files depend on.
+
+    `bare=True`  -- count unprefixed `§N.M`. ONLY valid for files ON the track being measured,
+                    because a bare citation means a section of the citing file's OWN spec.
+    `prefix=...` -- also count `§<PREFIX>:N.M`, the cross-track form.
+
+    THE `bare` FLAG IS NOT A CONVENIENCE, IT IS THE FIX FOR A BUG THIS FILE SHIPPED FOR ABOUT
+    AN HOUR ON 2026-09-07. The first draft of the cross-track pass called this function on the
+    OTHER tracks' models to pick up their `§CORE:N.M` references -- and it also counted their
+    BARE citations, so `tla/AttestIndex.tla`'s `§3.1` and `§3.2` (sections of
+    EXTENSION-ATTESTATION) were resolved against ENTITY-CORE-PROTOCOL and entered core's
+    dependency set. The drift denominator moved 30 -> 32 and `make driftclaim` failed against
+    all nine prose sites, which is the only reason it was caught.
+    That is the document-blind citation bug -- the exact failure the whole track dimension was
+    built to prevent -- reintroduced by the patch that added track awareness to this file.
+    Worth the paragraph: knowing the rule, having just written the gate for it, and violating
+    it in the same session is the normal case, and the gate is what caught its author.
+    """
     cites: dict[str, set[str]] = defaultdict(set)
     for rel in sorted(paths):
         text = read(os.path.join(root, rel))
-        for m in CITATION.finditer(text):
-            cites[m.group(1)].add(rel)
+        if bare:
+            for m in CITATION.finditer(text):
+                cites[m.group(1)].add(rel)
         if prefix:
             for p, sec in PREFIXED.findall(text):
                 if p == prefix:
@@ -197,14 +214,14 @@ def core_citations(root: str) -> dict[str, set[str]]:
         cfg = tomllib.load(fh)
     tracks = cfg.get("track", {})
     core = tracks.get("core", {})
-    cites = model_citations(root, list(core.get("models", [])))
+    cites = model_citations(root, list(core.get("models", [])), bare=True)
     prefix = core.get("cite_prefix", "")
     others = [
         f for n, t in tracks.items() if n != "core" and t.get("kind") == "protocol"
         for f in t.get("models", [])
     ]
     if others and prefix:
-        for sec, files in model_citations(root, others, prefix).items():
+        for sec, files in model_citations(root, others, bare=False, prefix=prefix).items():
             cites.setdefault(sec, set()).update(files)
     return cites
 

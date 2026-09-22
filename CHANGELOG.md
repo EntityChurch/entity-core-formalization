@@ -18,6 +18,164 @@ copy, so between a spec release and a re-validation this repository is *behind o
 
 ## [Unreleased]
 
+### Added — the identity track, and with it the last extension protocol is modeled
+
+**`tla/IdentityProcess.tla`, `tla/IdentityRecovery.tla`, `tla/IdentityCertChain.tla`** model
+`EXTENSION-IDENTITY` v3.10 — 33 runs, TLC only, pinned by `spec-data/MODELING-PIN-IDENTITY`,
+which had to be written *before* the model files could be declared. That is the `scoped` gate
+doing its job for the second time in one day, and with `identity` promoted **no scoped track
+remains**: four tracks, all modeled, each against its own frozen and separately pinned snapshot.
+The consequence is recorded rather than left to be found — a gate whose input set has gone empty
+asserts nothing about the live registry, and this one now has no subject in it.
+
+**Nine findings, all machine-checked, routed to `entity-system-architecture`.** The one to read
+is a *green*: §9.4's compromise-recovery rule is a negative-reachability claim ("fail-closed if
+no `quorum-publish` is cached"), and the model that transcribes it passes — **because the
+accepting path is unreachable.** §6.3 phase 1 rejects `quorum-publish` at
+`not_identity_attestation`, so §6.3's own phase-2 dispatch row `(quorum-publish, *) →
+seed_contacts_cache` never runs, so the trust anchor §9.4 requires is never stored, so a
+compromise-recovery signed by the identity's real quorum is rejected at a contact that has
+received that identity's genuine publish. §9.6 names compromise-recovery as the only remedy for
+a stolen controller key.
+
+This repo's own scoping note predicted the shape before a line was modeled — *"a peer that does
+nothing satisfies it … write the witness before the prohibition"* — and the prediction was right
+and under-specific: the risk it named was a model with no paths; what turned up is a **spec**
+with no paths. The prohibition and its witness are now two rows that must be read together.
+
+One finding is **cross-spec and exists only in a pair of documents**: `EXTENSION-ATTESTATION`'s
+TV-A8 delegates the rejection of an invalid-signature revocation to *"identity's
+`identity_verify_cert` … at topology-dispatch step"*, and `identity_verify_cert` rejects every
+`kind="revocation"` before topology dispatch is reached. Neither document is wrong read alone.
+
+**The implementation cohort does not agree with itself here, and that inverts the argument the
+previous two tracks rested on.** On quorum, three independent authors derived the same unwritten
+rule three times, and the unanimity was the argument for writing it down. On identity all three
+added a kind branch ahead of §6.3 phase 1 that the spec does not have — that unanimity is the
+finding — and no two did the same thing, so whether an arriving `quorum-publish` fills §9.4's
+trust anchor is answered three different ways and the peers do not interoperate on compromise
+recovery.
+
+**Where a track consumes another track's known-defective output, the assumption is now a model
+constant with a negative control rather than a footnote.** Identity calls
+`EXTENSION-QUORUM §4.2 current_signer_set`, which this repo has already measured and refuted.
+Transcribing it would have re-derived the quorum findings wearing identity section numbers;
+assuming it silently would have hidden the choice. `SignerSetIsSound` is true in the green sweep
+and false in a control whose only job is to exhibit what every identity K-of-N verdict rests on.
+`docs/LEAN-SEAM.md` O16 is that row and it is a shape the other eighteen do not have.
+
+The published coverage pair is **22 of 73 sections**, audited down from an initial 30: nine of
+those citations were background, impact or "the property this section exists to provide"
+mentions, and the coverage gate's scope-disclaimer tripwire passed all thirty. A tripwire that
+matches one phantom idiom does not cover the class.
+
+Matrix: **361 runs**, up from 328. Assumption ledger: **37 rows, 14 open**, up from 33 and 10.
+
+### Added — the attestation track's first two models, and all three extension specs vendored
+
+`tools/vendor-spec.py` (`make specfreeze`) vendors a spec byte-for-byte into a new frozen
+snapshot and, separately, re-hashes **every** existing snapshot against its own MANIFEST.
+The second half closes a rule that had no enforcement point: `AGENTS.md` and
+`v0.8.2/MANIFEST.md` both say a snapshot is frozen because *"a pin whose bytes can change is
+not a pin"*, and nothing had ever re-hashed one. Now in `check` and `matrix`. Nothing had
+drifted — all six files matched — but that could only be known by checking by hand.
+
+Vendored: `ext-attestation-v1.3`, `ext-quorum-v1.2`, `ext-identity-v3.10`. **Not blocked on
+anything, contrary to what the status log said:** all three declare
+`Depends: ENTITY-CORE-PROTOCOL.md (v7.40+)`, a floor the existing core pin already meets.
+Core's pin is unmoved and every published core result is untouched; extension tracks pin
+independently.
+
+**`tla/AttestIndex.tla`** models `EXTENSION-ATTESTATION` §5.7's index invariants I1–I5 — 7
+runs, TLC only. Two of the four mandatory indexes are **conditional**, so
+the obvious invariant *"the entity is in all four indexes"* is false for a kind-less
+attestation; the model asserts membership of the entity's *eligible* set instead, and carries
+a witness that a bound attestation with a proper-subset eligibility actually exists — without
+which the correct and incorrect readings are indistinguishable on the model. Three ledger rows
+added, all OPEN, including one recording that the model encodes a *reading* of I2 that nothing
+in this repo can check.
+
+**`tla/AttestLive.tla`** models §4.3's liveness check and the §5.2 / §5.3 chain walks — 8
+runs, TLC only — and **two of its rows are findings about the specification rather than
+results about the protocol.**
+
+*`§5.3 find_live_head` does not compute its own stated contract.* It filters direct successors
+by the full `is_attestation_live` predicate, and v1.1's ratified transitive supersession makes
+that predicate false for any attestation that *has* a live descendant. So the link leading to
+the head is never itself "live", the walk cannot pass through it, and on a three-link chain the
+function returns **null** where the head is the third link. Checked on a model with nothing
+weakened: `SpecHeadFindsLiveHead` — §5.3's own comment, stated as an invariant — is violated
+over every supersedes graph on three nodes.
+
+*And the corollary is green:* `§5.1`'s head-resolution step is an **identity map**.
+`default_find_authorizing` filters candidates to live ones and then resolves each through
+`find_live_head`, but a live attestation has no live descendant, so every resolution returns
+its input. That is also why the normative cross-impl vectors cannot catch the defect above —
+the composite returns the right answer because the liveness filter already did the chain
+resolution, and the broken component is invisible from outside it.
+
+Routed to the owning repository with the implementation cohort measured first: all three
+sibling implementations diverge from §5.3's pseudocode in the same direction, one carrying a
+code comment naming the exact cause, and one repository's spec-ambiguity log had raised the
+neighbouring half against v1.0 — v1.1 adopted one of its two interim changes, and this is the
+residue of the other. Two further findings routed alongside: §5.2 passes a hash to the
+path-keyed accessor that §4.0's own interface contract types by path, and `EXTENSION-QUORUM`'s
+normative historical-state requirement rests on an `as_of` parameter §5.3 does not define.
+
+**New gate-table kind — `TLC_FINDING`** (`make -C tla tlc-finding`, in `matrix`): rows that
+must be violated on a model where nothing is weakened. It grades exactly like a negative
+control and means the opposite, so it is a separate table with its own retirement condition —
+a green here means the spec was fixed upstream and the row should be deleted, not repaired.
+
+**`tla/AttestRevoke.tla`** models §4.3's other recursion — revocation — and closes an
+abstraction `AttestLive` had declared rather than moving on to a new section. 8 runs; two more
+findings.
+
+*`is_self_revoked` is used in §4.3's normative pseudocode and defined nowhere in the document.*
+One occurrence in the file, and it is the use site; `not_expired` likewise. The document has
+fixed this exact class before — v1.0 Amendment 1 added definitions for two helpers "referenced
+from §4.3 … but never specified" — and two more in the same function were left. It is not
+editorial: the two natural readings give `is_attestation_live` different answers about the same
+attestation, which the model shows by computing both. The counterexample is the documented
+predecessor-revival semantics being switched on and off by the undefined term.
+
+*And §4.3's cycle-safety covers one of its two recursions.* `has_live_transitive_descendant`
+carries a visited set and says it is cycle-safe; the revocation recursion four lines above it
+has neither a visited set nor a depth bound. Recorded as a reading rather than a measurement —
+the model assumes acyclicity by construction and says so.
+
+*A cohort divergence that turned out not to be one.* Two implementations read the undefined
+helper recursively; the third computes the descendant check a different way entirely. The
+green `DescReadingsCoincide` shows the two forms are the same predicate on every acyclic graph.
+Run rather than argued, because §D.1 is this repository's record of reasoning its way to a
+cohort claim and being wrong.
+
+### Fixed — the coverage denominator dropped every lettered section, and two gates disagreed about it
+
+`make coverage` matched section citations as `§(\d+\.\d+)` and counted spec headings the
+same way, so a **letter suffix** was silently discarded at both ends. Two consequences, and
+the second is the one that had been live for releases:
+
+- A citation of `§5.6a` was credited to `§5.6` — **sibling sections**, not a section and its
+  subsection — which is the `§4.7` phantom-row mechanism arriving through a different door.
+- The **denominator** excluded lettered headings outright, so six normative core sections had
+  never been counted (`1.2a`, `1.5a`, `4.5a`, `5.2a`, `6.9a`, `9.5a`). Core coverage is
+  **29 of 91**, not `28 of 85`; by area **§4 64% · §5 91% · §6 57%**, not `70/90/62`. `§5.2a`
+  is now its own grid row rather than folded into `§5.2`, a different section 320 lines away.
+
+`make specdrift` had the correct convention all along, which is exactly why it reported **30**
+cited sections where `make coverage` reported **28** — a two-tool disagreement over one
+artifact, with both numbers published in the same documents and neither reconciled to the
+other. Both tools share the convention now.
+
+`make coverage` also checked the coverage pair at **one** site, the line inside the grid it
+derives from, while three other published sites stated it; all three were stale and were found
+by grep. Declared prose sites now, in both directions.
+
+Published numbers are now **per track** — 277 runs on `core`, 15 on `attestation`, derived by
+`make runcount` rather than written by hand, because one total across two protocols is the
+conflation the track dimension exists to prevent.
+
 ### Added — proof tracks: which protocol a result is about is now declared and gated
 
 This repository verifies **more than one protocol**, and until now nothing said so. Every
@@ -25,7 +183,9 @@ model file, spec pin and coverage number is assigned to exactly one **track** in
 root-level **`TRACKS.toml`**, gated by **`make trackcheck`** (in `check` and `matrix`). Four
 tracks: **`core`** — the Entity Core Protocol, the only **modeled** one, and therefore what
 every published number here is about — plus **`attestation`**, **`quorum`** and
-**`identity`**, each **scoped**: spec landed, nothing vendored, no model.
+**`identity`**. *(All three extension tracks were `scoped` — spec landed, nothing vendored, no
+model — when this entry was first written; `attestation` is vendored, pinned and modeled by the
+end of the same release. The other two are vendored and scoped.)*
 
 **The structure was built before the first extension model, because two existing gates would
 have absorbed it rather than rejected it.** The coverage number is derived from `§(\d+\.\d+)`,

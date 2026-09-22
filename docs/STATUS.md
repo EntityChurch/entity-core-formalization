@@ -16,16 +16,16 @@ _Updated: 2026-09-06 · this line: 0.8.2_
 
 ## Proof tracks
 
-**4 proof tracks** — **1 modeled**, **3 scoped** — declared in `TRACKS.toml`, gated by
-`make trackcheck`. **`core` is the only modeled one, so every number below is a statement
-about `core` unless it says otherwise.**
+**4 proof tracks** — **4 modeled**, **0 scoped** — declared in `TRACKS.toml`, gated by
+`make trackcheck`. **Every number below is a statement about `core` unless it says
+otherwise**; the `attestation` and `quorum` tracks are days old and are reported separately.
 
 | Track | Subject | Status |
 |---|---|---|
 | `core` | Entity Core Protocol | **modeled** — 95 model files, 277 runs, pinned at `spec-data/v0.8.2` |
-| `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **scoped** — spec landed in `entity-system-architecture`, nothing vendored |
-| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **scoped** — same |
-| `identity` | cert chains; rotation by handoff and by recovery; retirement | **scoped** — same |
+| `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 23 runs, TLC only, pinned at `spec-data/ext-attestation-v1.3` |
+| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 28 runs, TLC only, pinned at `spec-data/ext-quorum-v1.2` |
+| `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 33 runs, TLC only, pinned at `spec-data/ext-identity-v3.10` |
 
 Added 2026-09-06, **before** any extension model exists, and that order is the point. The
 coverage number is derived from a *document-blind* `§N.M` pattern, so an
@@ -108,7 +108,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 277 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 361 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -149,24 +149,39 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 
 | slice | runs |
 |---|---|
-| TLC green (11 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero` + `CoreRefines` + 6 T4 classifier rows) | 22 |
-| TLC negative controls | 42 |
-| TLC non-vacuity witnesses | 15 |
+| TLC green (20 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero` + `CoreRefines` + 6 T4 classifier rows) | 31 |
+| TLC negative controls | 65 |
+| TLC non-vacuity witnesses | 42 |
+| TLC findings (must be violated; `tla/Makefile:TLC_FINDING`, whose header states which rows weaken nothing, which read toward the spec, and which read toward an implementation because the spec is silent) | 25 |
 | Apalache inductive (24 invariants × base+step, + 2 at N=3) | 52 |
 | Apalache negative controls | 24 |
 | Spin green (7 × safety+LTL, 4 safety-only, 3 × safety+LTL variant rows) | 24 |
 | Spin negative controls | 39 |
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
-| **total** | **277** |
+| **total** | **361** |
+
+Split by proof track, derived by `make runcount` rather than stated by hand: **277 runs** on
+`core`, **23** on `attestation`, **28** on `quorum` and **33** on `identity`. Attestation:
+`AttestIndex` — 1 green, 3 controls, 3 witnesses; `AttestLive` — 1 green, 2 controls,
+3 witnesses, 2 findings; `AttestRevoke` — 1 green, 2 controls, 3 witnesses, 2 findings. Quorum:
+`QuorumSignerSet` — 1 green, 2 controls, 3 witnesses, 5 findings; `QuorumTrust` — 1 green,
+3 controls, 3 witnesses, 2 findings; `QuorumKofN` — 1 green, 2 controls, 3 witnesses, 2 findings.
+Identity: `IdentityProcess` — 1 green, 4 controls, 3 witnesses, 3 findings; `IdentityRecovery` —
+1 green, 2 controls, 3 witnesses, 5 findings; `IdentityCertChain` — 1 green, 3 controls,
+3 witnesses, 4 findings.
+The four are different protocols against different spec pins, so the total is a fact about the
+gate rather than about any one subject; the per-track figures are the ones to quote. The
+derivation also fails if any gate-table row names a module no track declares — a run whose
+track cannot be determined is not silently counted as core.
 
 Plus **6 runs in the Lean seam tier** (`make lean`: 1 green + 5 negative controls), counted
 separately and deliberately: they require an `entity-core-keystone` checkout, so they are not
 reproducible from a bare clone and must not inflate a number that is.
 
 **Section-by-section coverage, per-engine, with every limit stated:
-`docs/COVERAGE-MATRIX.md`** — the document to send a new reader to. Headline: **28 of 85
-numbered sections (33%)**, which by area is **§4 70% · §5 90% · §6 62%** — the three surfaces
+`docs/COVERAGE-MATRIX.md`** — the document to send a new reader to. Headline: **29 of 91
+numbered sections (32%)**, which by area is **§4 64% · §5 91% · §6 57%** — the three surfaces
 this repo owns — with §2/§3/§7–§9 deliberately out of scope rather than missed.
 
 ### What 0.8.2 added, and where it now lives
@@ -339,6 +354,41 @@ Never spec edits here — proposals in the sibling repo.
   `COVERAGE-MATRIX.md` §7 and in `tla/Makefile`'s own header — which contradicted its own
   `MOUNT` line. D14 applied to a retraction, the L7 shape again: what finds these is grepping
   the withdrawn **phrasing** (`:Z`, "relabel", "race"), not the subject.)*
+- **Observed once, 2026-09-07, and NOT diagnosed — an Apalache directory error that looks
+  exactly like the fixed `:Z` bug.** A `make matrix` run died at `apalache-green` /
+  `StoreApalache` with `Configuration error: Could not find or create directory:
+  /work/_apalache-out/StoreApalache.tla` (`EXITCODE: ERROR (255)`). An immediate re-run of
+  `make -C tla apalache-green` succeeded, and a full `make matrix` re-run passed end to end.
+  Two runs of the same matrix earlier the same day had also passed.
+
+  What was actually measured, since the tempting move is to call it the known bug and move on:
+  `tla/Makefile` and `tamarin/Makefile` correctly use lowercase `:z`, `spin/Makefile`
+  correctly uses `:Z`, and a `spin` container run relabels **only** `spin/`. But **the
+  repository ROOT** — `.`, `docs/`, `tools/`, `spec-data/`, `README.md` — carries
+  `container_file_t:s0:c255,c930`, a *private* MCS category pair, and `tla/` inherits it.
+  Only a `:Z` mount of the whole repo produces that, and **no Makefile here does one**. So
+  something outside this repo's build has privately relabelled the tree, which is a standing
+  trap for precisely this failure: a container holding different categories then cannot write
+  into `tla/`.
+
+  **Root cause not determined, and this is deliberately not written up as solved.** What is
+  known: the flag discipline inside this repo is correct, the failure is transient, and the
+  repo-root label is anomalous. What is not known: what set it. Do not relabel the tree to
+  make this go away without finding the writer first — the label is the evidence.
+
+  **Recurred 2026-09-07 during the identity track's matrix run, at `apalache-green` /
+  `RegisterApalache`, same message and same `EXITCODE: ERROR (255)`. One new measurement, and
+  it is the useful one: THE CATEGORY PAIR HAD CHANGED.** It was `c255,c930` when the bullet
+  above was written and `c360,c625` when this run failed — the whole repo root again, uniformly,
+  every file. So the relabel is **not a one-time event that predates the build**; something
+  re-applies a *fresh* private pair repeatedly. That is what makes it transient rather than
+  permanent, and it means a `:z` mount (which relabels to shared `s0` on each run) can be
+  undone **while a run is in progress** — which is a race, in the shape the retracted
+  "concurrent `:Z` relabel" explanation guessed at while being wrong about the cause. The
+  writer is still outside this repo: no Makefile here mounts the root, and every mount that
+  touches `tla/` is `:z`. Still not written up as solved, and still: **do not relabel the tree
+  to make it go away.** The next person to see it should record the pair, because a third
+  distinct pair confirms the periodicity and a repeat of `c360,c625` refutes it.
 - TLC's liveness graph exhausts the 2 GB cap at `Store`'s safety bound of `NReq = 4`, so
   `Store` runs safety at 4 and liveness at 3 in two configs rather than one config that
   silently drops a property. Stated in both cfg headers.
@@ -367,7 +417,7 @@ item 4.
 ## Next
 
 1. **Coverage breadth.** Measured by the `§`-citations the models carry — and now *checked*
-   against them by `make coverage` — they reach **28 of the 85 numbered sections** of the core
+   against them by `make coverage` — they reach **29 of 91 numbered sections** of the core
    spec. By area that is **§4 · §5 · §6**, the three surfaces this repo owns. Near-zero
    coverage of §2, §3, §7, §8 and §9 is deliberate scope: registries, encoding, trusted crypto
    and the conformance profiles belong to other layers of the assurance map. The remaining
@@ -553,8 +603,17 @@ item 4.
      *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
      §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
      attribution. Derived now, **by `make ledgercount` rather than by hand**: the ledger is
-     **22 rows** — 13 Class L, 5 Class T, 4 Class O — of which **15 CLOSED**, 1 CLOSED —
-     ASSUMPTION FALSE (T4), 1 CLOSED-MODULO-H (L1), 2 N/A-device, 3 BY-DESIGN, and **0 OPEN**. *(This same sentence has now been wrong twice more than the bullet it
+     **37 rows** — 13 Class L, 5 Class T, 19 Class O — of which **15 CLOSED**, 1 CLOSED —
+     ASSUMPTION FALSE (T4), 1 CLOSED — ASSUMPTION ISOLATED (O6), 1 CLOSED-MODULO-H (L1),
+     2 N/A-device, 3 BY-DESIGN, and **14 OPEN** (O5, O7–O10 from the attestation track,
+     O11–O15 from quorum and O16–O19 from identity, all added 2026-09-07 with those tracks'
+     first nine modules).
+     All three extension tracks are entirely TLC, so O5, O14 and O19 — the three Dolev-Yao rows
+     — are the same undischarged gap counted three times, and every green on any of them assumes
+     signatures work. **O16 is a shape none of the others has**: it is not "no tool reaches
+     this" but "this repo already measured this input and found it defective (Q1), and the
+     identity models assume it works anyway" — held visible as a constant with its own negative
+     control rather than as a fidelity note. *(This same sentence has now been wrong twice more than the bullet it
      corrects: it read "14 CLOSED … 2 OPEN (T4, O4)" until O4 closed two hours later, then
      "15 CLOSED … 1 OPEN (T4)" until T4 closed on 2026-09-06. Both were true when written.
      **That is four ungated ledger counts published wrong, and the fifth was only avoided
@@ -770,7 +829,16 @@ item 4.
     property, cite it to turn "spec says" into "spec says *and* a passing test exercises it."
     Overlaps item 4 — a conformance vector and a replayed counterexample are the same move
     from opposite ends.
-12. **Phase 3 extension-protocol attacker models** stay gated on vendoring `EXTENSION-*`,
+12. **Phase 3 extension-protocol attacker models.** *(Header rewritten 2026-09-07: the original
+    read "stay gated on vendoring `EXTENSION-*`, which is still not in `spec-data/`". All three
+    are vendored, pinned and modeled now, so the gate that item named is gone and what remains is
+    narrower and sharper — **there is no prover theory on any extension track**. The original
+    text and its 2026-09-06 correction are kept below because the way the blocker was
+    misdescribed is the reusable part.)* Structural models exist on all three tracks; the
+    Dolev-Yao layer exists on none, which is `docs/LEAN-SEAM.md` O5, O14 and O19 — one
+    undischarged row per track, deliberately not merged so the growth is visible.
+
+    *Original text:* stay gated on vendoring `EXTENSION-*`,
     which is still not in `spec-data/`. Note that §5.8's registry rows and §5.9's continuation
     depth brake are now modeled at the *core* level, so the gate is narrower than it was.
 
@@ -831,6 +899,162 @@ item 4.
     deliberate next step, and are now safe: a file that falls out of a gate's view is a build
     failure rather than a silent green.
 
+    **STARTED 2026-09-07 — all three extension specs vendored, and the attestation track has
+    its first module.** `spec-data/ext-attestation-v1.3`, `ext-quorum-v1.2`,
+    `ext-identity-v3.10`, each a frozen snapshot with a generated MANIFEST, produced and
+    verified by `tools/vendor-spec.py`. **This was never blocked on keystone and the belief
+    that it was is worth recording as an error of ours:** all three specs declare
+    `Depends: ENTITY-CORE-PROTOCOL.md (v7.40+)`, a FLOOR, and the pin we already hold carries
+    v7.62–v7.76 clause tags. The item above said the extension snapshot "rides along with that
+    same re-vendoring pass" — an inference nobody checked. Core's pin stays parked on keystone;
+    the extension tracks pin independently, which is what per-track `pin_file` is for.
+
+    **`tla/AttestIndex.tla` — attestation §5.7, index invariants I1–I5.** 7 runs (1 green,
+    3 controls, 3 witnesses). What makes it more than a transcription: **two of the four
+    mandatory indexes are conditional** — `supersedes` only when the field is non-null, `kind`
+    only when the key is present (§3.2 makes `kind` a recommendation, not a field) — so *"the
+    entity is in all four indexes"* is FALSE for an ordinary kind-less attestation. Entity `a3`
+    exists to be that attestation, and `AttestIndexEligWitness` is asserted-to-be-violated
+    precisely so the two readings are distinguishable on this model; without it the wrong one
+    passes. The `Register` vacuity trap was avoided by construction and then **demonstrated**:
+    with the index publishes collapsed into one assignment the state space drops 1485 → 216,
+    the sequencing witness goes silent, and `IndexAllOrNothing` goes green as a tautology.
+
+    **Honest scope: TLC only.** No Apalache, no Spin, no prover model — so the corroboration
+    argument this repo rests on does **not** cover these rows, and `docs/COVERAGE-MATRIX.md`
+    §3c says so rather than leaving it to be inferred. Three new ledger rows, all **OPEN**: O5
+    (no prover model exists on this track at all, so attestation signature validity is
+    discharged by nobody), O6 (below), O7 (the model encodes a *reading* of I2, and nothing in
+    this repo could check it).
+
+    **`tla/AttestLive.tla` — §4.3 liveness and the §5.2/§5.3 chain walks. The next target was
+    O6, and modelling it found something bigger, in the direction the hypothesis was wrong.**
+    8 runs (1 green, 2 controls, 3 witnesses, **2 findings**). Coverage on this track is now
+    **7 of 25**.
+
+    The hypothesis written above was: `§5.2` and `§5.3` both lack a depth bound, so both rest
+    on unstated acyclicity. Half of that survived contact with a model.
+
+    - **§5.2 does rest on it, exactly** — `BackWalkBoundedWhenAcyclic` green over every graph
+      on three nodes including cyclic ones, `BackWalkBoundedAlways` violated. The assumption is
+      now *isolated* rather than suspected, which is what closes O6: not "it terminates" but
+      "here is precisely what its termination is, and nobody here owns the discharge."
+    - **§5.3 does not, and the reason is the defect.** `SpecWalkNeverExhausts` is green: the
+      `while True` cannot iterate twice, because stepping to a live successor proves that
+      successor has no live successor of its own. But that same fact means the walk **cannot
+      traverse a chain of three at all** — the link leading to the head is never itself "live"
+      under §4.3's ratified transitive semantics, so `find_live_head` started at the oldest
+      link returns **null** where the head is the third link. A missing bound was the guess;
+      a wrong answer was the defect. **Reading found the smell and got the mechanism
+      backwards.** Only running it separated the two — which is the argument for modelling a
+      suspicion rather than writing it down.
+
+    **And the corollary is worth more than the bug: §5.1's head-resolution step is an identity
+    map.** `default_find_authorizing` filters candidates to live ones and then resolves each
+    through `find_live_head` — but a live attestation has no live descendant, so every
+    resolution returns its own input. `HeadResolutionIsIdentity` is **green, and the green is
+    the finding**. That is also *why the conformance vectors cannot catch the bug*: TV-A4 gets
+    the right answer because the liveness filter already did the chain resolution, and the
+    broken component is invisible from outside the composite. **T4's lesson on a different
+    composition** — "the composed thing is checked and the components are checked" does not
+    mean the composition is verified.
+
+    Routed to `entity-system-architecture`:
+    `docs/status/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md`. Three findings — the §5.3
+    traversal defect, a §5.2 type error against §4.0's own accessor contract (a hash passed to
+    the path-keyed getter), and `EXTENSION-QUORUM` §4's normative MUST resting on an `as_of`
+    parameter §5.3 does not define. **The cohort was measured before any of it was written**:
+    all three implementations diverge from §5.3's pseudocode in the same direction, Go's
+    comment names the exact cause, and `entity-core-rust`'s `SPEC-AMBIGUITIES.md` **ATT-1**
+    raised the neighbouring half against v1.0 and asked for a ruling. v1.1 adopted **one of
+    ATT-1's two interim changes**, and F1 is the residue of the half that was not adopted — the
+    amendment that fixed §4.3 is what made §5.3 worse. Rust and Go disagree on `as_of`, which
+    is a live interop split.
+
+    **A new gate-table kind: `TLC_FINDING`** (`make -C tla tlc-finding`, in `matrix`). Rows
+    that MUST be violated on a model where **nothing is weakened**. It grades identically to
+    `TLC_NEG` and means the opposite — `TLC_NEG`'s header says "a green here means the property
+    has no teeth", which is false of these rows, where a green would mean the spec defect had
+    been *fixed upstream* and the row should be retired rather than repaired. Two opposite
+    meanings behind one exit code is the D13 shape; `TLC_NEG` already carried one such
+    exception in a paragraph, and a second is a table. Teeth-tested both ways before use (a row
+    that goes green; a row naming a nonexistent operator).
+
+    **`tla/AttestRevoke.tla` — §4.3's OTHER recursion, found by going back to close a declared
+    abstraction rather than by moving on.** 8 runs (1 green, 2 controls, 3 witnesses, 2
+    findings). Coverage 7 of 25 -> **9 of 25**.
+
+    `AttestLive` abstracted self-revocation to a per-node flag and said so in a D11
+    inventory-boundary note. Closing that boundary is what surfaced this: **`is_self_revoked`
+    is used in §4.3's normative pseudocode and defined nowhere in the document** — one
+    occurrence in the whole file, and it is the use. `not_expired` likewise. And this is a
+    class the document has already fixed twice: v1.0 Amendment 1's history entry records adding
+    definitions for two helpers *"referenced from §4.3 … but never specified"*. Two were found;
+    two more in the same function were not.
+
+    **It is not editorial, because the readings disagree.** The main path spells self-revocation
+    out recursively (`is_attestation_live(rev, …)`); the descendant path calls the undefined
+    helper. Modelled both ways side by side: `SelfRevReadingsAgree` is violated by an *expired*
+    revocation (recursively it does not revoke, structurally it does — an expired revocation
+    that goes on revoking), and `LiveReadingsAgree` shows it changes `is_attestation_live`'s
+    answer, which is the predicate every consumer's authorization decision runs through. The
+    counterexample is the documented predecessor-revival semantics being switched on and off by
+    an undefined term: node 3 supersedes node 1, node 4 revokes node 3, node 4 is expired —
+    recursively node 1 is dead, structurally node 1 is alive.
+
+    **The cohort was measured and it is more interesting than "they diverge".** Python and Rust
+    both pick the recursive reading; Go computes the descendant check a third way (any *fully
+    live* descendant, walking past dead links, with the comment *"the rescuing-grandchild case
+    the spec's literal pseudocode mishandles"*). That looked like a real interop divergence.
+    **It is not, and `DescReadingsCoincide` is the green that says so** — the two predicates
+    coincide on every acyclic graph. Run rather than argued, because §D.1 is the record of this
+    repo reasoning its way to a cohort claim and being wrong.
+
+    **Second finding, recorded as a reading rather than a measurement.**
+    `has_live_transitive_descendant` carries a `visited` set and says it is cycle-safe; the
+    revocation recursion four lines above it has **neither a visited set nor a depth bound**.
+    The one place §4.3 defends against cycles defends one of its two recursions. All three
+    implementations built a guard or a rationale for it — Python threads an `in_progress` set
+    through the whole mutual recursion, Rust's comment says the recursion is *"fine because
+    revocations don't normally form chains"*. `AttestRevoke` cannot check this: its `Init`
+    restricts both relations to be acyclic by construction and every recursion in it terminates
+    because of that restriction rather than because of the algorithm. The module header says so.
+    Ledger O10.
+
+    **The transferable piece: a declared abstraction is a to-do list, not an absolution.** O9
+    exists because someone went back and read a D11 boundary note as work rather than as
+    disclosure. That is the first time in this repo that reading one back has paid, and it is
+    cheaper than finding a new section to model.
+
+    **And modelling this section found a defect in `make coverage` — D15's mechanism in a
+    fourth shape, the letter suffix.** `AttestLive`'s first draft cited `§5.6a`
+    (`find_attestations_with_supersedes`). `coverage-check.py`'s citation pattern was
+    `§(\d+\.\d+)`, so it produced the token `5.6` — and in this spec `§5.6`
+    (`find_revocations_for`) and `§5.6a` are **sibling `###` sections**, not a section and its
+    subsection. The citation would have been credited to a section the model says nothing
+    about. Same miscredit as `§4.7`'s range endpoint, arriving through a different door.
+
+    Asking the same question of the **denominator** was worse: `SPEC_HEADING` excluded lettered
+    headings outright, so **six normative core sections had been missing from it all along**
+    (`1.2a`, `1.5a`, `4.5a`, `5.2a`, `6.9a`, `9.5a`) plus two in attestation. `28 of 85` was a
+    fraction over a section set that dropped sections for no stated reason, and the by-area
+    figures published beside it (`§4 70% · §5 90% · §6 62%`) were computed the same way. It is
+    **29 of 91** — `§4 64% · §5 91% · §6 57%` — and `§5.2a` is now its own Matrix A row rather
+    than being folded into `§5.2`, which is a different section 320 lines away.
+
+    **`tools/spec-drift.py` had it right the whole time** (`[a-z]?` in both its heading and
+    citation patterns). *That* is why it reports **30** cited sections where `coverage` reported
+    **28** — a two-tool disagreement over one artifact, both numbers published in the same
+    documents, and nobody had reconciled them. Two gates, two definitions of "a section",
+    neither aware of the other. The convention is spec-drift's now, in both.
+
+    **Third piece: `make coverage` checked one prose site and there were four.** It verified the
+    `Coverage: N of M` line *inside the grid it derives from* — and `README.md`'s headline,
+    `docs/STATUS.md`'s pointer and `COVERAGE-MATRIX` §5's complement ("N of M sections are not
+    cited by any model") all stated the old pair and were found **by grep**. `runcount`'s
+    declared-prose-site discipline now applies to the coverage pair too, teeth-tested both ways
+    (a stale number; a site that stops making the claim).
+
     **Scoped 2026-09-06: `docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md`.** Identity
     + attestation + quorum is the next phase, and it is a better target than core was: a
     signed graph with **mutable membership, cached trust, and a temporal query**. Four shapes
@@ -849,6 +1073,148 @@ item 4.
     therefore a negative control already written for us. Start at `EXTENSION-ATTESTATION`'s
     substrate, not at identity's 1,617 lines. **"Recovery cluster" is the pre-v3.3 name for an
     identity quorum** (`SYSTEM-IDENTITY-COMPOSITION.md` §7).
+    **QUORUM TRACK — promoted and modeled 2026-09-07, three modules, 28 runs, SEVEN findings.**
+    `spec-data/MODELING-PIN-QUORUM` -> `ext-quorum-v1.2` (byte-identical to live when checked).
+    The `scoped` gate worked exactly as designed: the three model files could not be declared
+    in `TRACKS.toml` until the pin file existed, so promotion happened in the intended order
+    rather than being worked around. Routed:
+    `docs/status/ROUTING-2026-09-07-QUORUM.md`; indexed with the attestation note in
+    `docs/status/FINDINGS-INDEX.md`, which is the per-track index the previous checkpoint
+    deferred until there was more than one note to index.
+
+    **The two questions `TRACKS.toml` wrote down before any model existed were both answered,
+    and one of them was answered wrong by the note.** That is the interesting half.
+
+    - *"The whole live signer set rests on every write path running arrival-time validation,
+      and nothing states that every path does."* — right about the assumption, **wrong that it
+      is unstated.** §4.2's cold-start posture asserts it outright ("tree-bound only on
+      validation success"), and two sentences in the same document falsify it: §4.2.1
+      non-trigger 1 ("may sit in the tree at a structurally-valid path without being
+      authoritative") and §8's permitted raw `tree:put`. `tla/QuorumTrust.tla` exhibits it in
+      **two steps with §8 switched off** — a K-of-N failure is tree-bound, the next read walks
+      the index and caches it as authoritative. Ledger O11.
+      **And the green is the more useful result:** given the closure, §4.2.1's trigger and
+      non-trigger set is *exactly sufficient* across every interleaving. The invalidation rules
+      are not the problem; the closure they silently require is.
+    - *"Model `not_before` and the clock explicitly from the start."* — the right call, and it
+      paid immediately. With the clock in, `EXTENSION-ATTESTATION §4.3`'s undefined
+      `not_expired` separates into two readings that disagree about whether a **scheduled**
+      membership change destroys the current signer set. Ledger O12.
+
+    **The finding worth reading first is Q1**, and it needs no attacker, no expiry and no
+    malformed input: on a plain chain of three `quorum-update`s, §4.2 returns the roster the
+    quorum was **created** with. §5.3's walk returns null from the oldest element (the routed
+    F1), and §4.2's fall-through is silent — `signers` still holds `quorum.data.signers`.
+    TLC's counterexample is `sup = <<0,1,2>>` with no `not_before` and no `expires_at`.
+
+    **The cohort was measured before any impact claim, and it is unanimous three times.** None
+    of `entity-core-{go,rust,py}` implements §4.2's `find_live_head(updates[0], ...)` — all
+    three probe more than one candidate. All three read `not_expired` as full temporal
+    validity. All three reject `threshold = 0` at `:create`, which only §6.2 requires — and
+    Go's comment attributes that rule to "the §3.1 invariants", where §3.1 states no such
+    invariant. Three authors deriving the same unwritten rule is the argument for writing it
+    down. The one exception is Q5, where the cohort follows the text faithfully and the text is
+    wrong.
+
+    **O15, and it is the row that could not be seen from one track.** `AttestRevoke` models
+    revocation with the clock collapsed to a flag; `QuorumSignerSet` models the clock with
+    revocation omitted. Both disclosures are honest and neither model is wrong. But
+    `DescReadingsCoincide` — AttestRevoke's cohort green — is scoped to a model in which
+    `not_before` does not exist, and O12 shows the two descendant readings separate precisely
+    when it does. **The green is true and its scope is narrower than it reads.** No model covers
+    both dimensions; that composition is now the cheapest open item on either extension track.
+    O9's lesson arriving from a direction nobody was watching.
+
+    **Two gates were found asserting less than they claimed, both by widening, not by breaking.**
+    (a) `runcount`'s per-track split captured exactly two groups, core and attestation.
+    Promoting a third track did **not** fail it — the sentence still matched, both numbers were
+    still right, and it went green while asserting nothing whatever about 28 quorum runs. It now
+    derives the tuple from the modeled set and **errors on a modeled track it does not read**;
+    teeth-tested both ways. (b) `coverage`'s prose-site table listed three sites and there was a
+    fourth: §Next item 1 above said "they reach **28 of the 85** numbered sections", the
+    pre-letter-suffix pair, stale since 2026-09-07. It survived the grep that fixed the other
+    three **because it states the pair in different words** — "they reach", not "Coverage:".
+    That is the shape worth keeping: a stale number hides best in a sentence that says it
+    differently from the canonical one, since every search for the staleness searches for the
+    canonical phrasing.
+
+    **Still TLC only, and this now spans two tracks.** No Apalache, no Spin, no prover. §4.1 is
+    a K-of-N *signature* validator — §2 calls it "the only mechanism that distinguishes quorum
+    from a regular peer node" — and its unforgeability is discharged by nothing here (O5, O14).
+    Read both extension tracks as defect reports, not as assurance.
+
+    **IDENTITY TRACK — promoted and modeled 2026-09-07, three modules, 33 runs, NINE findings,
+    and the LAST scoped track.** `spec-data/MODELING-PIN-IDENTITY` -> `ext-identity-v3.10`
+    (byte-identical to live when checked). The `scoped` gate forced the pin before the model
+    files could be declared, for the second time in one day — and with this promotion **no
+    scoped track remains**, so that half of the gate now has no subject in the live registry.
+    Routed: `docs/status/ROUTING-2026-09-07-IDENTITY.md`; indexed in
+    `docs/status/FINDINGS-INDEX.md`, now 21 findings across three notes, 18 machine-checked.
+
+    **The finding worth reading first is I2, and its shape is a green.** §9.4's fail-closed rule
+    for compromise recovery is a NEGATIVE REACHABILITY claim, and `TRACKS.toml` plus
+    `docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md` §3.3 both said so before a line was
+    modeled: *"a peer that does nothing satisfies it ... write the witness before the
+    prohibition."* Followed literally. `RecoveryFailClosed` — the prohibition — is **GREEN**.
+    `RecoveryAttainable` — the witness, stated as a positive claim so a machine can check it —
+    is **VIOLATED on the same constants**:
+
+    > a compromise-recovery signed K-of-N by the identity's real quorum, delivered to a contact
+    > that has already received that identity's genuine `quorum-publish`, is REJECTED.
+
+    The cause is §6.3: phase 1 is unconditional `identity_verify_cert`, whose §3.6 step 1 admits
+    four kinds, and the phase-2 dispatch table's seventh row names `quorum-publish`. So the row
+    that fills §9.4's trust anchor is unreachable and the arrival is unbound on the way past.
+    §9.6 names compromise-recovery as the only remedy for a stolen controller key. **A
+    conformance vector that checks only the fail-closed rejection passes on a peer that can
+    never recover.** The pre-model note was right and *under-specific*: the risk it named was a
+    MODEL with no paths; what turned up is a SPEC with no paths.
+
+    **The same mechanism deletes two other kinds on arrival**, neither of them a row of that
+    table, so both had to be looked for: a `revocation` (§4.6 gives identity authority rules over
+    it, §5.1 stores it at synced paths, §3.6 step 3 reads it back out of the tree) and a
+    `quorum-update` (§5.1's path, §3.3's "identity does not define this kind"). The second
+    composes with Q1: the roster cannot change because the updates do not survive to be walked.
+
+    **THE COHORT DOES NOT AGREE WITH ITSELF, AND THAT INVERTS THE ARGUMENT THE PREVIOUS TWO
+    TRACKS RESTED ON.** All three implementations added a kind branch before §6.3 phase 1 that
+    the spec does not have — the unanimity is the finding — and **no two did the same thing.**
+    Go no-ops every non-identity kind and caches nothing; Rust caches `quorum-publish` without
+    validating it; Python validates and caches both quorum kinds; only Go admits `revocation`,
+    and it needed two spec-absent additions to do so. §9.4 keys its fail-closed rule on exactly
+    that cache, so **a Go contact rejects a recovery a Rust contact accepts**. "Three authors
+    deriving the same unwritten rule" was the quorum track's argument for writing it down; here
+    they derived three different rules and the peers do not interoperate.
+
+    **One cross-spec finding exists only in a PAIR of documents.** `EXTENSION-ATTESTATION`'s
+    TV-A8 constructs an invalid-signature attestation written by raw `tree:put` and justifies
+    returning it: *"consumers layer signature validation per topology — identity's
+    `identity_verify_cert` rejects A at topology-dispatch step."* §3.6 rejects every
+    `kind="revocation"` at step 1, before topology dispatch, and `identity_topology_for` has no
+    revocation arm. **The rejection point TV-A8 delegates to does not exist for the kind TV-A8
+    is about.** Neither document is wrong read alone. On the pinned text an unsigned revocation
+    naming the quorum marks any cert rooted there `authority_revoked` — denial of authority, no
+    signature required.
+
+    **§9.2's MUST and §4.2's valid-modes table cannot both be satisfied.** §4.2 gives `agent`
+    "any of the four" modes; §4.2a and §5.1 put mode=public at `public/cert/`; §2.3 makes the
+    signer the controller in the three-key default; §9.2 requires rejecting anything under
+    `public/` carrying a live controller's signature. The four-key shape is unaffected, which
+    is the tell. **No implementation enforces §9.2 at all** — that absence is the census datum.
+
+    **O16 is a NEW SHAPE of ledger row and the transferable piece.** Identity consumes
+    `§QUORUM:4.2 current_signer_set`, which this repo has already measured and refuted (Q1).
+    Transcribing it would have re-derived Q1-Q7 wearing identity section numbers and routed them
+    twice; assuming it silently would have made the choice invisible afterwards, which the prior
+    checkpoint predicted. Neither: `SignerSetIsSound` is a model **constant**, TRUE in the green
+    sweep and FALSE in a negative control whose only job is to exhibit what every identity K-of-N
+    verdict rests on. **When a track consumes another track's known-defective output, make the
+    assumption a constant, control it, and open the row.**
+
+    **Still TLC only, and this now spans three tracks.** O5, O14 and O19 are one undischarged
+    Dolev-Yao gap counted once per track — deliberately not merged, so its growth is visible.
+    Read all three extension tracks as defect reports, not as assurance.
+
 13. **~~Vacuity, the last of it.~~ DONE 2026-09-06 — no thin positive remains.**
     `Register`'s correct-model atomicity was near-tautological because the five §6.2 writes
     landed in **one assignment**: `tree[h] \in {{}, FACETS}` restated the assignment and could

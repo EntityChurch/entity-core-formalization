@@ -207,7 +207,8 @@ models = [
 ]
 
 # ════════════════════════════════════════════════════════════════════════════════════════
-# EXTENSION TRACKS — declared, not yet modeled.
+# EXTENSION TRACKS — all three are modeled as of 2026-09-07. NONE is scoped, which is itself a
+# fact about the gate below: `scoped` now has no subject in this registry.
 #
 # `status = "scoped"` is a real state with a gated meaning, not a placeholder: a scoped track
 # MUST carry no models and no pin. The moment a model file is assigned to one of these,
@@ -215,11 +216,21 @@ models = [
 # Promotion is the step where someone has to say out loud which snapshot the results are about,
 # and it cannot be skipped by quietly adding a file.
 #
-# All three specs are LANDED and readable today in
-# `../entity-system-architecture/specs/extensions/` (26 extension specs live there; the three
-# below are the scoped phase). Nothing here is blocked on anyone writing anything — nothing is
-# vendored yet only because `spec-data/` is held at the core pin until the keystone sibling
-# converges, and the extension snapshots ride along with that same re-vendoring pass.
+# The gate did its job on 2026-09-07: `quorum` was promoted by writing
+# `spec-data/MODELING-PIN-QUORUM` FIRST, because the three model files could not be declared
+# until the pin existed. That is the whole intended sequence, and it is worth recording that it
+# ran as designed rather than being worked around.
+#
+# All three specs are LANDED in `../entity-system-architecture/specs/extensions/` (26 extension
+# specs live there) and ALL THREE ARE NOW VENDORED — see each track's `vendored` field.
+#
+# *(This block said, until 2026-09-07: "nothing is vendored yet only because `spec-data/` is
+# held at the core pin until the keystone sibling converges, and the extension snapshots ride
+# along with that same re-vendoring pass." That was an inference nobody checked, and it was
+# wrong. Each extension spec declares `Depends: ENTITY-CORE-PROTOCOL.md (v7.40+)` — a FLOOR,
+# which the pin already held clears. Core's pin is parked on keystone; the extension tracks
+# pin independently, which is what the per-track `pin_file` field is for. Left in place rather
+# than deleted because a retracted reason survives longest where it reads as background.)*
 #
 # Scoping and the ranked targets: docs/status/SCOPING-2026-09-06-IDENTITY-ATTESTATION.md.
 # Start at attestation's substrate, not identity's 1,617 lines.
@@ -227,7 +238,7 @@ models = [
 
 [track.attestation]
 kind         = "protocol"
-status       = "scoped"
+status       = "modeled"
 title        = "Attestation extension — the signed-edge substrate"
 owner_repo   = "entity-system-architecture"
 source_repo_path = "../entity-system-architecture"
@@ -235,12 +246,16 @@ source_dir       = "specs/extensions"
 depends_note = "`ENTITY-CORE-PROTOCOL.md` (v7.40+) — met by `spec-data/v0.8.2`, which carries v7.62–v7.76 clause tags"
 vendored     = "ext-attestation-v1.3"
 cite_prefix  = "ATTEST"
-pin_file     = ""
+pin_file     = "spec-data/MODELING-PIN-ATTESTATION"
 primary_spec = "EXTENSION-ATTESTATION.md"
 specs        = ["EXTENSION-ATTESTATION.md"]
-coverage_doc = ""
-coverage_heading = ""
-models       = []
+coverage_doc     = "docs/COVERAGE-MATRIX.md"
+coverage_heading = "Matrix A-ATT — attestation section × property class × engine"
+models       = [
+  "tla/AttestIndex.tla",
+  "tla/AttestLive.tla",
+  "tla/AttestRevoke.tla",
+]
 note = """
 The substrate the other two consume: a system/attestation is a signed edge attesting→attested
 with a properties.kind, plus a supersedes chain. Owns four mandatory indexes and the
@@ -248,11 +263,21 @@ chain-walk family. First target because every identity property is stated in ter
 because two of its shapes reuse models this repo already trusts: index invariant I2
 ("partial-index states are NOT permitted") is RegisterAllOrNothing with four indexes instead
 of five facets, and the chain walks are DeepChain/Bounds' termination question.
+
+Two modules as of 2026-09-07. AttestIndex is a concurrency model in the house shape;
+AttestLive is NOT — it is an exhaustive enumeration over every supersedes graph on three
+nodes, because §4.3/§5.2/§5.3 are pure functions of one graph and the question is whether the
+algorithm computes its own contract, not whether an interleaving can break it. Two of its
+rows are findings against the spec rather than results about the protocol; they live in the
+TLC_FINDING gate table and are routed in docs/status/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md.
+
+Still TLC only on this track: no Apalache, no Spin, and no prover model at all (LEAN-SEAM O5),
+so the corroboration argument that carries the core track does not reach these results yet.
 """
 
 [track.quorum]
 kind         = "protocol"
-status       = "scoped"
+status       = "modeled"
 title        = "Quorum extension — K-of-N signer rosters"
 owner_repo   = "entity-system-architecture"
 source_repo_path = "../entity-system-architecture"
@@ -260,28 +285,52 @@ source_dir       = "specs/extensions"
 depends_note = "`ENTITY-CORE-PROTOCOL.md` (v7.40+); `EXTENSION-ATTESTATION.md` (v1.2+) — both met by the vendored snapshots"
 vendored     = "ext-quorum-v1.2"
 cite_prefix  = "QUORUM"
-pin_file     = ""
+pin_file     = "spec-data/MODELING-PIN-QUORUM"
 primary_spec = "EXTENSION-QUORUM.md"
 specs        = ["EXTENSION-QUORUM.md"]
-coverage_doc = ""
-coverage_heading = ""
-models       = []
+coverage_doc     = "docs/COVERAGE-MATRIX.md"
+coverage_heading = "Matrix A-QRM — quorum section × property class × engine"
+models       = [
+  "tla/QuorumKofN.tla",
+  "tla/QuorumSignerSet.tla",
+  "tla/QuorumTrust.tla",
+]
 note = """
 A system/quorum is a signer roster + threshold whose own membership changes are attestations
-(quorum-update, quorum-publish). Carries the sharpest attacker question on the surface: a
-quorum-update is validated at ARRIVAL and then trusted on every read — end-to-end
-re-validation "NOT performed and NOT required", cold start "trusts the existing tree state".
-So the whole live signer set rests on every write path running arrival-time validation, and
-nothing states that every path does. That is an unstated closure assumption and belongs in
-docs/LEAN-SEAM.md the day a model exists, whatever the answer turns out to be.
-Also carries current_signer_set(as_of) — verdict determinism over a declared temporal input,
-which is the exact shape where §5.10's δ turned out to be missing from Revoke.tla and the
-invariant was accidentally true. Model not_before and the clock explicitly from the start.
+(quorum-update, quorum-publish). Promoted scoped -> modeled on 2026-09-07 by writing
+spec-data/MODELING-PIN-QUORUM, which is the step the `scoped` gate exists to force.
+
+THE TWO QUESTIONS THIS NOTE CARRIED BEFORE ANY MODEL EXISTED ARE BOTH ANSWERED, AND BOTH
+ANSWERS ARE WORSE THAN THE QUESTIONS. They are left in place below rather than rewritten,
+because what a pre-model hypothesis got right and wrong is the thing worth reading later
+(LEAN-SEAM O6 is the precedent: the written-down hypothesis was half right and backwards on
+the interesting half).
+
+  (1) "A quorum-update is validated at ARRIVAL and then trusted on every read [...] So the
+      whole live signer set rests on every write path running arrival-time validation, and
+      nothing states that every path does." -- RIGHT about the assumption, WRONG that it is
+      merely unstated. §4.2's cold-start posture asserts it outright ("tree-bound only on
+      validation success"), and two other sentences in the same document falsify it: §4.2.1
+      non-trigger 1 ("may sit in the tree at a structurally-valid path without being
+      authoritative") and §8 ("Direct tree:put [...] is permitted"). tla/QuorumTrust.tla
+      exhibits it in TWO STEPS with §8 switched off. LEAN-SEAM O11.
+  (2) "current_signer_set(as_of) -- verdict determinism over a declared temporal input [...]
+      Model not_before and the clock explicitly from the start." -- this was the right call
+      and it paid. With the clock in, EXTENSION-ATTESTATION §4.3's undefined `not_expired`
+      separates into two readings that disagree about whether a SCHEDULED membership change
+      destroys the current signer set. AttestRevoke's DescReadingsCoincide green is scoped to
+      a model with no not_before and does not cover this; that is O9 firing again on the
+      module written to close it.
+
+Six findings routed: docs/status/ROUTING-2026-09-07-QUORUM.md. Still TLC only, like
+attestation: no Apalache, no Spin, and no prover model, so LEAN-SEAM O5's gap now spans two
+extension tracks rather than one. §4.1 is the K-of-N validator and its unforgeability is a
+Dolev-Yao question nothing here touches.
 """
 
 [track.identity]
 kind         = "protocol"
-status       = "scoped"
+status       = "modeled"
 title        = "Identity extension — cert chains, rotation, recovery"
 owner_repo   = "entity-system-architecture"
 source_repo_path = "../entity-system-architecture"
@@ -289,24 +338,77 @@ source_dir       = "specs/extensions"
 depends_note = "`ENTITY-CORE-PROTOCOL.md` (v7.40+); `EXTENSION-ATTESTATION.md` (v1.2+); `EXTENSION-QUORUM.md` (v1.2+) — all met by the vendored snapshots"
 vendored     = "ext-identity-v3.10"
 cite_prefix  = "IDENT"
-pin_file     = ""
+pin_file     = "spec-data/MODELING-PIN-IDENTITY"
 primary_spec = "EXTENSION-IDENTITY.md"
 specs        = ["EXTENSION-IDENTITY.md"]
-coverage_doc = ""
-coverage_heading = ""
-models       = []
+coverage_doc     = "docs/COVERAGE-MATRIX.md"
+coverage_heading = "Matrix A-IDN — identity section × property class × engine"
+models       = [
+  "tla/IdentityCertChain.tla",
+  "tla/IdentityProcess.tla",
+  "tla/IdentityRecovery.tla",
+]
 note = """
 Built on both of the above: certs, rotation by handoff (dual-sig), rotation by recovery
 (K-of-N, old key compromised — so the adversary is assumed to hold the old key), retirement.
-Deliberately LAST: 1,617 lines, and it consumes the other two.
-Two things to settle before a model abstracts anything away. (1) The cross-peer recovery rule
-is a NEGATIVE REACHABILITY claim ("fail-closed if no quorum-publish is cached"), which is the
-highest vacuity risk there is — a peer that does nothing satisfies it. Write the witness
-before the prohibition; this is the same advice this repo routed to keystone about H3.
-(2) Identity's chain-walk predicates (identity_confers_function,
-identity_is_authorized_revoker) are authority-logic interior — the layer entity-core-keystone's
-Lean owns for core. Whether it owns these too is the first Class-L question and should be
-asked BEFORE a model reduces them to a predicate, not after.
+Deliberately LAST: 1,617 lines, and it consumes the other two. Promoted scoped -> modeled on
+2026-09-07 by writing spec-data/MODELING-PIN-IDENTITY, which is the step the `scoped` gate
+exists to force — the second time it has forced it, on a different day, without anyone having
+to remember. WITH THIS PROMOTION NO SCOPED TRACK REMAINS, so that gate now has no subject in
+the live registry and is teeth-tested only by tools/trackcheck.py's own test path. A gate whose
+input set has gone empty asserts nothing; recorded here rather than discovered later.
+
+THE TWO PRE-MODEL QUESTIONS THIS NOTE CARRIED ARE BOTH ANSWERED, AND ONE OF THEM PRODUCED THE
+TRACK'S HEADLINE. They are left below unrewritten, as the quorum note's were, because what a
+pre-model hypothesis got right and wrong is the thing worth reading later (LEAN-SEAM O6).
+
+  (1) "The cross-peer recovery rule is a NEGATIVE REACHABILITY claim ('fail-closed if no
+      quorum-publish is cached'), which is the highest vacuity risk there is — a peer that does
+      nothing satisfies it. Write the witness before the prohibition." -- RIGHT, followed
+      literally, and UNDER-SPECIFIC in a way that turned out to matter. The risk it named was a
+      MODEL with no paths. What tla/IdentityRecovery.tla found is a SPEC with no paths: §6.3
+      phase 1 rejects `quorum-publish` at `not_identity_attestation`, so §6.3's own phase-2 row
+      `(quorum-publish, *) -> seed_contacts_cache` never runs, so §9.4's trust anchor is never
+      stored, so §9.4 fail-closes on every cross-peer compromise recovery. `RecoveryFailClosed`
+      is GREEN and `RecoveryAttainable` is VIOLATED, on the same constants. Findings I1/R1/R2.
+  (2) "Identity's chain-walk predicates (identity_confers_function,
+      identity_is_authorized_revoker) are authority-logic interior — the layer
+      entity-core-keystone's Lean owns for core. Whether it owns these too is the first Class-L
+      question and should be asked BEFORE a model reduces them to a predicate, not after."
+      -- ASKED BEFORE, and the answer is NO with a reason worth keeping: keystone's Lean owns
+      CAPABILITY-CHAIN attenuation, and §2.2/§12.3 of this spec make identity attestations a
+      structurally distinct validation class from capability tokens with "no shared validator".
+      Reducing identity's predicates to the Lean layer would be the exact conflation §9.1 calls
+      "the natural implementation mistake". So these stay TLA+ operators, LEAN-SEAM O17 records
+      that nothing discharges them, and the ledger's Class-L does not grow.
+
+A THIRD QUESTION AROSE FROM THE QUORUM TRACK AND IS ANSWERED IN THE MODELS RATHER THAN HERE.
+"Identity consumes current_signer_set, and seven of its inputs are now known-defective — decide
+up front whether the identity models transcribe §QUORUM:4.2 as written (and inherit the defects)
+or assume the cohort's behaviour (and book it as a Class-O row), because the two answer
+different questions and the choice is invisible afterwards." Neither: the assumption is a
+CONSTANT (`SignerSetIsSound` in IdentityCertChain), TRUE in the green sweep and FALSE in a
+negative control whose whole job is to exhibit what identity's greens rest on. The choice is
+therefore visible in the gate table rather than invisible afterwards, and Q1 is not re-routed
+wearing an identity section number. LEAN-SEAM O16.
+
+Seven findings routed: docs/status/ROUTING-2026-09-07-IDENTITY.md. Two of them are CROSS-SPEC
+and one of those exists only in a PAIR of documents — §ATTEST:TV-A8 delegates the rejection of
+an invalid-signature revocation to "identity's `identity_verify_cert` ... at topology-dispatch
+step", and §3.6 rejects every `kind="revocation"` before topology dispatch is reached. Neither
+document is wrong read alone. Still TLC only, like the other two extension tracks: no Apalache,
+no Spin, no prover, so LEAN-SEAM O5's gap now spans three tracks rather than two.
+
+THE COHORT ON THIS TRACK DOES NOT AGREE WITH ITSELF, which is new. On quorum, three independent
+authors derived the same unwritten rule three times and that unanimity was the argument for
+writing it down. Here all three added a pre-phase-1 kind branch §6.3 does not have and NO TWO
+DID THE SAME THING: Go no-ops every non-identity kind and seeds nothing, Rust seeds
+quorum-publish without validating it, Python validates and seeds quorum-publish and
+quorum-update both, and only Go admits `revocation`. Whether an arriving quorum-publish fills
+the §9.4 trust anchor is answered three ways, so the peers do not interoperate on compromise
+recovery. "The impls work around it" is not a general law here and this is the sharpest
+counter-example on record.
+
 "Recovery cluster" is the pre-v3.3 name for an identity quorum (SYSTEM-IDENTITY-COMPOSITION §7).
 """
 

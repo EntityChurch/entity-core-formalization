@@ -80,7 +80,10 @@ repl:
 # liveness graph exhausts the 2g cap at Store's safety bound of NReq = 4, so the two are
 # separate configs rather than one that silently drops a property.
 TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds \
-              ConnCodes Bootstrap
+              ConnCodes Bootstrap \
+              AttestIndex AttestLive AttestRevoke \
+              QuorumSignerSet QuorumTrust QuorumKofN \
+              IdentityProcess IdentityRecovery IdentityCertChain
 
 # NON-VACUITY WITNESSES (added 0.8.2). TLC has no ProVerif-style reachability query, so a
 # witness is an invariant asserted in order to be VIOLATED: the violation exhibits the
@@ -100,6 +103,33 @@ TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds \
 # assignment. A "sequenced" model whose sequence is never reached is the same vacuity in new
 # source code; only a violated reachability assertion rules that out.
 TLC_WITNESS := \
+  "IdentityProcess|IdentityProcessUnbindWitness|Invariant WitnessUnbindReached is violated" \
+  "IdentityProcess|IdentityProcessPhase2Witness|Invariant WitnessPhase2Reached is violated" \
+  "IdentityProcess|IdentityProcessEventWitness|Invariant WitnessFailureEvent is violated" \
+  "IdentityRecovery|IdentityRecoverySeedWitness|Invariant WitnessAnchorSeeded is violated" \
+  "IdentityRecovery|IdentityRecoveryAcceptWitness|Invariant WitnessRecoveryAccepted is violated" \
+  "IdentityRecovery|IdentityRecoveryFailClosedWitness|Invariant WitnessFailClosedFires is violated" \
+  "IdentityCertChain|IdentityCertChainPublicWitness|Invariant WitnessPublicAgentCert is violated" \
+  "IdentityCertChain|IdentityCertChainKofNWitness|Invariant WitnessKofNDispatched is violated" \
+  "IdentityCertChain|IdentityCertChainDualWitness|Invariant WitnessDualDispatched is violated" \
+  "QuorumSignerSet|QuorumSignerSetThreeChainWitness|Invariant WitnessThreeChain is violated" \
+  "QuorumSignerSet|QuorumSignerSetPendingWitness|Invariant WitnessPendingUpdate is violated" \
+  "QuorumSignerSet|QuorumSignerSetRevertWitness|Invariant WitnessSilentRevert is violated" \
+  "QuorumTrust|QuorumTrustCacheWitness|Invariant WitnessCachePopulated is violated" \
+  "QuorumTrust|QuorumTrustUnvalidatedWitness|Invariant WitnessUnvalidatedInTree is violated" \
+  "QuorumTrust|QuorumTrustColdStartWitness|Invariant WitnessColdStartExposed is violated" \
+  "QuorumKofN|QuorumKofNPassWitness|Invariant WitnessKofNPasses is violated" \
+  "QuorumKofN|QuorumKofNCollapseWitness|Invariant WitnessResolutionCollapses is violated" \
+  "QuorumKofN|QuorumKofNUnresolvableWitness|Invariant WitnessUnresolvableSigner is violated" \
+  "AttestRevoke|AttestRevokeChainWitness|Invariant WitnessRevokedRevocation is violated" \
+  "AttestRevoke|AttestRevokeSupWitness|Invariant WitnessSupersededByLive is violated" \
+  "AttestRevoke|AttestRevokeKillsWitness|Invariant WitnessRevocationKills is violated" \
+  "AttestLive|AttestLiveChainWitness|Invariant WitnessThreeChain is violated" \
+  "AttestLive|AttestLiveStepWitness|Invariant WitnessSpecWalkSteps is violated" \
+  "AttestLive|AttestLiveMoveWitness|Invariant WitnessDagHeadMoves is violated" \
+  "AttestIndex|AttestIndexWitness|Invariant WitnessAttestBound is violated" \
+  "AttestIndex|AttestIndexEligWitness|Invariant WitnessPartialEligibility is violated" \
+  "AttestIndex|AttestIndexSeqWitness|Invariant WitnessIndexPartial is violated" \
   "Reentry|ReentryWitness|Invariant WitnessBothComplete is violated" \
   "Reentry|ReentryWitness3|Invariant WitnessBothComplete is violated" \
   "Core|CoreWitness3|Invariant WitnessExchangeComplete is violated" \
@@ -141,6 +171,29 @@ TLC_WITNESS := \
 # grader asserts, not because anything is broken. Its six MANUFACTURED siblings are in
 # TLC_GREEN_PAIRS, where a passing green is likewise the finding rather than the success.
 TLC_NEG := \
+  "IdentityProcess|IdentityProcessScopeBug|Invariant LocalCreateNeverUnbinds is violated" \
+  "IdentityProcess|IdentityProcessHandlerBug|Invariant UnbindOnlyOnRejection is violated" \
+  "IdentityProcess|IdentityProcessNoEmitBug|Invariant FailureIsObservable is violated" \
+  "IdentityProcess|IdentityProcessSuccessEventBug|Invariant NoSuccessEvents is violated" \
+  "IdentityRecovery|IdentityRecoveryOpenBug|Invariant RecoveryFailClosed is violated" \
+  "IdentityRecovery|IdentityRecoveryFreshBug|Invariant AcceptedRecoveryIsQuorumSigned is violated" \
+  "IdentityCertChain|IdentityCertChainUpfrontBug|Invariant TopLevelControllerIsKofN is violated" \
+  "IdentityCertChain|IdentityCertChainDualBug|Invariant HandoffIsDual is violated" \
+  "IdentityCertChain|IdentityCertChainSubstrateBug|Invariant KofNAnswerIsTrustworthy is violated" \
+  "QuorumSignerSet|QuorumSignerSetProbeFirstBug|Invariant CohortMatchesNormativeOnChain is violated" \
+  "QuorumSignerSet|QuorumSignerSetLiteralBug|Invariant CohortNeverSilentlyReverts is violated" \
+  "QuorumTrust|QuorumTrustNoInvalidateBug|Invariant CacheMatchesValidated is violated" \
+  "QuorumTrust|QuorumTrustRawInvalidateBug|Invariant NoInvalidationWithoutAcceptance is violated" \
+  "QuorumTrust|QuorumTrustCrossQuorumBug|Invariant InvalidationScopedPerQuorum is violated" \
+  "QuorumKofN|QuorumKofNDedupeBug|Invariant DedupeCountsPeersOnce is violated" \
+  "QuorumKofN|QuorumKofNResolveBug|Invariant UnresolvableNeverCounts is violated" \
+  "AttestRevoke|AttestRevokeAuthorityBug|Invariant OnlySelfRevocationKills is violated" \
+  "AttestRevoke|AttestRevokeFlatBug|Invariant DeadRevocationSpares is violated" \
+  "AttestLive|AttestLiveDirectBug|Invariant NoLiveAncestorOfLive is violated" \
+  "AttestLive|AttestLiveHeadFilterBug|Invariant DagHeadIsLive is violated" \
+  "AttestIndex|AttestIndexAtomicBug|Invariant NoResidueOnFailure is violated" \
+  "AttestIndex|AttestIndexKindBug|Invariant KindIndexEligibleOnly is violated" \
+  "AttestIndex|AttestIndexRevokeBug|Invariant IndexRetainedOnRevoke is violated" \
   "Reentry|ReentryBug|Deadlock reached" \
   "Reentry|ReentryFrameBug|Invariant FramesNotInterleaved is violated" \
   "Reentry|ReentryBug3|Deadlock reached" \
@@ -184,7 +237,102 @@ TLC_NEG := \
   "Core|CoreRefinesGateBug|Invariant RefinesConnDispatched is violated" \
   "CoreMapFree|CoreMapFreeCarried|Invariant FreeConnDispatched is violated"
 
-.PHONY: tlc-green apalache-green green tlc-witness tlc-neg
+# FINDINGS. Rows that MUST be violated, on a model in which NOTHING IS BROKEN: every constant
+# is the constant the green sweep runs. A negative control weakens the model on purpose and
+# its violation proves a property has teeth. A finding row weakens nothing and its violation
+# is a statement about the SPEC — the transcribed algorithm fails a contract the spec itself
+# writes.
+#
+# WHY THIS IS A SEPARATE TABLE AND NOT THREE MORE TLC_NEG ROWS. The grading is identical
+# (must fail, must fail for the declared reason), so the mechanical argument is for reuse.
+# But TLC_NEG's header says "every row MUST fail — a green here means the property has no
+# teeth", and that sentence is FALSE of these rows: a green here would mean the spec defect
+# had been FIXED upstream, which is the outcome we want and would need the row retired rather
+# than repaired. Two opposite meanings behind one exit code is the D13 shape exactly, and
+# TLC_NEG already carries one such exception (CoreMapFreeCarried) explained in a paragraph.
+# A second exception is a table.
+#
+# Retirement condition, stated so nobody has to reconstruct it: when the owning repo amends
+# the section, re-vendor, re-run, and if the row goes green DELETE it and move the claim into
+# the green sweep. Do not "fix" it.
+#
+# ── A SECOND SHAPE OF FINDING ROW, ADDED WITH THE QUORUM TRACK 2026-09-07 ────────────────
+# The paragraph above says a finding row weakens nothing and runs the green sweep's constants.
+# That is true of every attestation row and of QuorumSignerSetRevert / Probe / Normative /
+# Fork / QuorumKofNAttainable. It is NOT true of four rows, and the difference is worth a
+# sentence rather than a discovery:
+#
+#   QuorumTrustClosure       WalkClosedOverValidated = FALSE
+#   QuorumTrustFailPath      WalkClosedOverValidated = FALSE, RawWrites = FALSE
+#   QuorumKofNThreshold      CreateValidates         = FALSE
+#   QuorumSignerSetReading   (neither -- it names both readings inside the invariant)
+#
+# In each case the flipped constant moves the model TOWARD the specification, not away from
+# it. The green sweep on this track runs the behaviour the three implementations actually
+# have -- probe every candidate, read `not_expired` as full temporal validity, reject
+# threshold 0 at create, read only validated entries -- because that is the only setting in
+# which anything is green at all. The spec's own setting is what these rows assert against.
+#
+# So on this track the constants tell you which of two subjects a row is about, and BOTH
+# directions of flip appear. A row that reads TOWARD the spec and fails is a finding; a row
+# that reads AWAY from the spec and fails is a control (TLC_NEG). The grader cannot tell them
+# apart -- it checks "must fail, on this named invariant" and nothing more -- so the
+# distinction lives in each cfg's own header, and every cfg on this track states in its first
+# line which of the two it is. That is a documented limit of this table, recorded here rather
+# than left for someone to infer from the constants.
+#
+# -- A THIRD SHAPE, ADDED WITH THE IDENTITY TRACK 2026-09-07 -----------------------------------
+# Two rows flip a constant toward NEITHER the spec nor a cohort consensus, because on their
+# question the spec says nothing at all and the three implementations answer three different
+# ways:
+#
+#   IdentityRecoveryAnchor        SeedValidates = FALSE
+#   IdentityRecoveryForgedAnchor  SeedValidates = FALSE
+#
+# §9.4 calls the contacts cache "the trust anchor" and neither §9.4 nor §6.3 says one word about
+# what may become one. entity-core-rust therefore validates nothing on the way in,
+# entity-core-py validates via the quorum substrate, and entity-core-go does not seed at all.
+# The constant is set to Rust's answer because it is the one that reaches the property; the
+# FINDING is the silence that let three authors pick three answers, not Rust's choice.
+#
+# Read together with the two shapes above, that is the general rule this table has arrived at:
+# **a finding row's constants name the subject on trial, and the subject is not always the
+# spec's own words -- sometimes it is their absence.** Each cfg's first line says which.
+#
+# ONE INVARIANT ON THIS TRACK IS THE TARGET OF BOTH A FINDING AND A CONTROL.
+# `AcceptedRecoveryIsQuorumSigned` is broken by IdentityRecoveryForgedAnchor (finding: the
+# unspecified admission rule) and by IdentityRecoveryFreshBug (control: §QUORUM:3.3's named
+# wrong answer, validating against the freshest publish seen rather than the one cached). Two
+# independent ways to break one property is a good sign about the property and a bad sign for
+# anyone reading the table alone; the cfg headers carry the distinction.
+TLC_FINDING := \
+  "IdentityProcess|IdentityProcessSeedRow|Invariant SeedRowReachable is violated" \
+  "IdentityProcess|IdentityProcessRevocation|Invariant RevocationSurvivesArrival is violated" \
+  "IdentityProcess|IdentityProcessQUpdate|Invariant QuorumUpdateSurvivesArrival is violated" \
+  "IdentityRecovery|IdentityRecoverySeed|Invariant SeedFollowsArrival is violated" \
+  "IdentityRecovery|IdentityRecoveryAttainable|Invariant RecoveryAttainable is violated" \
+  "IdentityRecovery|IdentityRecoveryAnchor|Invariant AnchorWasValidated is violated" \
+  "IdentityRecovery|IdentityRecoveryForgedAnchor|Invariant AcceptedRecoveryIsQuorumSigned is violated" \
+  "IdentityRecovery|IdentityRecoveryReplay|Invariant RecoveryIdempotent is violated" \
+  "IdentityCertChain|IdentityCertChainPublicSig|Invariant PublicPathNeverControllerSigned is violated" \
+  "IdentityCertChain|IdentityCertChainRevocation|Invariant RevocationReachesTopology is violated" \
+  "IdentityCertChain|IdentityCertChainHandoffSigner|Invariant HandoffReadingsCoincide is violated" \
+  "IdentityCertChain|IdentityCertChainHandoffNull|Invariant HandoffTargetGuarded is violated" \
+  "QuorumSignerSet|QuorumSignerSetProbe|Invariant ResultIndependentOfProbe is violated" \
+  "QuorumSignerSet|QuorumSignerSetRevert|Invariant SpecNeverSilentlyReverts is violated" \
+  "QuorumSignerSet|QuorumSignerSetReading|Invariant NotExpiredReadingsAgree is violated" \
+  "QuorumSignerSet|QuorumSignerSetNormative|Invariant SpecMatchesNormative is violated" \
+  "QuorumSignerSet|QuorumSignerSetFork|Invariant CohortMatchesNormative is violated" \
+  "QuorumTrust|QuorumTrustClosure|Invariant CacheMatchesValidated is violated" \
+  "QuorumTrust|QuorumTrustFailPath|Invariant CacheMatchesValidated is violated" \
+  "QuorumKofN|QuorumKofNThreshold|Invariant KofNRequiresASignature is violated" \
+  "QuorumKofN|QuorumKofNAttainable|Invariant ThresholdAttainable is violated" \
+  "AttestRevoke|AttestRevokeReading|Invariant SelfRevReadingsAgree is violated" \
+  "AttestRevoke|AttestRevokeVerdict|Invariant LiveReadingsAgree is violated" \
+  "AttestLive|AttestLiveSpecHead|Invariant SpecHeadFindsLiveHead is violated" \
+  "AttestLive|AttestLiveBackWalk|Invariant BackWalkBoundedAlways is violated"
+
+.PHONY: tlc-green apalache-green green tlc-witness tlc-neg tlc-finding
 # D13 applied to the GREEN sweep, not only to the controls. This target used to grade on
 # TLC's EXIT STATUS alone (`|| exit 1`). TLC exits 0 for "no error found" and also for runs
 # that checked far less than intended, so exit status is a symptom of success, not the
@@ -310,6 +458,32 @@ tlc-neg:
 	    exit 1; \
 	  fi; \
 	  echo "   ok (failed as required: $$want)"; \
+	done
+
+# Each finding row MUST be violated, and for the declared reason. Graded exactly like a
+# control and meaning the opposite: see TLC_FINDING's header. A clean run here is not a
+# regression in the model — it is a signal that the upstream section changed under the pin,
+# which cannot happen without a re-vendor, so in practice it means the row is stale.
+tlc-finding:
+	@for row in $(TLC_FINDING); do \
+	  mod=$$(echo "$$row" | cut -d'|' -f1); cfg=$$(echo "$$row" | cut -d'|' -f2); \
+	  want=$$(echo "$$row" | cut -d'|' -f3); \
+	  echo "== TLC finding $$mod/$$cfg (MUST be violated: $$want) =="; \
+	  out=$$($(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -eq 0 ]; then \
+	    echo "FAIL: $$cfg reported GREEN. This row asserts a defect in the SPEC as pinned;"; \
+	    echo "      a green means the pinned text no longer has it. Re-read the section,"; \
+	    echo "      then RETIRE the row and move the claim into the green sweep. Do not"; \
+	    echo "      repair the model to make it fail again."; \
+	    exit 1; \
+	  fi; \
+	  if ! echo "$$out" | grep -qF "$$want"; then \
+	    echo "FAIL: $$cfg failed, but NOT on the invariant that states the finding."; \
+	    echo "      expected: $$want"; \
+	    echo "      got:      $$(echo "$$out" | grep -E '^Error:' | head -3 | tr '\n' ' ')"; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (violated as required: $$want)"; \
 	done
 
 # Apalache: prove each module's key safety invariant INDUCTIVE (unbounded) —
@@ -441,7 +615,7 @@ green: tlc-green apalache-green
 # The FULL matrix: green + every negative control + every non-vacuity witness. `green` alone
 # proves the properties hold; it does NOT prove they could have failed or that the model does
 # anything. This target proves all three.
-matrix: tlc-green apalache-green tlc-neg apalache-neg tlc-witness
+matrix: tlc-green apalache-green tlc-neg apalache-neg tlc-witness tlc-finding
 
 # ----------------------------------------------------------------------------------
 # Apalache — the SYMBOLIC (SMT) cross-check engine (cross-check #A). Same .tla models,

@@ -29,6 +29,11 @@ Read with `tla/PHASE1-FORMALIZATION-REPORT.md` (the models being corroborated).
 > conjunction (`CoreApalache.InvComposed`) that had been carried as "consciously deferred"
 > since Phase 1. Every module is now checked by all three engines; nothing is deferred.
 >
+> *(Scope, added 2026-09-07: that sentence is about the **`core` track**, which was the only
+> track when it was written. The nine extension modules added later on `attestation`, `quorum`
+> and `identity` are **TLC-only**. This blockquote is a historical snapshot and is left as
+> written; the qualifier is the correction.)*
+>
 > One Apalache result is stronger than the others in kind: `BoundsApalache` proves §5.9's
 > depth-brake property over **symbolic** constants constrained only by the ratio condition,
 > so it covers every conforming deployment rather than the one triple TLC checks.

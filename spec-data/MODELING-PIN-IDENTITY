@@ -1,0 +1,55 @@
+# The snapshot the `identity` track's models actually transcribe.
+#
+# Every published result about the identity track is a statement about THIS snapshot and no
+# other. It is the answer to "which version of EXTENSION-IDENTITY was verified?", and it is
+# deliberately a separate fact from "which snapshots have been vendored."
+#
+# Vendoring a newer snapshot does NOT move this. It moves only after the models have been
+# re-validated against the newer text, and moving it is the LAST step of that work. A pin
+# that advances when someone copies files in would quietly convert "we vendored the new
+# spec" into "we verified the new spec," which are not the same claim.
+#
+# WRITING THIS FILE IS WHAT PROMOTED THE TRACK, for the second time and by the same gate.
+# `identity` was `status = "scoped"` in TRACKS.toml, and a scoped track is gated to carry no
+# models and no pin -- adding a model file fails `make trackcheck` until the track is promoted
+# WITH a pin. `quorum` was promoted this way on 2026-09-07 and this is the second instance;
+# the gate has now forced the "say out loud which snapshot the results will be about" step
+# twice, on two different days, without anyone having to remember it. That is what a gate is
+# for and it is worth recording that it ran as designed rather than being worked around.
+#
+# THIS IS THE LAST TRACK TRACKS.toml SCOPES. With identity modeled there is no `scoped` track
+# left, so the `scoped` gate now has NO subject -- it is teeth-tested by nothing until a fifth
+# track is scoped. Recorded here rather than discovered later: a gate whose input set has gone
+# empty asserts nothing, and this one asserts nothing from today. Its teeth-test is in
+# tools/trackcheck.py's own test path, not in the live registry.
+#
+# This is the identity track's pin and it is independent of the other three. Core is held at
+# v0.8.2 pending the keystone sibling's convergence and that has no bearing here.
+# EXTENSION-IDENTITY v3.10 declares `Depends: ENTITY-CORE-PROTOCOL.md (v7.40+);
+# EXTENSION-ATTESTATION.md (v1.2+); EXTENSION-QUORUM.md (v1.2+)` -- all three FLOORS, and all
+# three met by the snapshots already vendored (`spec-data/v0.8.2` carries v7.62-v7.76 clause
+# tags; `ext-attestation-v1.3` clears the v1.2 floor; `ext-quorum-v1.2` meets it exactly).
+# The tracks pin independently by design.
+#
+# IDENTITY MODELS CITE BOTH SUBSTRATE SPECS, AND MORE HEAVILY THAN QUORUM CITED ONE. §3.5 is a
+# table of nothing but substrate calls and §3.6's validators are composed almost entirely out
+# of them, so the identity results depend on THREE pins at once: this file,
+# MODELING-PIN-ATTESTATION and MODELING-PIN-QUORUM. Those citations are written `§ATTEST:4.3`
+# and `§QUORUM:4.2`, which are excluded from every track's coverage set. They are still a real
+# dependency: an identity result is a statement about all three snapshots, and moving any one
+# of them invalidates it. Nothing gates that triple; it is stated here because the file a
+# reader checks for "which version was verified" is this one.
+#
+# TWO OF THIS TRACK'S FINDINGS ARE CROSS-SPEC AND ONE OF THEM IS *ABOUT* THE PIN TRIPLE.
+# EXTENSION-ATTESTATION's TV-A8 delegates the rejection of an invalid-signature revocation to
+# "identity's `identity_verify_cert` ... at topology-dispatch step", and EXTENSION-IDENTITY
+# §3.6 rejects every `kind="revocation"` before topology dispatch is reached. Neither document
+# is wrong when read alone. That defect exists only in the pair, which is precisely the class
+# a per-document pin cannot express -- so read this paragraph as the reason the triple above
+# is written out rather than assumed.
+#
+# Read by tools/coverage-check.py and tools/trackcheck.py via TRACKS.toml.
+#
+# One line, the directory name under spec-data/, no leading path.
+
+ext-identity-v3.10

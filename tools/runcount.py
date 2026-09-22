@@ -39,6 +39,7 @@ import argparse
 import os
 import re
 import sys
+import tomllib
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -55,6 +56,11 @@ DERIVATION = [
     ("tlc-green (StoreLive)", None,                None,               "const", 1),
     ("tlc-neg",               "tla/Makefile",     "TLC_NEG",           "rows",  1),
     ("tlc-witness",           "tla/Makefile",     "TLC_WITNESS",       "rows",  1),
+    # Added 2026-09-07 with AttestLive. Graded like a control, means the opposite: these rows
+    # must be violated on a model in which nothing is weakened, because the SPEC's own
+    # algorithm fails a contract the spec writes. Counted here as runs like any other — the
+    # total is "invocations `make matrix` performs", not "properties that hold".
+    ("tlc-finding",           "tla/Makefile",     "TLC_FINDING",       "rows",  1),
     ("apalache-green",        "tla/Makefile",     "APALACHE_GREEN",    "rows",  2),
     ("apalache-neg",          "tla/Makefile",     "APALACHE_NEG",      "rows",  1),
     ("spin green (safety+LTL)", "spin/Makefile",  "SPIN_GREEN",        "words", 2),
@@ -110,6 +116,109 @@ PROSE_SITES = [
 ]
 
 
+# ── WHICH PROOF TRACK EACH RUN BELONGS TO ───────────────────────────────────────────────
+# Added 2026-09-07, with the attestation track's first module. A single "N runs" total across
+# two protocols is precisely the conflation TRACKS.toml exists to prevent: a reader seeing one
+# number reasonably assumes one subject. The split could have been written into prose by hand
+# -- and would then have been an ungated derived number, which is D15's entire subject.
+#
+# Every gate-table row names its module/theory in its FIRST field (whitespace- or
+# pipe-delimited), and TRACKS.toml maps a model FILE to a track, so the mapping is
+# module -> file (by each engine's naming convention) -> track. A token that resolves to no
+# declared model file is a FAILURE rather than a default-to-core: silently attributing an
+# unrecognized run to the biggest track is how a number stops meaning anything.
+ENGINE_SUFFIX = {
+    "tla/Makefile":     [("tla/", ".tla")],
+    "spin/Makefile":    [("spin/", ".pml")],
+    "tamarin/Makefile": [("tamarin/", ".pv"), ("tamarin/", ".spthy")],
+}
+
+
+def file_to_track() -> dict[str, str]:
+    with open(os.path.join(HERE, "TRACKS.toml"), "rb") as fh:
+        cfg = tomllib.load(fh)
+    return {f: name for name, t in cfg.get("track", {}).items() for f in t.get("models", [])}
+
+
+def track_of(rel: str, token: str, f2t: dict[str, str]) -> str:
+    for pre, suf in ENGINE_SUFFIX.get(rel, []):
+        cand = f"{pre}{token}{suf}"
+        if cand in f2t:
+            return f2t[cand]
+    raise Fail(
+        f"{rel}: gate-table entry {token!r} maps to no model file declared in TRACKS.toml"
+        "\n      -> a run whose track cannot be determined must not be silently counted as"
+        "\n         core. Add the file to a track, or fix the table entry."
+    )
+
+
+def first_token(item: str) -> str:
+    return re.split(r"[|\s]", item.strip().strip('"'), 1)[0]
+
+
+# Where the per-track split is claimed. Same anchored discipline as the total: silence fails,
+# because dropping the sentence is otherwise the cheapest way to make a stale split go green.
+# EXTENDED 2026-09-07 WITH THE QUORUM TRACK, AND THE REASON IS THE FAILURE MODE, NOT THE
+# ADDITION. Before this edit both patterns captured exactly two groups, core and attestation.
+# Promoting a third track did NOT fail either of them: the sentences still matched, the two
+# captured numbers were still right, and `make runcount` went green while asserting nothing
+# whatever about the 28 quorum runs. That is D15's own subject one level down -- the INPUT SET
+# a gate checks over, silently narrowed -- and it is the same shape as the non-recursive globs
+# that would have hidden a whole subdirectory. A per-track gate must name every modeled track
+# or it is a per-SOME-tracks gate; `check_track_prose` now derives the tuple from the modeled
+# set rather than from a hardcoded pair, so a fourth track cannot repeat this.
+TRACK_PROSE_SITES = [
+    ("docs/STATUS.md", "the per-track run split",
+     r"\*\*(\d+) runs\*\* on `core`, \*\*(\d+)\*\* on `attestation`, \*\*(\d+)\*\* on `quorum` "
+     r"and \*\*(\d+)\*\* on `identity`"),
+    # The attestation anchor was `1 module` until 2026-09-07 and had to move when a second
+    # module landed. Anchored on `modules?` now, so module COUNT is not part of the anchor --
+    # it is prose the gate does not check, and pinning a gate to a number it does not assert
+    # is how a correct edit gets reported as a missing claim.
+    ("README.md", "the proof-tracks table",
+     r"95 model files, (\d+) runs.*?modules?.*?, (\d+) runs.*?modules?.*?, (\d+) runs"
+     r".*?modules?.*?, (\d+) runs"),
+]
+
+# The tracks the two patterns above capture, IN ORDER. Named here rather than inlined in
+# `check_track_prose` so that adding a track is one edit in one place and the mismatch between
+# "tracks that exist" and "tracks the gate reads" is checkable -- see the assertion below.
+# EXTENDED AGAIN 2026-09-07 with the identity track, and this time the widening WORKED AS
+# DESIGNED rather than being found after the fact: promoting a fourth track failed `runcount`
+# immediately with "track(s) identity have runs but no group in TRACK_PROSE_SITES", which is
+# exactly the message the quorum-day fix was written to produce. Recorded because a gate that
+# fires correctly on its first real test is the only evidence that the previous fix was a fix
+# and not a restatement.
+TRACK_PROSE_ORDER = ("core", "attestation", "quorum", "identity")
+
+
+def check_track_prose(by_track: dict[str, int]) -> list[str]:
+    out = []
+    # A modeled track missing from TRACK_PROSE_ORDER is the silent-narrowing failure this
+    # function was widened to prevent, so it is an error rather than a skip.
+    unread = sorted(set(by_track) - set(TRACK_PROSE_ORDER))
+    if unread:
+        out.append(
+            f"track(s) {', '.join(unread)} have runs but no group in TRACK_PROSE_SITES"
+            "\n      -> the split gate would go green while asserting nothing about them."
+            "\n         Add a capture group to each pattern and a name to TRACK_PROSE_ORDER."
+        )
+    want = tuple(by_track.get(t, 0) for t in TRACK_PROSE_ORDER)
+    for rel, what, pat in TRACK_PROSE_SITES:
+        m = re.search(pat, re.sub(r"\s+", " ", read(rel)), re.S)
+        if not m:
+            out.append(
+                f"{rel}: {what} no longer states the per-track split"
+                "\n      -> restore the claim or drop the row from TRACK_PROSE_SITES."
+            )
+            continue
+        got = tuple(int(g) for g in m.groups())
+        if got != want:
+            say = lambda v: " ".join(f"{t}={n}" for t, n in zip(TRACK_PROSE_ORDER, v))
+            out.append(f"{rel}: {what} says {say(got)}; derived {say(want)}")
+    return out
+
+
 class Fail(Exception):
     pass
 
@@ -140,6 +249,27 @@ def count(rel: str, var: str, how: str) -> int:
     if how == "rows":                       # quoted "…" rows
         return len(re.findall(r'"[^"]+"', b))
     return len([w for w in b.replace("\\", " ").split() if not w.startswith("#")])
+
+
+def items(rel: str, var: str, how: str) -> list[str]:
+    """The individual table entries, so each can be attributed to a track."""
+    b = block(rel, var)
+    if how == "rows":
+        return re.findall(r'"([^"]+)"', b)
+    return [w for w in b.replace("\\", " ").split() if not w.startswith("#")]
+
+
+def derive_tracks() -> dict[str, int]:
+    f2t = file_to_track()
+    per: dict[str, int] = {}
+    for label, rel, var, how, factor in DERIVATION:
+        if how == "const":
+            per["core"] = per.get("core", 0) + factor      # StoreLive; Store is a core module
+            continue
+        for it in items(rel, var, how):
+            tr = track_of(rel, first_token(it), f2t)
+            per[tr] = per.get(tr, 0) + factor
+    return per
 
 
 def derive(verbose: bool) -> tuple[int, dict[str, int]]:
@@ -217,7 +347,20 @@ def main() -> int:
         print("== run total, derived from the gate tables (not from prose) ==")
         total, per = derive(args.verbose or True)
         print(f"  {'TOTAL':26} {total:4}")
-        problems = check_prose(total) + check_status_slices(total, per)
+
+        # Per proof track. A single total across two protocols is the conflation TRACKS.toml
+        # exists to prevent -- a reader seeing one number reasonably assumes one subject.
+        by_track = derive_tracks()
+        if sum(by_track.values()) != total:
+            raise Fail(
+                f"per-track runs sum to {sum(by_track.values())} but the total is {total}"
+                " -- the two derivations disagree, which means one of them is wrong"
+            )
+        print("\n== the same runs, by proof track (TRACKS.toml) ==")
+        for tr in sorted(by_track):
+            print(f"  {tr:26} {by_track[tr]:4}")
+        problems = (check_prose(total) + check_status_slices(total, per)
+                    + check_track_prose(by_track))
     except Fail as exc:
         print(f"FAIL -- {exc}", file=sys.stderr)
         return 1

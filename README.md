@@ -11,20 +11,27 @@ This repo verifies **more than one protocol**, and a result is only meaningful o
 which one it is about. Every model file, every coverage number and every spec pin belongs to
 exactly one **track**, declared in [`TRACKS.toml`](TRACKS.toml) and gated by `make trackcheck`.
 
-**4 proof tracks** — **1 modeled**, **3 scoped**:
+**4 proof tracks** — **4 modeled**, **0 scoped**:
 
 | Track | Subject | Spec owner | Status |
 |---|---|---|---|
 | **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 95 model files, 277 runs, pinned at `spec-data/v0.8.2` |
-| **attestation** | The signed-edge substrate: `attesting → attested`, four mandatory indexes, the supersedes chain | `entity-system-architecture` | **scoped** — spec landed, nothing vendored, no model |
-| **quorum** | K-of-N signer rosters; `quorum-update` / `quorum-publish`; `current_signer_set(as_of)` | `entity-system-architecture` | **scoped** — spec landed, nothing vendored, no model |
-| **identity** | Cert chains, rotation by handoff, rotation by recovery, retirement | `entity-system-architecture` | **scoped** — spec landed, nothing vendored, no model |
+| **attestation** | The signed-edge substrate: `attesting → attested`, four mandatory indexes, the supersedes chain | `entity-system-architecture` | **modeled** — 3 modules (§5.7 index invariants; §4.3/§5.1–5.3 liveness and the chain walks; §4.3's revocation recursion), 23 runs, TLC only, pinned at `spec-data/ext-attestation-v1.3` |
+| **quorum** | K-of-N signer rosters; `quorum-update` / `quorum-publish`; `current_signer_set(as_of)` | `entity-system-architecture` | **modeled** — 3 modules (§4.2 the signer-set resolver and its clock; §4.2/§4.2.1 the arrival-time trust model; §4.1 K-of-N), 28 runs, TLC only, pinned at `spec-data/ext-quorum-v1.2` |
+| **identity** | Cert chains, rotation by handoff, rotation by recovery, retirement | `entity-system-architecture` | **modeled** — 3 modules (§6.3 the arrival convergence point; §9.4 compromise-recovery validation; §3.6 topology dispatch and §9.2 key confinement), 33 runs, TLC only, pinned at `spec-data/ext-identity-v3.10` |
 
-**Everything else in this README is about the `core` track**, because it is the only modeled
-one. The three extension tracks are declared rather than merely planned: `scoped` is a gated
-state, and assigning a model file to a scoped track **fails the build** until the track is
-promoted with a spec pin — which is the step where someone has to say which snapshot the
-results are about.
+**Everything else in this README is about the `core` track** unless it says otherwise. The
+three extension tracks are days old and **TLC-only — no second engine and no
+prover** — and their coverage is stated separately in `docs/COVERAGE-MATRIX.md` §3c, §3d and
+§3e, where a substantial share of the rows are **findings against the spec** rather than coverage
+of it. Read those three tracks as a defect report, not as assurance; the routed findings are
+indexed in `docs/status/FINDINGS-INDEX.md`. `scoped` is a gated state rather than a label:
+assigning a model file to a scoped track **fails the build** until the track is promoted with a
+spec pin — which is the step where someone has to say which snapshot the results are about. It
+forced that step twice, on `quorum` and on `identity`; with both promoted **no track is scoped
+now**, so the gate has no subject left in this registry. **Vendored
+is not pinned**, and the two are separate fields: all three extension specs are vendored as
+frozen snapshots, and each names its own `MODELING-PIN-*` separately from that snapshot.
 
 > **Why the tracks are declared before any extension model exists.** The coverage number here
 > is derived from the `§`-citations the models carry, via a pattern that is *document-blind*:
@@ -95,8 +102,8 @@ the pin — but a reader wanting a statement about 0.8.2.11 does not have one ye
 
 ### What is verified, and by what
 
-Four engines in two families. **Every concurrency module is checked by all three engines of
-its family, and both provers close every attacker lemma but two** — that redundancy is the
+Four engines in two families. **Every `core` concurrency module is checked by all three engines
+of its family, and both provers close every attacker lemma but two** — that redundancy is the
 answer to the obvious objection, *"who formalizes the formalization?"* The two exceptions are
 named, not glossed: `BindingReplay` is ProVerif-only (ProVerif's tables do not model single-use
 atomically, so no-replay is Tamarin's) and `RevokeMech` does not terminate in Tamarin. The grid
@@ -124,7 +131,7 @@ Both are now genuinely modeled; `docs/COVERAGE-MATRIX.md` §3a-b has the story a
 |---|:---:|:---:|
 | 14 lemmas — unforgeability, no-escalation, binding/no-replay, caveats, depth-bound, deep-chain integrity, expiry, malformed-temporal ingest, third-party chain topology, K-of-N multisig, revocation, persistent re-check | ● *(+`BindingReplay`)* | ● |
 
-**Coverage: 28 of 85 numbered spec sections (33%)** — by area, the **§4 · §5 · §6** surfaces
+**Coverage: 29 of 91 numbered spec sections (32%)** — by area, the **§4 · §5 · §6** surfaces
 this repo owns. The near-zero coverage of §2, §3, §7–§9 is deliberate scope (type system,
 encoding, trusted crypto, conformance profiles belong to other layers), not neglect. That
 figure is **derived from the models' own `§`-citations and checked by `make coverage`**,
@@ -167,7 +174,7 @@ ProVerif toolchain) runs everything; the model checkers are all containerized.
 ```
 make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
-make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (277 runs)
+make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (361 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
 make trackcheck # which proof track is each model file on? (TRACKS.toml)
@@ -200,7 +207,7 @@ AGENTS.md                 ← repo-specific agent guidance (build/test, layout, 
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
   COVERAGE-MATRIX.md      ← section x engine, the limits, what is NOT covered (start here)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 277-run matrix
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 361-run matrix
   STATUS.md               ← rolling status: where it is, what is next
   SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls

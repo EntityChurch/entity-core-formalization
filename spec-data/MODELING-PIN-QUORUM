@@ -1,0 +1,36 @@
+# The snapshot the `quorum` track's models actually transcribe.
+#
+# Every published result about the quorum track is a statement about THIS snapshot and no
+# other. It is the answer to "which version of EXTENSION-QUORUM was verified?", and it is
+# deliberately a separate fact from "which snapshots have been vendored."
+#
+# Vendoring a newer snapshot does NOT move this. It moves only after the models have been
+# re-validated against the newer text, and moving it is the LAST step of that work. A pin
+# that advances when someone copies files in would quietly convert "we vendored the new
+# spec" into "we verified the new spec," which are not the same claim.
+#
+# WRITING THIS FILE IS WHAT PROMOTED THE TRACK. `quorum` was `status = "scoped"` in
+# TRACKS.toml, and a scoped track is gated to carry no models and no pin -- adding a model
+# file fails `make trackcheck` until the track is promoted WITH a pin. That gate exists so
+# that the moment someone starts modelling an extension, they have to say out loud which
+# snapshot the results will be about. This file is that statement.
+#
+# This is the quorum track's pin and it is independent of the other three. Core is held at
+# v0.8.2 pending the keystone sibling's convergence and that has no bearing here.
+# EXTENSION-QUORUM v1.2 declares `Depends: ENTITY-CORE-PROTOCOL.md (v7.40+);
+# EXTENSION-ATTESTATION.md (v1.2+)` -- both FLOORS, and both met by the snapshots already
+# vendored (`spec-data/v0.8.2` carries v7.62-v7.76 clause tags; `ext-attestation-v1.3`
+# clears the v1.2 floor). The tracks pin independently by design.
+#
+# QUORUM MODELS CITE EXTENSION-ATTESTATION HEAVILY -- §4.2's walk is entirely built out of
+# EXTENSION-ATTESTATION §5.3 / §5.4 -- and those citations are written `§ATTEST:5.3`, which
+# is excluded from every track's coverage set. They are still a real dependency: a quorum
+# result is a statement about THIS snapshot *and* about `MODELING-PIN-ATTESTATION`'s, and
+# moving either invalidates it. Nothing gates that pair; it is stated here because the file
+# a reader checks for "which version was verified" is this one.
+#
+# Read by tools/coverage-check.py and tools/trackcheck.py via TRACKS.toml.
+#
+# One line, the directory name under spec-data/, no leading path.
+
+ext-quorum-v1.2

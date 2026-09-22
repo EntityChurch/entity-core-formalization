@@ -8,11 +8,15 @@ understand *what was proved, how far it goes, and what it deliberately does not 
 without re-reading the underlying reports.
 
 > **Which protocol: the `core` track.** `TRACKS.toml` declares **4 proof tracks**
-> (`make trackcheck`) and `core` — the Entity Core Protocol — is the only **modeled** one.
-> Everything capstoned here is about `core`. `attestation`, `quorum` and `identity` are
-> **scoped**: landed specs, no vendored snapshot, no model, and so nothing in this summary
-> speaks for them. There is deliberately no repo-wide assurance figure — averaging a
-> verified protocol with three unmodeled ones produces a number true of nothing.
+> (`make trackcheck`). **Everything capstoned here is about `core`** — the Entity Core
+> Protocol — and nothing in this summary speaks for the others.
+> `attestation` became **modeled** on 2026-09-07 (two TLC modules,
+> `docs/COVERAGE-MATRIX.md` §3c) and is deliberately **not** capstoned here: it has one
+> engine, no prover model, and two of its results are findings against the spec rather than
+> assurance about it. A capstone is a claim that a body of work is settled, and that track's
+> is not. `quorum` and `identity` are vendored, unpinned and unmodeled.
+> There is deliberately no repo-wide assurance figure — averaging a verified protocol with
+> three others at three different stages produces a number true of nothing.
 
 > *On version names.* Live documents say **"the design"** or cite the pin
 > (`spec-data/v0.8.2/`). The phase reports below say **"V7"** because they were written
@@ -28,17 +32,19 @@ concurrency + liveness, and is cross-checked with **two independent engines**: a
 translated — and **Apalache** SMT proofs that turn the key safety invariants from *checked at
 a bound* into *proven inductive (unbounded)*. **Tamarin + ProVerif** (two provers, lockstep)
 cover the active-attacker surface — **14 lemmas closed by both**, plus `BindingReplay` in
-ProVerif only. **Every concurrency module is checked by all three engines of its family**
-(that is per *module*; at *section* granularity one row still rests on one engine — §3.3, and
-only as the *subject* of §6.11(a′) rather than as a property of its own) — see
-`docs/COVERAGE-MATRIX.md` for the grid,
+ProVerif only. **Every `core` concurrency module is checked by all three engines of its family**
+(that is per *module* and per *track*; at *section* granularity one core row still rests on one
+engine — §3.3, and only as the *subject* of §6.11(a′) rather than as a property of its own; and
+the **nine extension modules across `attestation`, `quorum` and `identity` are TLC-only**, with
+no second engine and no prover at all) — see `docs/COVERAGE-MATRIX.md` for the grid,
 what each engine can and cannot do, and the exact bound on every claim. Every property is §-cited to
 `spec-data/v0.8.2/`,
 every secure result has a negative control with teeth, and the scope boundaries — above all the
 **5th wall (spec↔model fidelity)** — are stated, not hidden. This is a strong machine-checked
 **demonstrator, not a closed proof** of the protocol: it now needs **human review against the
 vendored spec** and the remaining follow-ons (fuzzing/adversarial-authz for the *code*; Phase 3
-extension protocols, gated on vendoring `EXTENSION-*`).
+extension protocols — the async family `EXTENSION-CONTINUATION/-SUBSCRIPTION/-COMPUTE` is
+still gated on vendoring; `attestation` is vendored, pinned and modeled since 2026-09-07).
 
 If you are resuming work, read this capstone first — the optional leftovers are enumerated
 in §5 (Findings and residual risk).
@@ -163,7 +169,7 @@ The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**277 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**361 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
 surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
 audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a
@@ -298,9 +304,13 @@ bound.
    not terminate in Tamarin (`RevokeMech`); it stays ProVerif's lane while Tamarin
    uses the terminating trace-restriction idiom. This is a genuine tool-capability
    finding, documented, not a modeling gap.
-5. **Async/extension PROTOCOLS not modeled.** `EXTENSION-CONTINUATION/-SUBSCRIPTION/
-   -COMPUTE` are not in the vendored snapshot; Phase 2 modeled only the §6.8 core
-   property that governs them. Full protocols are Phase 3, gated on vendoring.
+5. **The ASYNC extension protocols are not modeled.** `EXTENSION-CONTINUATION/
+   -SUBSCRIPTION/-COMPUTE` are not vendored; Phase 2 modeled only the §6.8 core
+   property that governs them. Those three remain Phase 3, gated on vendoring.
+   **Read this as narrower than it used to be:** it is a statement about the async
+   family, not about extensions generally. `EXTENSION-ATTESTATION` is vendored,
+   pinned and modeled as its own proof track (`docs/COVERAGE-MATRIX.md` §3c), and
+   `EXTENSION-QUORUM` / `EXTENSION-IDENTITY` are vendored and scoped.
 6. **The peer set is fixed — at 2 for nine modules, at 2 *and* 3 for `Reentry` and `Core`,
    and the remaining structural limit is the TOPOLOGY rather than the number.** TLC, Spin
    and Apalache all check `Reentry` and `Core` at both bounds; Apalache's results are

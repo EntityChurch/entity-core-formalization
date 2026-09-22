@@ -70,8 +70,9 @@ import re
 import sys
 import tomllib
 
-# A citation of a numbered spec subsection. `(?![\d.])` stops `§4.10` matching as `§4.1`.
-CITATION = re.compile(r"§\s*(\d+\.\d+)(?![\d.])")
+# A citation of a numbered spec subsection. `(?![\d.])` stops `§4.10` matching as `§4.1`;
+# the optional trailing letter is resolved by `fold()` below, not dropped here.
+CITATION = re.compile(r"§\s*(\d+\.\d+[a-z]?)(?![\d.])")
 # A CROSS-TRACK citation: `§CORE:6.2` inside an attestation model. Captured separately and
 # deliberately EXCLUDED from every track's coverage set -- it is a cross-reference, not a claim
 # that the cited section is verified here. Same disposition the §3b taxonomy already gives
@@ -91,14 +92,113 @@ CITATION = re.compile(r"§\s*(\d+\.\d+)(?![\d.])")
 #
 # `§X:N.M` cannot collide: a bare citation is `§` + digit, and the existing intra-document
 # forms in this repo are `§C.4` / `§D` -- a DOT or nothing, never a colon.
-PREFIXED = re.compile(r"§([A-Z][A-Z0-9]{1,11}):(\d+\.\d+)(?![\d.])")
+PREFIXED = re.compile(r"§([A-Z][A-Z0-9]{1,11}):(\d+\.\d+[a-z]?)(?![\d.])")
 # A row of Matrix A: `| 4.7 | topic | ... |`, with optional ** bolding on the section cell.
-GRID_ROW = re.compile(r"^\|\s*\*{0,2}(\d+\.\d+)\*{0,2}\s*\|", re.M)
-# "**Coverage: 28 of 85 numbered `§N.M` sections (33%).**"
+GRID_ROW = re.compile(r"^\|\s*\*{0,2}(\d+\.\d+[a-z]?)\*{0,2}\s*\|", re.M)
+# "**Coverage: 29 of 91 numbered `§N.M` sections (32%).**"
 COUNT = re.compile(r"Coverage:\s*\*{0,2}(\d+)\*{0,2}\s+of\s+\*{0,2}(\d+)\*{0,2}\s+numbered")
-# A numbered heading in a pinned spec: `### 4.7 Connection Error Codes`. No letter
-# suffixes, no `####` -- the same rule the pin's own MANIFEST counts by.
-SPEC_HEADING = re.compile(r"^#{2,3}\s+(\d+\.\d+)\s+\S", re.M)
+# A numbered heading in a pinned spec: `### 4.7 Connection Error Codes`, or `### 5.2a
+# Verdict-to-status enumeration`. `####` is excluded -- a fourth-level heading is a
+# SUBSECTION of the section above it, not a section of its own.
+#
+# THE LETTER SUFFIX WAS EXCLUDED HERE UNTIL 2026-09-07, AND THAT WAS TWO ERRORS.
+# (1) The denominator silently dropped every lettered section: SIX of them in core
+#     (`1.2a`, `1.5a`, `4.5a`, `5.2a`, `6.9a`, `9.5a`) and two in attestation (`5.6a`,
+#     `5.6b`). "28 of 85" was a fraction over a section set that omitted normative
+#     sections for no stated reason -- D15's own subject, the input set a number is
+#     derived over, asked of the DENOMINATOR rather than the numerator.
+# (2) Worse, `CITATION` dropped the letter too, so a citation of `§5.2a` (the
+#     verdict-to-status enumeration) was credited to `§5.2` (the verification
+#     algorithm) -- two different `###` sections, 320 lines apart. That is the §4.7
+#     miscredit mechanism in a new shape: not a range endpoint, a letter suffix.
+#
+# And `tools/spec-drift.py` had it RIGHT the whole time (`[a-z]?` in both its heading
+# and citation patterns), which is why it reports 30 cited sections where this tool
+# reported 28. Two gates over one artifact, disagreeing by two, with both numbers
+# published in the same documents and neither reconciled to the other. The convention
+# is spec-drift's now, in both tools.
+SPEC_HEADING = re.compile(r"^#{2,3}\s+(\d+\.\d+[a-z]?)\s+\S", re.M)
+
+
+# ── WHERE THE COVERAGE NUMBERS ARE CLAIMED OUTSIDE THE GRID ─────────────────────────────
+# Added 2026-09-07, and the reason is that it was needed: the letter-suffix fix moved core
+# from "28 of 85" to "29 of 91", and this tool checked ONE site -- the `Coverage:` line inside
+# the grid section it derives from. README.md's headline, docs/STATUS.md's pointer and
+# COVERAGE-MATRIX §5's complement ("N of M sections are not cited by any model") all stated
+# the old pair, and all three were found BY GREP. A number this repo publishes is checked;
+# these were published and unchecked, which is exactly the hole `make runcount` was built to
+# close for the run total, one artifact over.
+#
+# Each row is (track, file, description, pattern with two capture groups, kind). `pair` means
+# the groups are (numerator, denominator); `complement` means they are (uncited, denominator),
+# i.e. the same claim stated from the other end -- which is its own staleness risk, because a
+# reader checks the two against each other and neither against the models.
+#
+# A pattern that matches NOTHING is a failure, same as runcount: a site that stops making the
+# claim is how a number goes stale unnoticed. And the cost is stated: this asserts the
+# ANCHORED sites. A new prose site quoting a coverage pair and not listed here is unchecked,
+# and nothing detects that.
+COVERAGE_PROSE_SITES = [
+    ("core", "README.md", "the coverage headline",
+     r"Coverage: (\d+) of (\d+) numbered spec sections", "pair"),
+    ("core", "docs/STATUS.md", "the pointer to COVERAGE-MATRIX.md",
+     r"Headline: \*\*(\d+) of (\d+) numbered sections", "pair"),
+    ("core", "docs/COVERAGE-MATRIX.md", "the section-5 not-covered complement",
+     r"\*\*(\d+) of (\d+) sections are not cited by any model\.\*\*", "complement"),
+    # FOURTH SITE, ADDED 2026-09-07, AND IT WAS ALREADY STALE WHEN ADDED. docs/STATUS.md
+    # §Next item 1 said "they reach **28 of the 85 numbered sections**" -- the pre-letter-suffix
+    # pair, left behind by the fix that moved core to 29 of 91 and corrected three other sites.
+    # It survived because it is phrased differently from all three of those ("they reach", not
+    # "Coverage:"), so the grep that found them missed it and this table did not list it.
+    # That is precisely the cost this table's own header declares: "A new prose site quoting a
+    # coverage pair and not listed here is unchecked, and nothing detects that." The declaration
+    # was accurate and the hole was real for a day. Worth noting the shape rather than only the
+    # fix: a stale number hides best in a sentence that states it in DIFFERENT WORDS from the
+    # canonical one, because every search for the staleness is a search for the canonical
+    # phrasing. Same mechanism as D14's retracted-phrasing rule, inverted.
+    ("core", "docs/STATUS.md", "the coverage-breadth item in §Next",
+     r"they reach \*\*(\d+) of (\d+) numbered sections", "pair"),
+]
+
+
+def check_coverage_prose(root: str, derived: dict[str, tuple[int, int]]) -> list[str]:
+    out: list[str] = []
+    for track, rel, what, pat, kind in COVERAGE_PROSE_SITES:
+        if track not in derived:
+            continue                      # track not modeled in this run; nothing to compare
+        num, denom = derived[track]
+        want = (denom - num, denom) if kind == "complement" else (num, denom)
+        path = os.path.join(root, rel)
+        if not os.path.isfile(path):
+            out.append(f"{rel}: {what}: file not found")
+            continue
+        m = re.search(pat, re.sub(r"\s+", " ", read(path)))
+        if not m:
+            out.append(
+                f"{rel}: {what} no longer states the coverage pair"
+                "\n      -> restore the claim, or drop the row from COVERAGE_PROSE_SITES."
+            )
+            continue
+        got = (int(m.group(1)), int(m.group(2)))
+        if got != want:
+            out.append(f"{rel}: {what} states {got[0]} of {got[1]};"
+                       f" derived {want[0]} of {want[1]} for track `{track}`")
+    return out
+
+
+def fold(tok: str, spec: set[str]) -> str:
+    """A cited token, resolved against the track's own section set.
+
+    `§5.2a` is a section of core and stays `5.2a`. `§5.5a` is a `####` SUBSECTION of
+    `§5.5` and folds to it. `§4.9a` is not a heading at all -- it is clause (a) inside
+    §4.9's prose -- and folds the same way. So the rule is one line: keep the letter if
+    the spec has that section, otherwise it names something inside its parent.
+
+    When the spec is unreadable the set is empty and every lettered token folds. That is
+    the pre-2026-09-07 behavior, and it is the safe direction: folding can understate
+    coverage, keeping can mint a row for a section that does not exist.
+    """
+    return tok if tok in spec else re.sub(r"[a-z]$", "", tok)
 
 # Tripwire 1: a section range written with a sigil on BOTH ends mints a phantom endpoint.
 RANGE_FORM = re.compile(r"§ ?\d+(?:\.\d+)*[a-z]? *[-–—] *§")
@@ -138,7 +238,10 @@ def pin_dir(root: str, pin_file: str) -> str | None:
 
 
 def skey(s: str) -> list[int]:
-    return [int(p) for p in s.split(".")]
+    """Sort key. A lettered section sorts immediately after its parent: 5.2 < 5.2a < 5.3."""
+    m = re.fullmatch(r"([\d.]+?)([a-z]?)", s)
+    head, suffix = (m.group(1), m.group(2)) if m else (s, "")
+    return [int(x) for x in head.split(".")] + [ord(suffix) if suffix else 0]
 
 
 def main() -> int:
@@ -163,6 +266,7 @@ def main() -> int:
         return 1
 
     total_cited = 0
+    derived: dict[str, tuple[int, int]] = {}
     for name, t in modeled:
         files = [os.path.join(root, f) for f in t.get("models", [])]
         missing = [f for f in files if not os.path.isfile(f)]
@@ -176,6 +280,14 @@ def main() -> int:
             continue
 
         print(f"== track `{name}` — cited §N.M sections vs its grid rows ==")
+
+        # The track's own section set, read here rather than at the denominator check
+        # below, because `fold()` needs it to tell `§5.2a` (a section) from `§5.5a` (a
+        # subsection) from `§4.9a` (a clause inside one). Same file, read once.
+        pin = pin_dir(root, t.get("pin_file", ""))
+        primary = os.path.join(root, pin, t["primary_spec"]) if pin else None
+        spec = set(SPEC_HEADING.findall(read(primary))) if primary and \
+            os.path.isfile(primary) else set()
 
         # ---- gather citations, splitting cross-track references out ---------------
         cited: dict[str, set[str]] = {}
@@ -195,7 +307,7 @@ def main() -> int:
                 # draft subtracted the prefixed sections from this line's bare set, which is
                 # what turned 23 false prefix hits into 23 silently dropped citations.
                 for s in CITATION.findall(line):
-                    cited.setdefault(s, set()).add(rel)
+                    cited.setdefault(fold(s, spec), set()).add(rel)
 
         if bad_prefix:
             problems.append(
@@ -264,10 +376,7 @@ def main() -> int:
             else:
                 print(f"  ok        {stated} cited")
 
-            pin = pin_dir(root, t.get("pin_file", ""))
-            primary = os.path.join(root, pin, t["primary_spec"]) if pin else None
-            spec = set(SPEC_HEADING.findall(read(primary))) if primary and \
-                os.path.isfile(primary) else set()
+            # `pin`, `primary` and `spec` were computed above, before the citation pass.
             if not spec:
                 # D13: a check that cannot run is a FAILURE, not a silent pass. The denominator
                 # is the honest half of "28 of 85" and dropping it quietly is how the numerator
@@ -319,13 +428,26 @@ def main() -> int:
             print("  ok        no § inside a scope disclaimer")
         print()
         total_cited += len(cited)
+        derived[name] = (len(cited), len(spec))
+
+    prose = check_coverage_prose(root, derived)
+    if prose:
+        print("== the coverage pair as claimed outside the grid ==")
+        for pr in prose:
+            print(f"  WRONG     {pr.splitlines()[0]}")
+        print()
+        problems.extend(prose)
+    else:
+        print("== the coverage pair as claimed outside the grid ==")
+        print(f"  ok        {len(COVERAGE_PROSE_SITES)} declared site(s) agree\n")
 
     scoped = [n for n, t in sorted(tracks.items())
               if t.get("kind") == "protocol" and t.get("status") == "scoped"]
     if scoped:
         print(f"== not checked here: {len(scoped)} scoped track(s) — {', '.join(scoped)} ==")
-        print("  Declared in TRACKS.toml with a landed spec, no vendored snapshot and no model,")
-        print("  so they publish no coverage claim. `make trackcheck` is what keeps that true:")
+        print("  Declared in TRACKS.toml with a landed spec and a VENDORED snapshot but no pin and")
+        print("  no model -- vendoring is not pinning, and only a pinned track publishes results,")
+        print("  so these publish no coverage claim. `make trackcheck` keeps that true:")
         print("  a scoped track that acquires a model file fails until it is promoted with a pin.")
         print()
 

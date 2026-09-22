@@ -155,7 +155,13 @@ same way every model in this repo is:
   which is a mistake an earlier draft of this document made.
 - It does not detect a change that is **semantically** relevant but lands in a section no
   model cites. Coverage is bounded by what the models chose to cite.
-- It does not cover the extension protocols, which are not vendored at all.
+- It does not cover the extension protocols. Three of them (`attestation`, `quorum`,
+  `identity`) **are** vendored as of 2026-09-07 and `attestation` is pinned and modeled, but
+  `make specdrift` measures the `core` track's pin against the live core spec and nothing
+  else. **The attestation pin has no drift measurement at all** — its upstream lives in
+  `entity-system-architecture`, so the claim "our snapshot matches live" is one a sibling
+  repo's commit can falsify with our tree untouched. That is the `make driftclaim` failure
+  mode exactly, one spec body over, and it is open.
 
 ## What moved
 
