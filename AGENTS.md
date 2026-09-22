@@ -162,6 +162,22 @@ than reasoning about it.** The first draft of the Spin failure-signature check m
 *search-options header of every run* — so the two rows that legitimately expect a deadlock
 asserted nothing. Reading the code did not catch it; deliberately breaking a control did.
 
+*Second medium, same mechanism — D15 is not only about numbers.* `LEAN-SEAM.md` L7 claimed
+ProVerif and Lean shared one undischarged assumption, on the strength of the single equation
+`canon(star, fr) = awild(fr)` matching the shape of Lean's `hframed`. **There are three `canon`
+equations, four lines apart in the same file, and the second one is `hframed`'s negation.** The
+claim was assembled from a grep hit that agreed with a hypothesis already formed — the same
+mechanism as counting a `§` mention as coverage, in prose instead of in a metric. Ask it of a
+*claim*, not just a published number: **what does this assert, and what else produces the
+evidence I read it from?** The same pass mis-read `hframed` itself as an unproved lemma when
+`canonSegs`' two branches make it *false* for §5.5a's absolute form — one definition, read
+once, would have shown both. **Enforcement: none exists, and that is the point.**
+`make leanseam` pins the cited text by digest and states in its own output that it does **not**
+assert any correspondence is correct. This is the strongest argument on record for the
+`docs/STATUS.md` §Next differential-trace-checking item, which is the only proposal that would
+put a machine on this half of the seam. Until then the ledger is a human reading, and its own
+rows say so.
+
 ## Boundaries — do NOT modify
 
 - **An existing `spec-data/vX/` snapshot is frozen** — vendored, SHA-pinned. Model against

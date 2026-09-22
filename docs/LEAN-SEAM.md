@@ -185,12 +185,28 @@ be visible rather than silent. `make leanseam` re-checks that gate per cited nam
   exactly this **conclusion**.
 - **H:** the theorem takes the framing as a *hypothesis*:
   `hframed : ∀ p ∈ pats, (canonSegs granterPeer p).head? = some granterPeer`. Lean proves
-  the security logic (framing ⇒ isolation) and explicitly declines to prove `hframed` itself
-  from `canonSegs`' string operations, calling it mechanical stdlib plumbing.
-- **Verdict: CLOSED-MODULO-H — and this is the finding.** See §4.1: the ProVerif/Tamarin
-  side does not independently establish `hframed` either. It *assumes the same thing by
-  equation* — `canon(star, fr) = awild(fr)` is `hframed`, written as a rewrite rule. Two
-  engines, one shared undischarged assumption.
+  the security logic (framing ⇒ isolation) and declines to prove `hframed` itself from
+  `canonSegs`' string operations, calling it mechanical stdlib plumbing.
+- **What `hframed` actually excludes — corrected 2026-08-30, and the first version of this
+  row got it wrong.** `hframed` is **not an unproved lemma; it is false in general.**
+  `canonSegs` has two branches (`Capability.lean:118-119`) and only the *relative* one
+  frames: an absolute pattern passes through `splitSegs` untouched, so `canonSegs "P" "/Q/*"
+  = ["Q","*"]` and the head is `Q`, not the granter. That is not a defect — **§5.5a
+  (line 2729) says the absolute form is how cross-peer authority MUST be expressed.** So
+  `hframed` is a *scope restriction*: it confines the theorem to §5.5a's **peer-relative**
+  pattern fragment and excludes every cross-peer grant. The relative half is genuinely
+  mechanical (`¬p.startsWith "/"` + a `/`-free peer-id frame ⇒ head = frame); the absolute
+  half is a **different theorem, and Lean has none**.
+- **Verdict: CLOSED-MODULO-H, where H is now named precisely** — H is "every pattern in
+  `pats` is peer-relative," not "canonicalization frames patterns." The residual is
+  §5.5a's **absolute named form** (`/{q}/…` reaches exactly `q`), which our symbolic models
+  represent and no Lean theorem covers. Routed:
+  `docs/status/PROPOSAL-DRAFT-2026-08-30-KEYSTONE-HFRAMED.md`.
+- **Superseded claim, kept visible rather than deleted.** This row previously read: *"the
+  ProVerif/Tamarin side does not independently establish `hframed` either. It assumes the
+  same thing by equation — `canon(star, fr) = awild(fr)` is `hframed`, written as a rewrite
+  rule. Two engines, one shared undischarged assumption."* **That was wrong in both halves**
+  — see §4.1.
 
 ### L8 · A satisfied multi-sig root means a real quorum, including this peer
 
@@ -289,27 +305,55 @@ the extension is small. Recorded, not fixed.
 Four things, none of which a per-tool report could have surfaced, and none of which the
 prose division of labour showed.
 
-### 4.1 Two engines, one shared undischarged assumption (L7)
+### 4.1 Two engines, two *different* assumptions — and Lean's is the stronger one (L7)
+
+> **This section was rewritten on 2026-08-30. The first version claimed the opposite and was
+> wrong.** It is corrected in place rather than quietly amended, and the superseded claim is
+> quoted below, because a ledger that silently rewrites its own findings is worth less than
+> one that shows where it was mistaken. What it said: *"the two independent engines that both
+> 'cover' §5.5a rest on the **same** unproved proposition, stated in two notations … route
+> upstream a proposal to discharge `hframed` from `canonSegs` — the one change that would
+> close L7 on both sides at once."* Neither the diagnosis nor the disposition survived a
+> second reading.
 
 `§5.5a` namespace isolation is covered by ProVerif/Tamarin (`ChainTopology`, `DeepChain*`)
-*and* by Lean (`grantPattern_namespace_isolation`). Reading them together:
+*and* by Lean (`grantPattern_namespace_isolation`). Reading them together **properly**:
 
-- Lean proves **framing ⇒ isolation**, taking framing as the hypothesis `hframed`, and says
-  in the source that it declines to prove `hframed` from `canonSegs`' string operations.
-- ProVerif encodes framing as the **rewrite rule** `canon(star, fr) = awild(fr)` — which is
-  `hframed`, asserted rather than derived.
+- **Lean** proves **framing ⇒ isolation**, taking framing as the hypothesis `hframed`.
+  `hframed` is not merely underived — it is **false** for §5.5a's absolute form
+  (`canonSegs "P" "/Q/*" = ["Q","*"]`, head `Q`), which §5.5a line 2729 makes the *required*
+  form for cross-peer authority. So `hframed` scopes the theorem to the **peer-relative
+  fragment**.
+- **ProVerif/Tamarin** carry **three** canonicalization equations, not one
+  (`DeepChain.pv:47-52`, `ChainTopology.pv:69-75`, `ChainTopology.spthy:70,91`):
+  `canon(star, fr) = awild(fr)` · `canon(awild(p), fr) = awild(p)` · `canon(allp, fr) = allp`
+  — the peer-relative, absolute-named and open-access forms respectively. **The second is the
+  negation of `hframed` for absolute patterns.** The symbolic side does not assume framing
+  universally; it models all three §5.5a forms.
 
-So the two independent engines that both "cover" §5.5a rest on the **same** unproved
-proposition, stated in two notations. The redundancy is real for everything else in that
-section and worth nothing for this particular step.
+**How the error was made, because the shape of it is the transferable part.** The first pass
+quoted **one equation out of three** — the one that looked like `hframed` — and concluded a
+shared assumption. The other two equations are four lines below it in the same file. A single
+matching line is not a reading of the model; it is a grep result that agreed with a hypothesis
+already formed.
 
-This is the specific reason a coverage matrix counted by *engine* cannot substitute for a
-ledger counted by *assumption*. The audit that "closed every single-tool coverage gap" was
-right about engines and could not have seen this: §5.5a has two engines and one assumption.
+**The real asymmetry, which is the finding that survives:** our symbolic models represent all
+three §5.5a pattern forms; **Lean's isolation theorem covers one of them.** The absolute
+named form — `/{q}/…` reaches exactly `q`'s namespace, frame-independently — is the half
+§5.5a *mandates* for cross-peer authority, and it has no Lean theorem. That is a smaller and
+more actionable gap than the one first reported, and it points the other way.
 
-**Disposition:** route upstream to `entity-core-keystone` as a proposal to discharge
-`hframed` from `canonSegs` — the one change that would close L7 on both sides at once. Not
-a defect in either artifact; both disclose what they assume, and neither could see the other.
+This still makes the ledger's original point, and makes it better: a coverage matrix counted
+by *engine* cannot see this, and neither can a ledger counted by *assumption* if the
+assumptions are read one line at a time. §5.5a has two engines, **three** pattern forms, and
+theorem coverage on one of them.
+
+**Disposition:** route to `entity-core-keystone` — but the ask is now (a) discharge the
+relative half from a syntactic side-condition, (b) add the companion theorem for the absolute
+form, and (c) correct the source comment that calls `hframed` "mechanical stdlib plumbing,"
+which is true of the relative branch and cannot be true of the absolute one. Packet:
+`docs/status/PROPOSAL-DRAFT-2026-08-30-KEYSTONE-HFRAMED.md`. **No ask on the ProVerif/Tamarin
+side; there was never anything wrong with it.**
 
 ### 4.2 A correspondence that does not exist
 

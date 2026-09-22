@@ -296,33 +296,70 @@ item 4.
      argument and the §5.5a granter frame threads it through the walk, so `Revoke.tla`'s
      `ChainValid == TRUE` at both peers is sound only where the two peers' frames agree — a
      restriction the model does not state. CLOSED-MODULO-H.
-   - **L7 — two engines, one shared undischarged assumption.** §5.5a namespace isolation is
-     "covered" by ProVerif/Tamarin *and* by Lean, and **both** rest on the same unproved
-     proposition: that canonicalization roots a relative pattern at the granter's namespace.
-     Lean takes it as the hypothesis `hframed` and says in the source it declines to prove it;
-     ProVerif asserts it as the rewrite `canon(star, fr) = awild(fr)`. Redundancy counted by
-     *engine* cannot see this; counting by *assumption* is what found it.
+   - **L7 — Lean's §5.5a isolation theorem covers one of three pattern forms.**
+     *(Corrected 2026-08-30. This item previously read "two engines, one shared undischarged
+     assumption" and claimed ProVerif asserts `hframed` by rewrite. **Both halves were wrong**
+     — the error and its shape are recorded in `docs/LEAN-SEAM.md` §4.1, which is rewritten in
+     place rather than amended.)* `hframed` is not an unproved lemma, it is **false in
+     general**: `canonSegs` frames only the *relative* branch, so `canonSegs "P" "/Q/*"` heads
+     at `Q`. That is correct behaviour — §5.5a line 2729 makes the absolute form the required
+     way to express cross-peer authority — which means `hframed` **scopes** the theorem to the
+     peer-relative fragment. Our symbolic models carry all three §5.5a forms as three `canon`
+     equations, one of which is the *negation* of `hframed`; the first pass quoted one of the
+     three and inferred a shared assumption that does not exist. **The real residual:** the
+     absolute named form (`/{q}/…` reaches exactly `q`) has no Lean theorem. CLOSED-MODULO-H,
+     with H now named precisely.
 
    **Still open, in order:**
-   - **Route `hframed` upstream** to `entity-core-keystone` as a proposal to discharge it from
-     `canonSegs`' string operations — the single change that would close L7 on both sides.
+   - **~~Route `hframed` upstream.~~ Drafted — and the ask changed.**
+     `docs/status/PROPOSAL-DRAFT-2026-08-30-KEYSTONE-HFRAMED.md`. Not "discharge `hframed`"
+     (which would be asking keystone to prove something untrue) but three separable asks:
+     prove the relative half from a syntactic side-condition, add the companion theorem for
+     the absolute form, and correct the source comment calling `hframed` "mechanical stdlib
+     plumbing" — true of the relative branch, impossible for the absolute one. **No ask on the
+     ProVerif/Tamarin side; nothing was wrong with it.** Awaiting hand-off to keystone.
    - **Differential trace checking** — replay Apalache `.itf.json` counterexamples through the
      Lean executable model (or a reference peer) and assert the abstract predicate's value
      matches. The ledger is a human reading of two texts and `make leanseam` only detects that
      one of them moved; this is the only item that would put a **machine** on the Lean-facing
      half of the 5th wall. The ledger was built first precisely to tell us whether this is
-     worth it — with 21 of 23 rows CLOSED and the two open ones sharing a single root cause,
-     the answer looks like *route the finding first, then reassess*.
+     worth it — 21 of 23 rows are CLOSED and the two open ones (L1, L7) are both §5.5a
+     granter-framing, so *route the findings first, then reassess* still looks right.
+     **But note what the L7 correction says about this item's premise:** the ledger's open
+     rows were re-read once and one of them was materially wrong. A human reading of two texts
+     degrades exactly this way, which is the argument *for* the machine check, not against it.
    - **A local Lean tree here was considered and rejected.** The value of the seam is that
      Lean's theorems are about the same executable code the conformance suite runs; a fork
      would make them statements about our copy, which nothing gates. Cite, pin, and check.
-5. **The bound nobody has attacked: `Peers = {A,B}` is fixed in every model** — TLC, Spin and
-   Apalache alike. Apalache's results are unbounded in *steps*, never in *peers*, and this is
-   the first question a reviewer asks of a multi-peer protocol. Parameterized verification is
-   the named technique: **Ivy** (decidable EPR fragment — proves for all N given an inductive
-   invariant), `mypyvy`, or TLAPS. Revocation propagation and cross-peer chain topology are
-   the properties where N > 2 could plausibly matter. **This is now the largest single upgrade
-   available**, and the one with the least defence as it stands.
+5. **The bound nobody has attacked: `Peers = {A,B}`. Scoped 2026-08-30 — it is three different
+   problems, and the first version of this item pointed at the wrong one.**
+   `docs/status/SCOPING-2026-08-30-PEERS-BOUND.md`. Apalache's results are unbounded in *steps*,
+   never in *peers*, and this is still the first question a reviewer asks of a multi-peer
+   protocol. What reading the models changed:
+   - **`Revoke` / `RevokeApalache` are already N-generic** — `\A p \in Peers` throughout, no
+     binary idiom; one line pins them. **But widening them would assert nothing.** Both
+     properties are per-peer local or N-independent *by construction*: `Observe(p)` is
+     independent per-peer nondeterminism with no topology, so extra peers are extra coin
+     flips. The gap there is a **missing propagation mechanism**, not a small N — separate
+     work, separately justified. *(This item previously named revocation propagation as a
+     place N>2 "could plausibly matter." In reality, not until the model has a network.)*
+   - **Cross-peer chain topology is already at N=3** — `ChainTopology.{pv,spthy}` runs three
+     distinct principals (root `P`, granter `A`, verifier `W`), built deliberately because
+     `DeepChain`'s two collapsed the frames. *(Also previously named here as an N>2 target; it
+     is banked.)*
+   - **`Core` / `Reentry` are binary structurally, not by bound** — `Other(p) == IF p = "A"
+     THEN "B" ELSE "A"`. Under it the wait-for graph has two nodes, so the only expressible
+     deadlock is the mutual 2-cycle — which is the Class-G shape already re-derived. **A
+     3-cycle is a deadlock class two peers cannot make**, and whether §4.8's per-connection
+     invariant composes around a cycle of connections is a question the models cannot
+     currently ask. **That is the real prize, and it is reachable at N=3 with no new tool.**
+   **Revised order:** restructure `Reentry` for a peer-indexed request target (N stays a
+   `CONSTANT`; N=2 must reproduce today's results byte-for-byte — that equivalence is the
+   regression test, and the step most likely to fail silently) → run N=3 → *then* reassess
+   **Ivy** / `mypyvy` / TLAPS for unbounded N, informed by whether N=3 found anything and by an
+   inductive invariant we will have had to write regardless. Adopting the parameterized tool
+   first would answer at the expensive end a question not yet asked at the cheap one.
+   **Still the largest single upgrade available, and still the one with the least defence.**
 6. **Liveness is bounded everywhere and cannot be lifted by the current toolchain.** Apalache
    does safety/induction by construction. **TLAPS** machine-checks liveness proofs (fairness,
    well-founded ordering); deadlock-freedom for `Core` proved rather than model-checked would
