@@ -53,9 +53,9 @@ in §5 (Findings and residual risk).
 
 > **Which spec version this capstone certifies.** Everything here certifies models written
 > against the SHA-pinned `spec-data/v0.8.2/` — the protocol at spec version **0.8.2**. The
-> live spec is **0.8.2.19** and `make specdrift` reports **12 of 31 cited sections moved**, so
+> live spec is **0.8.2.21** and `make specdrift` reports **14 of 31 cited sections moved**, so
 > this capstone certifies 0.8.2 and nothing later. No result below is falsified by the
-> movement — eleven of the twelve moved sections contradict nothing modeled, and §4.7's `connection_sequence_error`
+> movement — thirteen of the fourteen moved sections contradict nothing modeled, and §4.7's `connection_sequence_error`
 > status change (400 → 409) contradicts `tla/ConnCodes.tla` only against text this capstone
 > does not claim. `docs/SPEC-DRIFT-ASSESSMENT.md` has the section-by-section measurement.
 >

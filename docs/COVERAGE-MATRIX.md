@@ -138,7 +138,7 @@ verified protocol with three unmodeled ones produces a figure that is true of no
 | 5.1 | revocation | revoked never passes | ● | ● | ● | ● | ● |
 | **5.2** | **verification + dispatch authority** | **three-valued authority; resource binding** | ● | ● | ● | ● | ● |
 | **5.2a** | **verdict-to-status enumeration** | **the §4.7-vs-§5.2a disagreement on a pre-hello nonce; reason codes distinct** | ● | ● | ● | | |
-| 5.4 | pattern matching | no escalation via attenuation | | | | ● | ● |
+| 5.4 | pattern matching | **abstracted — cited only as a declared boundary (§3a)** | | | | | |
 | 5.5 | chain verification | linkage; unforgeability; caveats | ● | | ● | ● | ● |
 | **5.6** | **attenuation + temporal ingest** | **expiry; malformed-field fail-open** | ● | | ● | ● | ● |
 | 5.7 | delegation caveats | caveat enforcement | ● | | | ● | ● |
@@ -157,7 +157,7 @@ verified protocol with three unmodeled ones produces a figure that is true of no
 
 **Bold** rows are the surface added or sharpened at 0.8.1/0.8.2.
 
-### 3a. One row is single-engine — and the other two were never covered at all
+### 3a. One row is single-engine, one is ZERO-engine — and two others were never covered at all
 
 The "every module is checked by all three engines of its family" claim in §1 and §4 is about
 **modules**, and it holds. At **section** granularity one row still rests on one engine:
@@ -165,6 +165,37 @@ The "every module is checked by all three engines of its family" claim in §1 an
 | § | Only engine | What that means |
 |---|---|---|
 | 3.3 | TLC (`Reentry.tla`) | §3.3 is not modeled *as* a wire-frame property. It appears only as the **subject** of §6.11(a′) — "these bytes are what must not interleave". The frame's own structure is the CBOR spec's and the conformance vectors', per §5(a). Not a gap in this repo's surface; a row that looks thinner than the claim behind it. |
+
+**And one row now carries no engine at all — §5.4, corrected 2026-09-12.** It read
+`| 5.4 | pattern matching | no escalation via attenuation | | | | ● | ● |`, crediting ProVerif
+and Tamarin. **All nine model files citing §5.4 cite it as an abstraction boundary**, in those
+words — *"the §5.4 path matcher stays abstract (the Canon/Cov fact tables)"* (`ChainTopology.*`),
+*"The §5.4 path-segment matcher is Lean's / abstracted; we model the FRAME … the §5.5a
+load-bearing bit"* (`DeepChain*`), *"The §5.4 pattern-match arithmetic … is Lean's / abstracted
+here (verdict-interior wall); we model the order RELATION … (§5.6 `is_attenuated`)"*
+(`NoEscalation*`). Checked at the source, not from the comments: `NoEscalation.pv` gives `scope` a
+two-point abstract order (`fun narrow(scope)`) with no path structure; `DeepChain.pv` declares
+`fun canon(bitstring, pkey)` with three frame-resolution equations and an opaque `covok`.
+
+Two things were wrong, not one. The **engines** were credited for a section every citing file
+declares out of scope — and the **property class** named was *"no escalation via attenuation"*,
+which is **§5.6's order relation**, already credited to the same two engines by §5.6's own row one
+line below. So the grid counted one property twice and attributed half of it to the wrong section.
+
+**This is the §4.7 / §6.9 phantom shape** — the pair of rows D15 was written about — arriving in
+the one dimension `make coverage` says in its own output it does *not* assert: *"the engine
+columns are still hand-maintained — a citation says a model is ABOUT a section, not which engine
+verifies what."* The disclaimers were accurate and explicit for the life of the grid; nothing read
+them. **The numerator does not move and the row is not deleted:** `make coverage` asserts the
+cited set equals the grid rows in *both* directions, so while nine files cite §5.4 the row must
+exist. What was wrong is exactly the hand-maintained part. Found while classifying §5.4's
+0.8.2.20 movement (`docs/SPEC-DRIFT-ASSESSMENT.md` §1b) — i.e. **by the drift gate firing on a
+sibling's commit**, which is not a mechanism anyone designed to catch this.
+
+*Contrast §7.3, which keeps its two dots and is honest: its property class says **"(as crypto
+wall)"** — the abstraction is in the label, and signatures are genuinely carried as an opaque
+primitive the theories reason with. The distinction worth keeping is not "abstract or not" but
+**whether the row's stated property is the one the engines actually establish.***
 
 **§4.7 and §6.9 used to sit in that table, described as "real single-tool results". They were
 not single-tool results. They were not results.** Both rows came from a `§`-mention that was

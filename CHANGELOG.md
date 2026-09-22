@@ -10,23 +10,48 @@ accompanies protocol `0.8.2`, so the two line up when read side by side.
 
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
-**`v0.8.2`**. The live protocol has since advanced to **0.8.2.19** and `make specdrift`
-reports **12 of 31 cited sections moved**. That gap is deliberate and visible rather than
+**`v0.8.2`**. The live protocol has since advanced to **0.8.2.21** and `make specdrift`
+reports **14 of 31 cited sections moved**. That gap is deliberate and visible rather than
 hidden: the pin moves only as the last step of re-validating the models, never on a file
 copy, so between a spec release and a re-validation this repository is *behind on purpose*.
 `docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance section by section.
 
 ## [Unreleased]
 
+### Fixed — a coverage row credited two engines for a section every model declares abstract
+
+`docs/COVERAGE-MATRIX.md` Matrix A carried `| 5.4 | pattern matching | no escalation via
+attenuation | … | ● | ● |`, crediting ProVerif and Tamarin. **All nine model files citing §5.4
+cite it as an abstraction boundary, in those words**, and the property the row named is **§5.6's**
+order relation — already credited to the same two engines by §5.6's own row. One property counted
+twice, half of it attributed to the wrong section.
+
+The row is **kept and corrected, not deleted**: the coverage gate asserts the cited section set
+equals the grid rows in both directions, so while nine files cite §5.4 a row must exist. What was
+wrong is the hand-maintained part — the engine dots and the property label — which is why **the
+published coverage figure does not change** and no gate had flagged it. `docs/COVERAGE-MATRIX.md`
+§3a records what was wrong, and the distinction that makes it statable: the test is not whether a
+section is abstracted but **whether a row's stated property is the one its engines establish**
+(§7.3 keeps two dots and says *"(as crypto wall)"* in its own label).
+
 ### Changed — the pin is further behind, and the distance was measured rather than assumed
 
-The live protocol advanced to **0.8.2.19** while this repository's models stayed pinned at
-**0.8.2**, and `make specdrift` now reports **12 of 31 cited sections moved**. Two of the eleven
-are new — **§5.2** and **§5.6**, which are the two most-cited sections here (17 and 14 model
-files). **Neither contradicts any model in this repository**, and that is an argument rather
-than a reassurance: every engine abstracts the scope matcher, and the one dimension any of them
-frames concretely is path-scope in both texts. `docs/SPEC-DRIFT-ASSESSMENT.md` §1a states the
-argument and the limit.
+The live protocol advanced to **0.8.2.21** while this repository's models stayed pinned at
+**0.8.2**, and `make specdrift` now reports **14 of 31 cited sections moved**. Four of the
+fourteen were added during this cycle — **§5.2** and **§5.6** (0.8.2.16), the two most-cited
+sections here (17 and 14 model files), and **§5.4** and **§6.8** (0.8.2.20/21), cited by 9 and
+10. **None contradicts any model in this repository**, and that is an argument rather than a
+reassurance: every engine abstracts the scope matcher, and the one dimension any of them frames
+concretely is path-scope in both texts. `docs/SPEC-DRIFT-ASSESSMENT.md` §1a and §1b state the
+arguments and their limits.
+
+**§5.4 and §6.8 had both been recorded as `unchanged` inside arguments that leaned on their
+stability**, so the measurement did not merely go stale — it went stale under two load-bearing
+sentences, with every gate in this repository green. The reasons they still contradict nothing
+differ in kind, and the difference is the interesting part: **all nine of §5.4's citations are
+abstraction disclaimers** — the section moved in the one place nothing here models — while
+**§6.8 grew by 3.8 KB around a clause that is byte-identical**, and that clause is the only thing
+the ten models citing it use.
 
 What the movement did surface is a divergence that **predates it**: §3.6's id-scope pattern
 grammar has been normative since 0.8.1, and the sibling proof development this repository's

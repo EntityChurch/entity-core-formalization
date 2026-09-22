@@ -437,10 +437,24 @@ V1–V3; none of them is visible from any single finding.
 are three sibling repos, so they go stale with our tree untouched — the `driftclaim` class
 exactly (D15). Re-read the source before quoting a row.
 
-**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.19** and `make specdrift` reports
-**12 of 31 cited sections moved**. Eleven of the twelve contradict no model — one of them (§5.8) is a
+**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.21** and `make specdrift` reports
+**14 of 31 cited sections moved**. Thirteen of the fourteen contradict no model — one of them (§5.8) is a
 single backtick removed from a cross-reference row; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
 `tla/ConnCodes.tla` transcribes 400.
+**§5.4 and §6.8 moved on 2026-09-11/12 (spec 0.8.2.20/21) and BOTH were previously classified
+`unchanged` IN AN ARGUMENT THAT LEANED ON THEIR STABILITY** — `SPEC-DRIFT-ASSESSMENT.md` §1a
+said *"§5.4 itself is unchanged"* and §4's reading of the confused-deputy property said §6.8
+*"did not move … the property was modeled against stable text."* Both sentences were true when
+written and both are now false in their premise, with every gate in this repo green — the
+`driftclaim` class again, and the first time it has landed on a **load-bearing clause of our own
+argument** rather than on a count. Read `SPEC-DRIFT-ASSESSMENT.md` §1b, not the count: neither
+contradicts a model, and the reasons are different in kind. **§5.4 is cited by 9 prover files and
+every one of the 9 citations is an ABSTRACTION DISCLAIMER** (*"the §5.4 path matcher stays
+abstract"*, *"is Lean's / abstracted here"*) — so the section moved in the one place nothing here
+models, and the `§5.4` row of the coverage grid credits two engines for it (see §1b's finding).
+**§6.8 moved by +3.8KB and the clause all ten citing models actually use — "a revoked capability
+never passes a check" — is byte-identical**; what moved is new surface, and 0.8.2.21's new
+authority-selection MUST lands squarely inside `tla/Authority.tla`'s own abstraction.
 **§5.2 and §5.6 moved on 2026-09-09 (spec 0.8.2.16) and they are the two most-cited sections
 in the repo (17 and 14 model files), so read the classification rather than the count.** What
 changed in both is *pseudocode*, not prose: `matches_scope` and `scope_subset` now **dispatch
@@ -1060,6 +1074,44 @@ the work look less important**, which is the moment to re-derive the domain rath
 paragraph. The file now runs two domains and reports both, which is the sensitivity check that
 would have caught it without the spec re-read. *D18 — a model's domain is a claim — asked of a
 differential rather than of a `Init`, and answered by getting it wrong first.*
+
+*Fifteenth shape, 2026-09-12 — **A PREMISE, NOT A NUMBER**, and it is the first one no gate here
+could have read.* Every prior shape was an input set that narrowed or a figure that went stale: a
+glob, a regex, a denominator, a model's `Init`, a gate whose state went empty, a fact in an
+unparsed notation, a derivation missing from the tree. This one is **a clause inside one of our own
+arguments.** `make driftclaim` fired on upstream 0.8.2.20/21 (core 12 → **14 of 31**) and the two
+newly-moved sections were **§5.4** and **§6.8** — *both already written down in
+`SPEC-DRIFT-ASSESSMENT.md` as `unchanged`, in sentences that used their stability as a premise*:
+§1a closes *"and §5.4 itself is unchanged"*, and §4's confused-deputy reading says the property
+*"lives in §6.8, **which did not move** … modeled against stable text."* Both true when written,
+both false now, tree untouched, every gate green. **Both conclusions survived and one had to be
+RESTATED**: *"the section did not move"* and *"the sentence we model did not move"* are different
+claims, and only the second was ever true of the future — §6.8 grew 3.8 KB around a
+**byte-identical** clause, which is the only part ten models consume. **Ask of a published argument
+which of its premises live in someone else's tree, and when the drift gate fires re-read the
+ARGUMENT, not just the number the gate names.** A count going stale is an embarrassment; a premise
+going stale looks like nothing from the inside. Both sites are corrected with the stale clause left
+standing and marked. Not numbered: D15's mechanism in a fifteenth medium, and the standing rule
+holds.
+
+*And the same fire produced the session's actual finding, INSIDE A BLIND SPOT WE HAD PUBLISHED.*
+Classifying whether §5.4's movement cost a model meant reading all nine of its citations — and all
+nine are **abstraction disclaimers** (*"the §5.4 path matcher stays abstract"*, *"is Lean's /
+abstracted here"*), while `docs/COVERAGE-MATRIX.md` Matrix A credited **ProVerif and Tamarin** for
+it, under a property class — *no escalation via attenuation* — that is **§5.6's order relation,
+already credited to the same two engines by §5.6's own row.** One property counted twice, half of
+it filed under the wrong section, for the life of the grid. This is the §4.7/§6.9 phantom shape
+that D15 was written about, in **the one dimension `make coverage` states in its own output that it
+does not assert**. Three transferable pieces: **a gate that honestly declares its blind spot still
+leaves the blind spot**, and this is the first time the declaration itself was where the defect
+lived; **the fix was not deleting the row** (coverage asserts the cited set equals the grid rows in
+*both* directions, so nine citations require a row — what was wrong was the hand-maintained dots,
+so the numerator never moved and no other gate could notice); and the test to apply to the next row
+is not *"is this section abstracted?"* but **"is the row's stated property the one these engines
+establish?"** — §7.3 keeps two dots honestly because its label *says* **"(as crypto wall)"**.
+**And it was found because someone else committed.** Nobody designed the drift gate to audit our
+coverage grid. *An audit trigger's value is not confined to what it was built to check.*
+`docs/COVERAGE-MATRIX.md` §3a, `docs/SPEC-DRIFT-ASSESSMENT.md` §1b.
 
 *Ninth instance of D13's "a behaviour a sibling says it has", 2026-09-10 — and the channel moved
 again.* The instance chain so far: a `sorry` reported as a warning; ProVerif exiting 0 on a false

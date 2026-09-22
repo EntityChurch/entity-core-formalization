@@ -53,7 +53,7 @@ frozen snapshots, and each names its own `MODELING-PIN-*` separately from that s
 > is how a repo ends up publishing three different answers to one question.
 >
 > Today `spec-data/MODELING-PIN` reads `v0.8.2` — spec version **0.8.2**. The live spec has
-> since advanced to **0.8.2.19**, and `make specdrift` reports **12 of 31 cited sections moved**.
+> since advanced to **0.8.2.21**, and `make specdrift` reports **14 of 31 cited sections moved**.
 > Results here are reproducible statements about **0.8.2**, not about the protocol as it
 > stands today. The pin moves only as the last step of re-validating the models against a new
 > snapshot, never on a file copy — so a repo in this state is one doing the honest thing
@@ -90,11 +90,11 @@ available for a delegated-authority protocol:
 
 Full picture: **`docs/ASSURANCE-MAP.md`**.
 
-## Status: verified against protocol 0.8.2; live spec is 0.8.2.19
+## Status: verified against protocol 0.8.2; live spec is 0.8.2.21
 
-The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **12 of 31 cited
+The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **14 of 31 cited
 sections moved** — so results here are statements about **0.8.2**, and the pin is behind the
-live spec by fifteen point revisions (distinct `0.8.2.N` revision tags carried by the live
+live spec by nineteen point revisions (distinct `0.8.2.N` revision tags carried by the live
 text; `0.8.2.12` and `0.8.2.15` were superseded and no longer appear in it).
 
 What that does and does not mean, measured rather than asserted

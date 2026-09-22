@@ -1,12 +1,15 @@
 # Spec-drift assessment — the pin vs the live spec
 
 > **LIVE — the pin is behind again, and this document is the measurement.** The models are
-> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.19**, and `make specdrift`
-> reports **12 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
-> and re-derived **three times since** — twice on 2026-09-09 and again on 2026-09-10, because
-> the upstream repo committed **0.8.2.15 through 0.8.2.19** across that window — **four separate
+> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.21**, and `make specdrift`
+> reports **14 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
+> and re-derived **four times since** — twice on 2026-09-09, again on 2026-09-10, and again on
+> 2026-09-12, because the upstream repo committed **0.8.2.15 through 0.8.2.21** across that
+> window — **six separate
 > commits, two of them while this document was being edited.** §1a classifies the two sections
-> 0.8.2.16 added. 0.8.2.19 added a twelfth, **§5.8**, whose entire delta is **one backtick**: it is
+> 0.8.2.16 added; **§1b classifies the two that 0.8.2.20/21 added — §5.4 and §6.8 — and it is
+> the section to read, because both had been recorded in this document as `unchanged` inside
+> arguments that leaned on their being unchanged.** 0.8.2.19 added a twelfth, **§5.8**, whose entire delta is **one backtick**: it is
 > the sharpest example on record of this document's own standing limit — *a section-touch count is
 > not a semantic delta* — and it is left in the count rather than filtered out, because the moment
 > this measurement starts deciding which movements are "real" it stops being reproducible.
@@ -31,7 +34,7 @@ does not read.
 
 | Track | Pin | Live tree | Files | Cited § moved |
 |---|---|---|---|---|
-| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **12 of 31 cited sections moved** |
+| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **14 of 31 cited sections moved** |
 | `attestation` | `spec-data/ext-attestation-v1.3` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`attestation` no drift** |
 | `quorum` | `spec-data/ext-quorum-v1.2` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`quorum` no drift** |
 | `identity` | `spec-data/ext-identity-v3.10` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`identity` no drift** |
@@ -51,19 +54,31 @@ before believing a zero (D15, ninth shape).
 
 ---
 
-# 1. Live measurement — 0.8.2 pin vs 0.8.2.19 live
+# 1. Live measurement — 0.8.2 pin vs 0.8.2.21 live
 
-**Measured 2026-09-06; re-derived twice on 2026-09-09 and again on 2026-09-10.** Reproduce with `make specdrift`; the
+**Measured 2026-09-06; re-derived twice on 2026-09-09, again on 2026-09-10, and again on
+2026-09-12.** Reproduce with `make specdrift`; the
 prose sites that state the status are gated by `make driftclaim`.
 
 | | |
 |---|---|
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
-| Live (`entity-core-protocol/specs`) | **0.8.2.19** · CBOR encoding 1.5 → 1.6 · type system also differs |
-| **Sections the models cite that moved** | **11 of 31** |
+| Live (`entity-core-protocol/specs`) | **0.8.2.21** · CBOR encoding 1.5 → 1.6 · type system also differs |
+| **Sections the models cite that moved** | **14 of 31** |
 | Sections whose movement contradicts a model | **1** (§4.7) |
 | Sections whose movement lands on the **Lean seam** rather than on a model | **2** (§5.2, §5.6 — §1a) |
+| Sections that moved where **every citation of them is an abstraction disclaimer** | **1** (§5.4 — §1b) |
 | Green matrix against the pin | unaffected — every result is quoted against `v0.8.2` |
+
+*The `Sections the models cite that moved` row read **11 of 31** until 2026-09-12, while the
+banner above it and eight other sites read 12 and `make driftclaim` was green over all of them.
+`CLAIM_RE` matches the sentence form ``​`make specdrift` reports **N of 31 cited sections
+moved**``; this row states the same fact as a **table cell in a different notation**, so the
+gate has never read it — the D15 thirteenth shape (a second copy of a gated fact the parser does
+not see) in the very table whose two other stale facets are the reason that shape was written
+down. Fixed by deriving, and left recorded rather than quietly corrected. It is not newly
+gated: a third notation would go stale the same way, and the honest note is cheaper than a
+regex that pretends otherwise.*
 
 *The line-delta row that used to sit here (`+152 added, −33 removed`) has been **removed
 rather than updated**, and that is the point of this note. It was a hand-derived figure
@@ -110,6 +125,8 @@ below records an earlier draft of this document making.
 | **§5.2** | **17** | **0.8.2.16** — `matches_scope` pseudocode now **dispatches on the scope's type**; new `scope_value_matches` helper | **none for any model here** — see §1a. Lands on the Lean seam |
 | **§5.6** | **14** | **0.8.2.16** — `scope_subset` likewise dispatches; new `pattern_covers` helper; a type mismatch between child and parent is now a malformed grant | **none for any model here** — see §1a. Lands on the Lean seam, and this is the half with a routed finding behind it |
 | §5.8 | 4 | **0.8.2.19** — **one backtick**, removed from a cross-reference table row (`` `EXTENSION-CONTINUATION.md` `` → `EXTENSION-CONTINUATION.md`) | **none, and it is the cleanest illustration this table has of its own limit.** One character, zero semantic content; the four `ChainTopology.*` theories cite §5.8 for chain-inclusion topology, not for that row |
+| **§5.4** | **9** | **0.8.2.20** — `canonicalize` is now **total**: the two `error(...)` returns become a `NEVER_MATCH = "/never-match"` sentinel, `matches_pattern` gains a first arm refusing it in either operand, and every `validate_absolute_path` call site is ruled MUST-consume | **none — and for a reason no other row here has.** All **nine** citations are **abstraction disclaimers** (*"the §5.4 path matcher stays abstract"*, *"is Lean's / abstracted here"*). See §1b |
+| **§6.8** | **10** | **0.8.2.20/21** — **+3.8KB**: the caller-specified-path check goes **act-neutral** (reads as well as writes) and MUST rather than voluntary; a new "the subject is the effective set" rule; and a new MUST selecting **which authority** the handler-level check runs against — *by who named the path, never by who initiated the chain* | **none.** The clause all ten citing models use — *"a revoked capability never passes a check"* — is **byte-identical**. The rest is new surface, and it lands inside `tla/Authority.tla`'s own abstraction. See §1b |
 | **§4.7** | **3** | **+7.0KB** | **the one contradiction — see below** |
 
 ### §4.7 — the one section where the live text contradicts a model
@@ -202,9 +219,115 @@ are still the most consequential movements measured here, because what they bear
 exposure in a repo whose published claims also rest on someone else's proofs.* That gap is now
 named; it is not yet gated, and §5 of the ledger says why.
 
+## 1b. §5.4 and §6.8 — the two that this document had already called `unchanged`
+
+**Measured 2026-09-12, against live 0.8.2.21.** These are the movements 0.8.2.20 and 0.8.2.21
+added, and the reason they get their own section is not their size. It is that **both were
+recorded in this document as `unchanged`, in two sentences that used their stability as a
+premise:**
+
+- §1a's argument closes *"and §5.4 itself is unchanged"* — load-bearing, because §1a's whole
+  claim is that the §5.2/§5.6 matcher movement costs no model, and one leg of that is the
+  matcher §5.4 defines not having moved underneath it.
+- §4's reading of the confused-deputy property says the door it lives behind is *"§6.8, **which
+  did not move** and is cited by 8 model files … The property was modeled against stable text."*
+
+Both sentences were **true when written**. Both are now **false in their premise**, and every
+gate in this repository was green the whole time. That is the `driftclaim` class exactly — a
+claim whose input lives in a sibling tree cannot be caught by anything that runs on our diffs —
+but it is the first time it has landed on **a load-bearing clause of one of our own arguments**
+rather than on a count or a version string. *The count going stale is an embarrassment; a
+premise going stale is a different failure, and only re-reading found it.*
+
+**Neither contradicts a model. The two reasons are different in kind, and the difference is the
+part worth carrying.**
+
+### §5.4 — the section moved in the one place nothing here models
+
+0.8.2.20 makes `canonicalize` **total**. Its two `error(...)` returns become a sentinel,
+`NEVER_MATCH = "/never-match"`; `matches_pattern` gains a **first** arm returning false for that
+value in either operand; `validate_absolute_path` is named as the designed destination for the
+diagnostic `canonicalize` can no longer raise, and **every one of its call sites is ruled
+MUST-consume-the-return** (both call sites in that document had invoked it for effect and
+discarded the result, one of them under a comment reading `; MUST — reject malformed peer_id
+segment`). 0.8.2.21 then rules the **other** direction: *an unmatchable exclude excludes
+everything*, because a "matches nothing" value is fail-**closed** in an include and
+fail-**open** in an exclude.
+
+**This is R11 folded** — this repository's own routed finding — and it lands in `§5.4`'s
+pseudocode. So the interesting question is not whether it contradicts a model. It is that
+**§5.4 is cited by 9 model files and all nine citations are ABSTRACTION DISCLAIMERS:**
+
+| file | what the citation says |
+|---|---|
+| `tamarin/ChainTopology.{spthy,pv}`, `tamarin/ChainTopologyBug.{spthy,pv}` | *"the §5.4 path matcher stays abstract (the Canon/Cov fact tables)"* |
+| `tamarin/DeepChain.pv`, `tamarin/DeepChainN.pv`, `tamarin/DeepChainBug.pv` | *"The §5.4 path-segment matcher is Lean's / abstracted; we model the FRAME the canonicalization uses — the §5.5a load-bearing bit"* |
+| `tamarin/NoEscalation.pv`, `tamarin/NoEscalationBug.pv` | *"The §5.4 pattern-match arithmetic … is Lean's / abstracted here (verdict-interior wall); we model the order RELATION the verifier checks per link (§5.6 `is_attenuated`)"* |
+
+Verified at the source, not from the comments: `NoEscalation.pv` gives `scope` a **two-point
+abstract order** (`scopeAdmin`, `narrow(scopeAdmin)`) with `fun narrow(scope)` and no path
+structure at all; `DeepChain.pv` declares `fun canon(bitstring, pkey)` with **three** rewrite
+equations and an opaque `covok`, which models §5.5a's *frame* and not §5.4's *matching*. Nothing
+in either could express `NEVER_MATCH`, a total `canonicalize`, or an arm order.
+
+**So the movement is free, and the finding is what being free reveals.** §5.4 is a row of
+`docs/COVERAGE-MATRIX.md` Matrix A — `| 5.4 | pattern matching | no escalation via attenuation |
+| | | ● | ● |` — crediting **ProVerif and Tamarin** for a section every citing file declares out
+of scope, for a property (*no escalation via attenuation*) that is **§5.6's order relation**, and
+which **§5.6's own row already credits to the same two engines**. This is the §6.9 / §4.7 phantom
+shape that D15 was written about, in the dimension `make coverage` says in its own output it does
+**not** assert (*"the engine columns are still hand-maintained — a citation says a model is ABOUT
+a section, not which engine verifies what"*). The disclaimer was accurate and the row still went
+unread for the life of the grid.
+
+**Not fixed by deleting the row**, and that is worth saying because it was the first instinct:
+`make coverage` asserts the cited set equals the grid rows **in both directions**, so as long as
+nine files cite §5.4 the row must exist. What is wrong is the two dots and the property label,
+which are hand-maintained. Recorded here and in `docs/COVERAGE-MATRIX.md`; the numerator does
+not move.
+
+### §6.8 — 3.8 KB around a byte-identical clause
+
+§6.8 grew by **+3.8 KB** across 0.8.2.20 and 0.8.2.21:
+
+- the **caller-specified-path** rule goes **act-neutral** — *reads or writes* — and the check is
+  promoted from voluntary to `[MUST]`. 0.8.2.20's own note says the measured harm was a `get`;
+  0.8.2.21 rules the read carve-out **closed** and names the region it searched;
+- a new **"the subject is the effective set"** rule: a handler MUST NOT act on a target
+  `effective_targets` (§5.2) excluded, and MUST NOT widen the set;
+- and the sharp one: **which authority the handler-level check runs against is selected by WHO
+  NAMED THE PATH, never by who initiated the chain `[MUST]`**, with a three-row table —
+  caller-named path → the caller's verified capability; handler-**derived** path → the executing
+  handler's own grant; peer-root dispatch → **no check**.
+
+**Every model citing §6.8 cites the "Capability validity" paragraph, and that paragraph is
+byte-identical.** `spin/core.pml` and `tla/Core.tla` cite it as `NoServeWhenRevoked`,
+`tla/Revoke.tla` and `tla/RevokeApalache.tla` as `RevokedNeverPasses`,
+`tamarin/PersistentRecheck.*` quotes it verbatim (*"A revoked capability never passes a check,
+even if the same capability passed a check earlier in the same operation"*). Ten files, one
+clause, unmoved.
+
+`tla/Authority.tla` is the one exception and it is the interesting one: it cites §6.8 only as the
+**source** of the grant (*"does the handler executing this sub-dispatch hold a §6.8 grant?"*) —
+its properties are §5.2's three rules, and §5.2's movement was already classified in §1a.
+
+**So: no contradiction, and the largest piece of new modelable surface this document has
+recorded.** It is new surface that lands *inside an abstraction this repo has already built*.
+`Authority.tla`'s header states its own subject as *"the rules under test are about WHICH
+authority is consulted and WHETHER it is consulted, never about what a grant contains"*, and its
+`Covers` makes the SELF and GRANT authorities **deliberately disjoint** *"so that consulting the
+wrong authority is observable"*. 0.8.2.21's new rule is a normative claim about exactly that:
+which authority, selected by a property of the path. The machinery to falsify it exists here.
+
+And the spec says the defect is **wire-invisible** — *"both readings produce a well-formed
+response and differ only in which authority was consulted"* — which is the strongest possible
+argument for a structural model over a conformance vector, and the D13/D17 shape: an obligation
+no oracle can grade. Booked in `docs/STATUS.md` §Next, not modeled here; the pin is 0.8.2 and
+this text is 0.8.2.21, so modeling it requires a re-vendor, which is a separate decision.
+
 ## What this measurement does not assert
 
-- **Not that the models would pass at 0.8.2.19.** Nothing has been re-run against the new
+- **Not that the models would pass at 0.8.2.21.** Nothing has been re-run against the new
   text and nothing can be, because the models transcribe 0.8.2. Only a re-vendor and
   re-validation can speak to the current spec, and that is the point of keeping the two
   statements apart.
@@ -339,6 +462,14 @@ unchanged, as are §5.4 pattern matching and §6.8. So the deepest and most wide
 foundations are stable. What "moved" means in practice — and it is much less than the
 count suggests — is measured in the next section.
 
+> **Dated scope note, 2026-09-12 — accurate history, no longer a live claim.** This paragraph
+> is about the **0.8.0 → 0.8.2** comparison and is left as written. In the *current* cycle
+> (0.8.2 → 0.8.2.21) **§5.4 and §6.8 have both moved**, so the sentence *"the deepest and most
+> widely shared foundations are stable"* must not be quoted forward — it is a measurement of a
+> resolved cycle, not a property of this repository's dependencies. §1b has the live reading.
+> Recorded here because a summary sentence that quantifies over a set someone else grows is
+> D14's sixth instance, and this is the second document it has happened in.
+
 ## How much actually changed — magnitude, not just section count
 
 **A section-touch count is not a semantic delta, and reporting it as one is misleading.**
@@ -376,7 +507,7 @@ revisions after a release.
 
   | change | what it alters | do the models depend on it? |
   |---|---|---|
-  | §3.6 `F40` — `id-scope` (`operations`, `peers`) is matched as a **literal string**, no longer via the §5.4 path `matches_pattern` | a real ALLOW bug class | **No.** The four models citing §3.6 (`Multisig*`) cite it for `system/capability/multi-granter` threshold structure. No model encodes id-scope matching at all, and §5.4 itself is unchanged. |
+  | §3.6 `F40` — `id-scope` (`operations`, `peers`) is matched as a **literal string**, no longer via the §5.4 path `matches_pattern` | a real ALLOW bug class | **No.** The four models citing §3.6 (`Multisig*`) cite it for `system/capability/multi-granter` threshold structure. No model encodes id-scope matching at all, and §5.4 itself is unchanged. **⚠ 2026-09-12 — the last clause is now FALSE and is left standing as the record: §5.4 moved at 0.8.2.20 (`canonicalize` made total, `NEVER_MATCH`), which is this row's own premise going stale in a sibling tree with every gate here green. The row's verdict is unaffected — all nine §5.4 citations are abstraction disclaimers — but the argument now rests on §1b rather than on this clause.** |
   | §6.1 `CAP-1` — a handler grant must be "present and **§6.8-valid**" rather than "present and **non-empty**" | empty `grants` is now a legitimate handler class | **No.** The models citing §6.1 (`Register*`, `register.pml`) cite it as the tree/index source of truth for handler facets. No model encodes grant emptiness. |
 
 **No property this repository proved has been contradicted by 0.8.0 → 0.8.2.** Not one of
@@ -433,6 +564,14 @@ Three things temper it:
    propagated caller capability, which is the confused-deputy door — lives in **§6.8,
    which did not move** and is cited by 8 model files. 0.8.2's new §5.2 text explicitly
    defers to §6.8 for it. The property was modeled against stable text.
+   **⚠ 2026-09-12 — "which did not move" is now FALSE, and this is the clause §1b was written
+   about.** §6.8 grew +3.8 KB at 0.8.2.20/21 and is cited by **10** model files, not 8. The
+   conclusion survives and the reason has to be restated rather than recalled: the clause those
+   models actually consume — *"a revoked capability never passes a check"* — **is** byte-identical,
+   so the property really was modeled against stable text. But *"the section did not move"* and
+   *"the sentence we model did not move"* are different claims, and only the second one was ever
+   true of the future. The new text also adds the MUST that decides **which** authority a
+   handler-level check consults; see §1b.
 3. `tla/Core.tla` does model gate denials (`GateEstablished`, `GateRevocation` are
    controls that can be false), so the track is not uniformly blind to a denying gate.
 

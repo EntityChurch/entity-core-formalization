@@ -2,9 +2,9 @@
 
 _Updated: 2026-09-06 · this line: 0.8.2_
 
-> **The models are pinned at 0.8.2; the live spec is 0.8.2.19.** Every model in this repo is
+> **The models are pinned at 0.8.2; the live spec is 0.8.2.21.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
-> Protocol at spec version **0.8.2**. `make specdrift` reports **12 of 31 cited sections
+> Protocol at spec version **0.8.2**. `make specdrift` reports **14 of 31 cited sections
 > moved**, so the results below are a statement about **0.8.2** and not about the protocol as
 > it stands today.
 >
@@ -673,6 +673,45 @@ item 4.
 
 ## Next
 
+0******. **§6.8's new authority-selection MUST is the largest piece of modelable surface on the
+   board, and `tla/Authority.tla` already has the machinery. NEW 2026-09-12.**
+   `make driftclaim` fired on 0.8.2.20 and 0.8.2.21, taking core from 12 to **14 of 31**, and the
+   two newly-moved sections are **§5.4** and **§6.8** — *both of which this repo had recorded as
+   `unchanged` inside arguments that leaned on their being unchanged.* Neither contradicts a
+   model; `docs/SPEC-DRIFT-ASSESSMENT.md` **§1b** is the classification and is the thing to read.
+   Three pieces of work fall out, in descending value:
+
+   - **Model §6.8's authority selection.** 0.8.2.21 adds: *which authority the handler-level check
+     runs against is selected by **who named the path**, never by who initiated the chain*
+     `[MUST]`, with three cases — caller-named → the caller's verified capability; handler-**derived**
+     → the executing handler's own grant; peer-root → **no check**. The spec states the defect is
+     **wire-invisible** (*"both readings produce a well-formed response and differ only in which
+     authority was consulted"*), so no conformance vector can grade it — D13/D17's shape, and the
+     strongest argument for a structural model this document has recorded. `tla/Authority.tla`
+     already declares its subject as *"WHICH authority is consulted and WHETHER it is consulted"*
+     and makes SELF and GRANT coverage **deliberately disjoint** *"so that consulting the wrong
+     authority is observable"*. **The falsifier is built; the rule is new.** Blocked only on a
+     re-vendor: this text is 0.8.2.21 and the pin is 0.8.2.
+   - **~~§5.4's coverage row credited two engines for a section nothing models.~~ Fixed
+     2026-09-12.** All **nine** §5.4 citations are abstraction disclaimers, and the property the
+     row named (*no escalation via attenuation*) is **§5.6's** order relation, already credited to
+     the same two engines by §5.6's own row — one property counted twice, half of it filed under
+     the wrong section. The §4.7/§6.9 phantom shape, in the one dimension `make coverage` says it
+     does **not** assert. Row kept (the gate requires one while nine files cite it), dots and label
+     corrected, numerator unmoved. `docs/COVERAGE-MATRIX.md` §3a. **Found by the drift gate firing
+     on a sibling's commit** — not a mechanism anyone designed to catch this.
+   - **R11 is folded, and it lands on the one domain the K2 sweep excludes.** 0.8.2.20 makes
+     `canonicalize` **total** — `NEVER_MATCH = "/never-match"`, a `matches_pattern` arm refusing it
+     in either operand *stated first*, and every `validate_absolute_path` call site ruled
+     MUST-consume. **Our K-5c design note is satisfied by the ruling**: the chosen sentinel is
+     star-free, which is exactly the criterion we sent (§14's theorem that a star-free pattern
+     matches only itself, so it matches nothing under *both* matchers). **A-31 and K2 are
+     unaffected, verified rather than assumed:** `StarFree.lean`'s `joinAbs` prepends `/` to every
+     pattern and target, so all 3276 pairs are absolute and the arm 0.8.2.20 changed — the
+     `*/`-leading case — is never exercised. **That arm is precisely the relative-pattern domain
+     item 0***** left open as "the one exclusion most likely to hide something."** The live spec
+     moving there raises that follow-up's value; it does not change a published figure.
+
 0*****. **~~The K2 chain measurement.~~ Done 2026-09-10, and the answer relocates K2.**
    `lean/lemmas/Chain.lean`, two domains, gated by `make leanlemma`. **Composition adds nothing** —
    both admission relations are transitively closed, so two admitted links reach exactly the pairs
@@ -731,7 +770,10 @@ item 4.
    **0.8.2.19** while the previous session's matrix was finishing, so `make driftclaim` went red
    across 16 site-claims with our tree untouched — the class of failure it exists for, twice in
    48 hours — and **twice more the next day** (0.8.2.19), so four fires in three days on four
-   separate upstream commits, our tree untouched every time. Core is now **12 of 31**; the twelfth
+   separate upstream commits, our tree untouched every time. Core was **12 of 31** at the close of
+   that session *(it is **14 of 31** as of 2026-09-12 — see item 0 above; this figure is left at
+   what it was because the paragraph is that session's record, and "is now" was the wrong tense to
+   write it in)*; the twelfth
    is §5.8, whose entire delta is **one backtick** removed from a cross-reference row. The two
    sections that
    moved are §5.2 and §5.6, **the two most-cited in the repo**, and they contradict **no model
