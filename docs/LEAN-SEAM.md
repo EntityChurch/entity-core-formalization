@@ -267,12 +267,47 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   **This row's assumed proposition — reflexivity and transitivity of *the §5.4 matcher* — is
   discharged by theorems about a DIFFERENT, more permissive function.** `matchesSeg_refl` and
   `matchesSeg_trans` are true; they are not about §5.4. The direction is the dangerous one: a more
-  permissive matcher inside `scopeSubset` admits child patterns a parent never authorized, and
-  unlike K1 this is on **`resources`** — a genuine path-scope dimension, and the one nine
-  `tamarin/` theories abstract as `canon`/`covok`. **Verdict held at CLOSED pending keystone's
+  permissive matcher inside `scopeSubset` admits child patterns **that the parent does not
+  authorize under §5.4**, and unlike K1 this is on **`resources`** — a genuine path-scope
+  dimension, and the one nine `tamarin/` theories abstract as `canon`/`covok`.
+  *(That scope qualifier was added 2026-09-10 and it is a correction, not a clarification — **R12**.
+  The sentence stood unscoped and read as an escalation claim. It is not one: `Chain.lean` measures
+  that a keystone peer's attenuation check implies containment under the matcher that same peer
+  dispatches with, so no peer hands out authority its own root lacks. The over-grant is relative to
+  §5.4's reading of the parent's grant, which makes K2 a cross-implementation ALLOW divergence and
+  not an internal escalation.)* **Verdict held at CLOSED pending keystone's
   ruling (K-4a), because which side is wrong is a spec question as much as a code one — but this
   row should be read as OPEN-in-effect until it is answered.** Routed:
   `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §10.
+- **The divergence is now BOUNDED from both sides, 2026-09-10 — and the bound is where this row's
+  own models live.** `make leanlemma` (`lean/lemmas/StarFree.lean`) proves
+  `matchesSeg_starFree`: on a **star-free** pattern `matchesSeg` *is* list equality, at any
+  length, because on that class neither wildcard arm is reachable. The differential behind it,
+  now gated, measures the complement: **all 108 disagreements over 3276 pairs fall inside the 624
+  interior-`*` pairs**, and the two matchers agree on all 1521 star-free and all 2652 edge-only-`*`
+  pairs. **So the residue this row carries is exactly: a pattern with a `*` in an interior
+  segment.** That does not close K-4a and does not change the verdict — the theorems are still
+  about a function that is not §5.4's on that class — but it says how large the gap is, which
+  "discharged by a different function" alone does not. **Read it as a limit on the row's exposure,
+  not as a repair**: the nine `tamarin/` theories abstract the matcher entirely, so whether any of
+  their `canon`/`covok` instances is an interior-`*` pattern is a separate question, and it is the
+  K2 chain measurement on `docs/STATUS.md` §Next.
+- **THE CHAIN MEASUREMENT IS DONE, 2026-09-10, and it relocates this row's exposure rather than
+  closing or widening it.** `lean/lemmas/Chain.lean` (`make leanlemma`) asks the question this row
+  actually turns on: does the divergence compose? **No.** Both admission relations are
+  transitively closed — two admitted links reach exactly the pairs one link reaches
+  (`chainNewKS=0`, `chainEsc=0`, with `reach2KS=591=admitKS` so the zero is not vacuous), which on
+  the keystone side is `matchesSeg_trans` lifted by their own `scopeSubset_trans` and therefore holds for multi-pattern scopes and the exclude direction too.
+  **Three things follow for this row.** (1) §5.6's *"widens authority down a delegation chain,
+  where nobody re-checks"* is not where this bites — the over-grant is complete at the **first**
+  link, 147 of 591 admitted pairs. (2) `ksSoundKS=0` and `specSoundSpec=0`: each peer's attenuation
+  check implies containment under the matcher that peer dispatches with, so **neither escalates
+  against itself** and the divergence is strictly cross-semantics. (3) The exposure is bounded:
+  an over-grant requires a **parent pattern with an interior `*`** in 147/147 and 30/30 cases, and
+  never requires an unusual child (0/147) — so a peer that issues no interior-`*` grant pattern is
+  unexposed, today, without K-4a. Full result and its stated limits (bounded target set, absolute
+  patterns only, includes only):
+  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §15.
 - **Scope note, 2026-09-09 — every theorem here is about the §5.2 side (K1).** This row has
   carried *"0.8.1 F40 makes the two matchers distinct"* since the ledger was written, and all
   five cited theorems are about `matchesScope` / `matchesIdPattern` — the **dispatch** check.

@@ -399,7 +399,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      `check` nor `matrix` — its input is a sibling repo's tree, so a gate that runs on our
      diffs cannot see it go stale.
 
-     *A twelfth and thirteenth target, in a tier of their own* — `make lean`, **6 runs**,
+     *A twelfth through fifteenth target, in a tier of their own* — `make lean`, **12 runs**,
      excluded from the 277 because they need an `entity-core-keystone` checkout that a bare
      clone does not have (`docs/LEAN-SEAM.md` §7):
 
@@ -407,6 +407,16 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      |---|---|---|
      | `leanproof` | 1 | the **axiom set** of all 40 `#print axioms` gates against `lean/proof-gate.expect`, in both directions, + every ledger-pinned theorem present + no undeclared warning + the image's Lean == keystone's `lean-toolchain` pin |
      | `leanproof-neg` | 5 | the declared reason codes per control **and the declarations each names** — `SORRY_AX`, `UNTRUSTED_AXIOM`, `MISSING_GATE` (declaration-level and file-level), `BUILD_ERROR` pinned to its error kind. Graded on counts alone in its first draft; that is below the standard `TM_NEG_EXPECT` set, and the session audit corrected it |
+     | `leanlemma` | 1 | **our own** Lean results about the peer's definitions (`lean/lemmas/`, the A-31 star-free theorem and the K2 differential): the axiom set of every gate under our namespace, the `#eval` output **one-to-one** against `lean/lemma-gate.expect`, and every declared prose site still stating a figure the sweep produces |
+     | `leanlemma-neg` | 5 | `sorry`, broken proof, deleted gate line, a **narrowed differential input set** (`neg-eval`, which reports a perfectly clean sweep about a smaller question), and `neg-site`, which perturbs the declared prose sites in memory three ways |
+
+     **Why `leanlemma` is a separate target from `leanproof` and not extra rows in it.** They are
+     two different claims about two different trees. `leanproof`'s subject is *keystone's* proofs;
+     folding ours in would mean a typo of ours turns red the one gate whose whole job is reporting
+     movement in a tree we do not control. The number above (**12**) is **not derived by
+     `make runcount`** — the lean tier is outside its `DERIVATION` by construction, because its
+     input is a sibling checkout — so it is a hand-maintained figure in a repo that has been wrong
+     about hand-maintained figures four times. Stated here rather than left implicit.
 
      Why not `lake build`'s exit status, which is what keystone's own documentation calls the
      proof check: **it exits 0 with a `sorry` in the proof** (a `sorry` is a warning in Lean,

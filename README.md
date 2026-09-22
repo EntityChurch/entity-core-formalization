@@ -186,8 +186,9 @@ make check    # the green-only slice — does NOT show the properties could have
 make specdrift # has the spec moved out from under the pin?
 make trackcheck # which proof track is each model file on? (TRACKS.toml)
 make coverage  # does the coverage claim match what the models actually cite?
-make lean      # the Lean seam tier: the cited Lean text has not moved (leanseam) AND
-               # the cited proofs still hold (leanproof, + 5 controls). Needs the
+make lean      # the Lean seam tier: the cited Lean text has not moved (leanseam), the
+               # cited proofs still hold (leanproof, + 5 controls), and our own results
+               # about those definitions still hold (leanlemma, + 5 controls). Needs the
                # entity-core-keystone sibling, so it is NOT part of `make matrix`.
 make clean    # remove generated model-checker artifacts
 make caps     # print the active per-container resource ceilings

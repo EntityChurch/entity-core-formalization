@@ -87,8 +87,14 @@ So what binds here is the honesty half of the framework:
   + `green` (green-sweep). **`lean/` is a fourth workspace with no models in it** — it holds
   the gate that builds the *sibling keystone peer's* Lean proof track (`entity-lean` image,
   `make lean-image`) and grades its axiom sets. `make lean` = `leanseam` + `leanproof` +
-  `leanproof-neg`; it needs the keystone checkout, so it is **excluded from `make matrix`**
-  rather than skipped inside it, and its 6 runs are counted separately from the 277. Maude 3.4 — Tamarin's required rewriting backend — is pinned via
+  `leanproof-neg` + **`leanlemma` + `leanlemma-neg`**; it needs the keystone checkout, so it is
+  **excluded from `make matrix`** rather than skipped inside it, and its 12 runs are counted
+  separately from the 277. **`leanproof` grades THEIR proofs; `leanlemma` grades OURS**
+  (`lean/lemmas/`, built inside a copy of their tree against their own definitions) — two claims
+  about two trees, deliberately two targets, so a typo of ours cannot redden the gate whose only
+  job is reporting movement in a tree we do not control. **The 12 is hand-maintained**: the lean
+  tier is outside `runcount`'s `DERIVATION` by construction, and that is said here because this
+  repo has been wrong about a hand-maintained figure four times. Maude 3.4 — Tamarin's required rewriting backend — is pinned via
   a Tamarin-blessed prebuilt binary in `tamarin/Containerfile.tamarin` (apt's 3.2 is too old).
 - Resource caps live in `caps.mk` (included by root + sub-Makefiles); `CAP_MEM=2g`,
   no swap (`CAP_SWAP == CAP_MEM` → the container is OOM-killed cleanly at the cap instead of
@@ -755,7 +761,7 @@ tripwire for this family: discarded output is the tell.
 
 ***And for the WITHDRAWN-CLAIM half specifically, "grep the retracted words" is now a program:
 `make retractcheck` (`tools/retractcheck.py`, `docs/RETRACTIONS.toml`), in `check` and
-`matrix`.*** **Ten** rows, each with the phrasing, the date, why it was withdrawn — and a
+`matrix`.*** **Eleven** rows, each with the phrasing, the date, why it was withdrawn — and a
 **`witness`**, a document that must still contain the words, because a mistyped tripwire reports
 a clean pass forever. It found one on its first run: **`tla/AttestRevoke.tla`'s header still
 asserted F5's withdrawn conclusion** ("termination rests on the revocation graph being acyclic"),
@@ -1014,6 +1020,68 @@ copy — `tools/lean-seam.py` now scans the whole ledger for any full sha256 **o
 block and fails when one is not a declared pin, so a third copy in a fourth notation cannot go
 stale silently either. Teeth-tested both ways plus the restore. *Not numbered: D15's mechanism —
 what is the input set of the gate — in a thirteenth medium, and the standing rule holds.*
+
+*Fourteenth shape, 2026-09-10 — **THE PROGRAM THAT PRODUCED A PUBLISHED NUMBER WAS NOT IN THE
+TREE**, and this one is not a stale figure, it is an unbacked one.* Every prior shape here is an
+input set that narrowed: a glob, a regex, a denominator, a model's `Init`, a gate whose state went
+empty, a fact in a notation the parser does not read. This is the **derivation itself** going
+missing. The A-31 differential — 3276 pairs, the answer that unblocked a counterpart's fold — ran
+in a `mktemp -d` scratch copy and was never committed, so for a day the only artifact behind those
+numbers was **the table in the routing note that quoted them**. Nothing was stale, no gate could
+have been red, and re-running the measurement would have meant rewriting it. **A number derived by
+a program that is not in the tree is a recollection with a decimal point on it**, and the tell is
+that nobody can answer *"what would I run to check this?"* without opening a shell history. The
+fix is `make leanlemma`, whose `eval` rows carry every published figure one-to-one.
+
+**Two things fell out of gating it that the scratch run could not have produced.** The sweep now
+reports the **complement** class (`interior=624/108`), so *"the divergence is exactly the
+interior-`*` class"* is bounded from both sides rather than from one — the published version showed
+only that the other two classes were clean, which is the weaker half of an "exactly". And the
+control that gives the whole thing teeth, `neg-eval`, is the executable form of the rule this
+section already carries about differentials: **remove `"*"` from the pattern alphabet and the
+sweep reports `disagree=0 … interior=0/0` — a perfectly clean, internally consistent, entirely
+green measurement of a smaller question.** No error, no warning, nothing to investigate. *The pair
+list of a differential is an input set* has been written here since 2026-09-10 morning; now there
+is a control that demonstrates it, which is the difference between a rule and a gate.
+
+*And the fourteenth shape bit US the same afternoon, in a MEASUREMENT rather than a gate, and it
+is the most expensive kind because the artifact was a negative.* The K2 chain measurement
+(`lean/lemmas/Chain.lean`) asks whether the matcher divergence widens authority. Its first draft
+drew target paths from `{a, b, p}` and reported that **every** keystone-admitted over-grant had a
+parent whose §5.4 extension was **empty** — i.e. that the whole divergence only ever involved
+grants that mean nothing to a conformant peer. That reads as a severity downgrade, it would have
+been published as one, and it was **an artifact of the target alphabet**: `ENTITY-CORE-PROTOCOL`
+§1.4 says *"All other UTF-8 characters are valid in path segments"*, so a path segment may be
+**literally `*`** — and under §5.4 an interior-`*` pattern falls through to exact equality, against
+a path that legally equals it. **Excluding `*` from targets excluded exactly the paths that give
+those patterns meaning.** With `*` admitted the figure is 147 of 147. **The tell was not in the
+code and not in the numbers; it was that a NEGATIVE result had landed in the direction that makes
+the work look less important**, which is the moment to re-derive the domain rather than write the
+paragraph. The file now runs two domains and reports both, which is the sensitivity check that
+would have caught it without the spec re-read. *D18 — a model's domain is a claim — asked of a
+differential rather than of a `Init`, and answered by getting it wrong first.*
+
+*Ninth instance of D13's "a behaviour a sibling says it has", 2026-09-10 — and the channel moved
+again.* The instance chain so far: a `sorry` reported as a warning; ProVerif exiting 0 on a false
+query; a gate a sibling repo's documentation claims and nothing invokes; **a doc comment listing
+behaviour the code does not have** (`entity-core-rust`'s cache, 2026-09-09). The new one is a
+**claim in a ROUTING PACKET, addressed to a third seat, about the sender's own code.** Keystone's
+F69 tells arch that their python peer *"already implements arch's proposed repair … a total wrapper
+returning a never-match sentinel"*; executed, `_canon` returns the **input unchanged** — the same
+shape as the `entity-core-go` line arch had just quoted as the defect — and the fallthrough matches
+*itself*, so it is not never-match either. **What makes this worth a rung rather than a correction:
+the same bullet contains two claims they EXECUTED and both are exactly right.** The failure is not
+sloppiness, it is that running two of three checks feels like having run the check. **Ask of a
+packet — yours or theirs — which of its claims were executed and which were read**, because they
+arrive in one sentence wearing the same confidence, and a third seat sequencing work off it cannot
+tell them apart. Routed as K-5.
+
+*And the same session's own paraphrase went stale within the day, on schedule.* The commit that
+added A-31 wrote **"arch 30 → 31 asks"** in its message, updated `FINDINGS-INDEX.md` to 31, and
+left `TRACKER-entity-system-architecture.md`'s own header sentence — *"Why there are 30 asks and
+not 7"* — at 30. Two files, one fact, one updated. No gate covers a tracker header. **Add to the
+grep list: a count stated in a section HEADING or a rhetorical question**, which is where a number
+does not look like a figure.
 
 *And the drift tool's own input set is "models", which is narrower than what this repo
 publishes.* `make specdrift` answers *spec-vs-model*. Two of this repo's Class-L rows rest on a

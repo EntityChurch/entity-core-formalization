@@ -239,3 +239,35 @@ Full exchange: `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §9."""
 pattern = "require an id-scope value carrying"
 witness = "docs/RETRACTIONS.toml"
 allow   = []
+
+# ── 2026-09-10 ─────────────────────────────────────────────────────────────────────────────
+
+[[retraction]]
+id      = "R12"
+retired = "2026-09-10"
+claim   = "K2's matcher admits child patterns a parent never authorized (unscoped)"
+why     = """Published in `docs/LEAN-SEAM.md` L6 the day K2 was found, as the sentence explaining
+why the divergence direction is "the dangerous one". Unscoped, it reads as an ESCALATION claim —
+a child ending up with authority the parent does not hold. It is not one.
+
+`lean/lemmas/Chain.lean` (`make leanlemma`, 2026-09-10) measures all three soundness questions
+separately and `ksSoundKS = specSoundSpec = 0` in both domains: **each peer's §5.6 attenuation
+check implies extensional containment under the matcher that same peer dispatches with.** A
+keystone peer never hands out authority its own root lacks; neither does a conformant one. The
+parent does not authorize the child's targets **under §5.4** — which makes K2 a
+cross-implementation ALLOW divergence, the A-SQL-008 class §3.6 names for id-scope, arriving on
+path-scope — and not an internal escalation.
+
+The corrected sentence keeps most of its words and adds the scope, which is why this row's
+pattern targets the CLAUSE and not the subject: grepping `scopeSubset`, `matchesSeg` or K2 finds
+every corrected site as well. Same shape as R11 — a bound published without naming what it is
+relative to.
+
+Two further things that measurement settled and that the unscoped sentence obscured: composition
+adds NOTHING (both admission relations are transitively closed, so §5.6's own "down a delegation
+chain, where nobody re-checks" names the wrong place — the over-grant is complete at the first
+link), and the exposure is bounded to parent patterns carrying an INTERIOR `*`, 147/147 and 30/30.
+Full result: `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §15."""
+pattern = "admits child patterns a parent never authorized"
+witness = "docs/RETRACTIONS.toml"
+allow   = []

@@ -1,0 +1,74 @@
+# lemma-gate.expect — what `make leanlemma` must observe, declared.
+#
+# Read tools/lean-lemma.py's header for what this gate asserts and what it does not. The
+# short version: `leanproof` grades KEYSTONE's proofs, this grades OURS, and the two are
+# separate so a typo of ours cannot turn red the gate whose job is watching their tree.
+#
+# Row kinds:
+#   gate|<full lean name>|<comma-separated axioms, or `-`>   the declaration's axiom set,
+#        exactly, in both directions. Only names under `EntityCoreFormalization.` are
+#        accepted -- a keystone declaration here is a parse error, not a silent pass.
+#   eval|<exact string>                                      the #eval output, one to one:
+#        an undeclared eval line fails exactly as a missing one does.
+#   warn|<substring>|<why tolerated>                         a Lean warning is otherwise a
+#        build failure (D13 -- a `sorry` is reported in the warning channel).
+#   site|<repo-relative path>|<claim text, verbatim>         a document that publishes a
+#        figure this sweep produces.
+
+# ── the theorems ────────────────────────────────────────────────────────────────────────
+# All four on Lean's standard axiom set; none carries `sorryAx`. The two that pull in
+# `Classical.choice` do so through `simp`'s decidability instances, not through a classical
+# step in the mathematics -- noted because the difference between these two lines and the
+# other two is the kind of thing that reads as significant and is not.
+gate|EntityCoreFormalization.A31.matchesSeg_starFree|propext, Quot.sound
+gate|EntityCoreFormalization.A31.starFree_matches_only_itself|propext, Quot.sound
+gate|EntityCoreFormalization.A31.matchesSeg_starFree_iff|propext, Classical.choice, Quot.sound
+gate|EntityCoreFormalization.A31.mp54_literal|propext, Classical.choice, Quot.sound
+
+# ── the differential ────────────────────────────────────────────────────────────────────
+# Every number the A-31 packet publishes, derived rather than recalled. `guardmisses` is the
+# bridge check the header explains (star-free ⇒ §5.4's three guards all fail, checked over
+# all 84 patterns because it is not proved); `controlmisses` is the seven-row control set,
+# including §5.4's own two worked examples. Both must be 0 -- and note that a `0` here is
+# the WEAKER kind of green: it says the sweep found nothing wrong, which is also what a
+# sweep with no teeth says. That is what `neg-eval` is for.
+eval|A31 pairs=3276 disagree=108 over=108 under=0 exhausted=0 starfree=1521/0 edgeonly=2652/0 interior=624/108 guardmisses=0 controlmisses=0
+# The two K2 witnesses, so the finding itself reproduces and not only its summary.
+eval|[/peerL/*/b]lean=true,spec=false [/peerL/x/*/z]lean=true,spec=false
+
+# ── the published sites ─────────────────────────────────────────────────────────────────
+# D15: a derived number is a claim, and it goes stale in prose nothing re-reads. These are
+# the LIVE documents that state a figure this sweep produces. The dated handoff is
+# deliberately NOT here, for the reason `runcount` gives: a number this repo publishes is
+# checked, a number it publishes about its own past is not, and making accurate history
+# fail the build is how a gate teaches you to delete it.
+#
+# NOT COMPLETE, and nothing can make it so -- no tool derives the set of documents that
+# quote a number. Adding a site is a hand edit, exactly as in runcount/enginecount.
+site|docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| pairs compared | **3276** |
+site|docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| **star-free** patterns (no `*` anywhere) | 1521 | **0** |
+site|docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md|| `*` only in the **first** segment or only as the whole **last** segment | 2652 | **0** |
+site|docs/status/TRACKER-entity-system-architecture.md|**3276 pairs, 108 disagreements, all one-directional (Lean over-grants, zero under-grants)**
+site|docs/status/TRACKER-entity-system-architecture.md|on **star-free patterns, 1521 of 1521 agree**
+
+# ── the chain measurement (K2, lean/lemmas/Chain.lean) ──────────────────────────────────
+# The three soundness questions and the chain question on top, over TWO domains — `general`
+# and the peer-faithful `peerlike` — because the first draft's answer changed when the target
+# alphabet did. Read them together:
+#   ksSoundKS=0        keystone's check implies containment under keystone's own matcher.
+#                      That is `matchesSeg_trans` lifted; a non-zero would contradict a
+#                      theorem `make leanproof` grades.
+#   specSoundSpec=0    §5.6's cover check implies containment under §5.4 — over `admit54`
+#                      admitted pairs, which is why that count is on the same line.
+#   ksSoundSpec>0      THE NON-VACUITY WITNESS. If this ever reads 0, every other zero in
+#                      these rows is worthless and the file must be re-read, not re-declared.
+#   escReal            of those, the ones whose PARENT authorizes real targets under §5.4.
+#                      Was 0 in the first draft and that was the target alphabet, not the
+#                      protocol (§1.4: a path segment may be literally `*`).
+#   chainNew*=0        two admitted links reach nothing one link would not — and `reach2*`
+#                      equals `admit*`, which is what stops that zero meaning "nothing
+#                      composes".
+eval|K2CHAIN[general] pats=84 tgts=84 ksSoundKS=0 specSoundSpec=0 ksSoundSpec=147 escReal=147 escParentInterior=147 escChildInterior=0 chainNewKS=0 chainNew54=0 chainEsc=0 admitKS=591/507 admit54=444/360 reach2KS=591 reach2_54=444
+eval|K2CHAIN[peerlike] pats=26 tgts=13 ksSoundKS=0 specSoundSpec=0 ksSoundSpec=30 escReal=30 escParentInterior=30 escChildInterior=0 chainNewKS=0 chainNew54=0 chainEsc=0 admitKS=144/118 admit54=114/88 reach2KS=144 reach2_54=114
+eval|[general] /a/a/a<=/a/*/a@/a/a/a(parent54=1) /a/a/a<=/a/*/*@/a/a/a(parent54=4) /a/a/a<=/*/*/a@/a/a/a(parent54=4)
+eval|[peerlike] /p/a/a<=/p/*/a@/p/a/a(parent54=1) /p/a/a<=/p/*/*@/p/a/a(parent54=3) /p/a/a<=/*/*/a@/p/a/a(parent54=1)

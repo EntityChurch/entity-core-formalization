@@ -32,7 +32,7 @@ MAKE ?= make
 
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
         check-provers crosscheck matrix specdrift specdrift-gate driftclaim leanseam \
-        lean lean-image lean-smoke leanproof leanproof-neg \
+        lean lean-image lean-smoke leanproof leanproof-neg leanlemma leanlemma-neg \
         coverage runcount ledgercount enginecount retractcheck trackcheck specfreeze clean caps
 
 # Where each track's live spec lives is DERIVED, per track, from TRACKS.toml's
@@ -58,11 +58,14 @@ help:
 	@echo "  make driftclaim does every doc STATE the drift status specdrift derives?"
 	@echo "                  Not in check/matrix: it can go stale with no commit here,"
 	@echo "                  so run it at a release boundary and on a schedule."
-	@echo "  make lean       the LEAN SEAM TIER: leanseam + leanproof + controls."
+	@echo "  make lean       the LEAN SEAM TIER: leanseam + leanproof + leanlemma + controls."
 	@echo "                  Needs the keystone sibling, so it is NOT in matrix —"
 	@echo "                  see docs/LEAN-SEAM.md §5/§7 for why a skip would be worse."
 	@echo "    make leanseam    has the cited Lean TEXT moved? (host python3 only)"
-	@echo "    make leanproof   do the cited PROOFS still hold? (needs entity-lean)"
+	@echo "    make leanproof   do THEIR cited PROOFS still hold? (needs entity-lean)"
+	@echo "    make leanlemma   do OUR results about their definitions hold, and does"
+	@echo "                     the A-31/K2 differential still produce its published"
+	@echo "                     numbers? (lean/lemmas/, needs entity-lean)"
 	@echo "    make lean-image  build the entity-lean toolchain image (network)"
 	@echo "  make specfreeze are the vendored spec snapshots still byte-identical"
 	@echo "                  to their own MANIFEST digests? (a pin that can move is not a pin)"
@@ -246,9 +249,10 @@ leanseam:
 #
 # Why not in `matrix`: the root matrix must run on a bare clone with make + podman alone,
 # and this needs the keystone sibling. A gate that silently skips its input asserts nothing.
-lean: leanseam leanproof leanproof-neg
+lean: leanseam leanproof leanproof-neg leanlemma leanlemma-neg
 	@echo
-	@echo "LEAN SEAM TIER complete — cited text unmoved, cited proofs hold, controls caught."
+	@echo "LEAN SEAM TIER complete — cited text unmoved, cited proofs hold, controls caught,"
+	@echo "and our own results about the peer's definitions re-derived (A-31/K2)."
 	@echo "NOTE: this asserts the Lean side is SOUND, never that the correspondences in"
 	@echo "docs/LEAN-SEAM.md §1 are the RIGHT ones. That reading is still a human's."
 
@@ -263,6 +267,32 @@ leanproof:
 
 leanproof-neg:
 	$(MAKE) -C lean neg KEYSTONE=$(KEYSTONE)
+
+# --- leanlemma: do OUR Lean results about the peer's definitions still hold? -------------
+# A SECOND, SEPARATE claim from `leanproof`, and the separation is the point. `leanproof`
+# watches keystone's tree: its subject is somebody else's proofs. `lean/lemmas/` is ours —
+# the A-31 star-free theorem (`matchesSeg` on a star-free pattern IS list equality, all
+# lengths) and the K2 differential behind it. Folding ours into theirs would mean a typo of
+# ours turns red the one gate whose job is reporting movement in a tree we do not control.
+#
+# It also closes a reproducibility hole this repo made on 2026-09-10: the sweep that
+# answered arch's A-31 hold ran in a scratch directory and was never committed, so the
+# measurement a counterpart has now folded against could not be re-run from this tree.
+# `eval` rows put its numbers under the gate — 3276 pairs, 108 disagreements, 1521 star-free
+# pairs clean — and `site` rows fail the build when a document still states a figure the
+# sweep no longer produces.
+#
+# D13 — what does this assert? NOT lake's exit status: a `sorry` is a warning and exits 0,
+# a substituted `axiom` exits 0 with no warning at all. It asserts the declared AXIOM SET of
+# every `#print axioms` gate under our namespace, the exact `#eval` output one-to-one, and
+# the declared prose sites. `leanlemma-neg` is four controls, each required to fail for its
+# OWN reason — including `neg-eval`, which narrows the differential's input set so the sweep
+# reports clean while asserting nothing, which is the failure a green cannot show you.
+leanlemma:
+	@python3 tools/lean-lemma.py --keystone "$(KEYSTONE)" --caps "$(PODMAN_RUN_CAPS)"
+
+leanlemma-neg:
+	@python3 tools/lean-lemma.py --keystone "$(KEYSTONE)" --caps "$(PODMAN_RUN_CAPS)" --neg
 
 # --- retractcheck: is a withdrawn claim still live somewhere? ----------------
 # D14's second half has always been a rule with no program behind it: "a withdrawn claim has a

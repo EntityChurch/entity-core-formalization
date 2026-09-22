@@ -87,6 +87,55 @@ it. See §Next item 4 and `docs/LEAN-SEAM.md` §7.
 
 ## Where we left off
 
+**2026-09-10 — the answer we sent a counterpart is now a theorem, and the program behind the
+numbers we sent is now in the tree, which it was not when we sent them.** Both counterparts
+signed off on the design the same day; nothing in this repo blocks anyone.
+
+- **A-31 reached arch and is ACCEPTED** — verified in their tree (`3052bc9`,
+  `docs/COHORT-OPEN-ITEMS.md` §0ad.3), not inferred. They reproduce the measurement, drop the K2
+  hold on the R11 sentinel fold, accept the text ask (*state the star-free requirement*, landing
+  as a `0.8.2.20` core proposal), and carry our three stated limits rather than dropping them.
+  **They read it off a tracker row, and say in the same breath that tracker rows are not on the
+  inbound surface their tooling scans** — a `ROUTING-*` file is. Worth knowing before the next
+  packet: it got in by accident.
+- **The star-free result is a THEOREM now**, `matchesSeg_starFree` — on a star-free pattern,
+  keystone's own `matchesSeg` **is** list equality, at **any** length, because on that class
+  neither wildcard arm (including the interior one K2 is about) is reachable. Proved against
+  their definition inside a copy of their tree, under the Lean their `lean-toolchain` pins, on
+  the standard axiom set. `make leanlemma`; `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`
+  §14. The bounded-sweep hedge comes off the half arch was holding a fold behind. **K-4a is still
+  unruled and this does not touch it**, which is exactly why the fold could ship without it.
+- **What is NOT proved is stated rather than rounded off.** The bridge *star-free ⇒ §5.4's three
+  guards all fail* is a string fact core Lean has no reasoning for and this peer is deliberately
+  mathlib-free (keystone's A-3, declined and re-tested today — the answer held). It is **checked
+  by evaluation** over all 84 patterns instead, decidable per sentinel. `mp54` is still our
+  transcription; still not a chain result.
+- **The A-31 sweep was never in the tree.** It ran in a scratch directory, arch folded against
+  it, and for a day the only artifact behind *3276 pairs, 108 disagreements* was the table
+  quoting them. Now `make leanlemma`'s `eval` rows carry every figure one-to-one, five controls
+  each fail for their own reason, and declared prose sites fail the build when they state a
+  number the sweep no longer produces. **`AGENTS.md` D15, fourteenth shape: a number derived by a
+  program that is not in the tree is a recollection with a decimal point on it.** Gating it also
+  produced the complement measurement (`interior=624/108`), which bounds *"exactly the interior-`*`
+  class"* from both sides where the published version bounded it from one.
+- **THE K2 CHAIN QUESTION IS ANSWERED AND THE ANSWER IS "NO" — composition adds nothing.** Both
+  admission relations are transitively closed, so §5.6's *"widens authority down a delegation
+  chain, where nobody re-checks"* names the wrong place: **the over-grant is complete at the first
+  link.** `ksSoundKS = specSoundSpec = 0` — each peer's attenuation check implies containment under
+  the matcher that peer dispatches with, so **neither escalates against itself** and K2 is a
+  cross-implementation ALLOW divergence rather than an internal escalation (**R12** corrects our own
+  unscoped sentence). **The bound that is actionable today, without K-4a: an over-grant requires a
+  PARENT grant pattern carrying an interior `*` — 147/147 and 30/30 — and never an unusual child.**
+- **And a correction routed to keystone, cc arch, because it bears on the fold arch is sequencing.**
+  Their F69 tells arch that their python peer *"already implements arch's proposed repair … a total
+  wrapper returning a never-match sentinel."* **Executed — it does not.** `_canon` returns the input
+  unchanged, the same shape as the `entity-core-go` `canon` arch quoted as the defect, and the
+  fallthrough is not never-match: three of four rejected forms **match themselves**. So repair (b)
+  has no implementation precedent and *"incidental in three of five"* is four of five. **The two
+  claims in that bullet they executed are both correct and reproduce** — it is the one they read
+  that fails, which is F69's own headline one channel further out.
+  `ROUTING-2026-09-10-KEYSTONE-CANON-SENTINEL-CLAIM.md`.
+
 **2026-09-09 — the standard this repo works to is now a discipline with a gate behind it, and
 the experiment a rule asked for one track over paid out.** Three things, and the first is the
 one to read.
@@ -623,6 +672,45 @@ human reading of two texts, and the gate detects only that one of them changed. 
 item 4.
 
 ## Next
+
+0*****. **~~The K2 chain measurement.~~ Done 2026-09-10, and the answer relocates K2.**
+   `lean/lemmas/Chain.lean`, two domains, gated by `make leanlemma`. **Composition adds nothing** —
+   both admission relations are transitively closed, so two admitted links reach exactly the pairs
+   one link reaches (`chainNewKS=0`, `chainEsc=0`, and `reach2KS=591=admitKS` so the zero is not
+   vacuous). §5.6's own *"widens authority down a delegation chain, where nobody re-checks"* names
+   the wrong place: **the over-grant is complete at the first link**, 147 of 591 admitted pairs.
+   `ksSoundKS = specSoundSpec = 0` — **neither peer escalates against itself**, so K2 is a
+   cross-implementation ALLOW divergence, not an internal escalation, and `docs/LEAN-SEAM.md` L6's
+   unscoped sentence is corrected (**R12**). **Actionable bound: an over-grant requires a PARENT
+   pattern with an interior `*`, 147/147 and 30/30, and never an unusual child (0/147).**
+   `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §15.
+   **And the first draft of it answered the headline question wrongly**, in the direction that
+   reads as a downgrade, because its target alphabet excluded a literal `*` segment — which §1.4
+   permits. D18 in our own file; the fix is the two-domain form that is now gated.
+   **Left open here deliberately:** the measurement excludes **relative** patterns, which is where
+   the §5.5a per-link granter frames differ, and that is the one exclusion most likely to hide
+   something (L7, L1). A relative-pattern domain is the natural follow-up and is *not* done.
+
+0****. ~~**The K2 chain measurement — the next real modelling task, and it is settleable HERE.**~~
+   K2 is currently a machine-checked divergence between two functions, now bounded on both sides
+   (`interior=624/108`). What it is not is a claim of this repo's usual strength: **nobody has
+   shown an over-granting delegation CHAIN is constructible under §5.6's other constraints.**
+   Unlike K1 this does not need routing — K2 lands on **`resources`**, a genuine path-scope
+   dimension, and it is the dimension nine `tamarin/` theories already frame as `canon`/`covok`.
+   `core` track. The shape of the question: is any `canon`/`covok` instance those theories admit
+   an **interior-`*`** pattern, and does `NoEscalation` still hold when the matcher is widened to
+   `matchesSeg`'s arm set rather than §5.4's? **`docs/LEAN-SEAM.md` L5 is what makes it matter** —
+   that row discharges Tamarin's `no_escalation` condition *through* this function.
+   Note the trap before starting: the answer *"no chain is constructible"* is a **negative
+   reachability** claim, which is the highest-vacuity-risk shape there is (§9.4's `RecoveryAttainable`
+   is the precedent). **Write the witness before the prohibition.**
+
+0***. **~~Promote the star-free result to a Lean lemma.~~ Done 2026-09-10.** `make leanlemma` /
+   `make leanlemma-neg`, `lean/lemmas/StarFree.lean`, `lean/lemma-gate.expect`. Four theorems on
+   the standard axiom set, the A-31 differential re-derived and gated one-to-one, five controls.
+   See §"Where we left off". The one open residue it names: the star-free⇒guards bridge is
+   evaluated, not proved, and closing it generally would mean mathlib in the peer's `proofs/`,
+   which keystone asked about (their A-3) and we declined twice on cost.
 
 0**. **`make retractcheck` cannot see routing notes, and they are the packets that leave.** Found
    2026-09-10 by teeth-testing R11 and watching it pass. `EXCLUDE_PREFIXES` drops all of
