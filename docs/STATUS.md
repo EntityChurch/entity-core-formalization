@@ -1,6 +1,6 @@
 # entity-core-formalization — status
 
-_Updated: 2026-09-17 · this line: 0.8.2_
+_Updated: 2026-09-22 · release line: 0.8.3 · modeling pin: `v0.8.2`_
 
 > **The models are pinned at 0.8.2; the live spec is 0.8.2.32.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core

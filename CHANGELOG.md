@@ -21,6 +21,14 @@ copy, so between a spec release and a re-validation this repository is *behind o
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-09-22
+
+> **This section was written and never published.** The release before this one is `0.8.0`,
+> so there is no `0.8.2` to download and no tag to find: everything described below, and
+> everything in the `0.8.2` section further down, reaches a reader for the first time inside
+> `0.8.3`. Both sections are kept as written rather than folded upward, because they are the
+> accurate record of when the work happened and of the state the models were in when it did.
+
 ### Changed in ways that can break an existing caller
 
 This repository publishes models, not an API. A *caller* here is somebody who runs one of
@@ -1694,5 +1702,4 @@ reproduces the *named* defect, and cross-engine corroboration where the surface 
 
 - Initial public research-preview release.
 
-[0.8.2]: https://github.com/EntityChurch/entity-core-formalization/releases/tag/v0.8.2
 [0.8.0]: https://github.com/EntityChurch/entity-core-formalization/releases/tag/v0.8.0
