@@ -4,9 +4,11 @@ The point of this map: **nothing double-owned, nothing assumed without a named
 owner.** Each formal question about the Entity Core Protocol is answered by exactly
 one tool, on the layer it can actually reach.
 
-> **Pinned at spec 0.8.2 — the current published line.** Rows 4 and 5 below — the two this
+> **Pinned at spec 0.8.2; the live spec is 0.8.2.11.** Rows 4 and 5 below — the two this
 > repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and
-> `make specdrift` reports **no drift** against the live spec.
+> `make specdrift` reports **9 of 30 cited sections moved**. Eight of the nine are additive
+> clarification; §4.7 is the one that contradicts a model constant. Measured section by
+> section in `docs/SPEC-DRIFT-ASSESSMENT.md`.
 >
 > Worth keeping in view: for part of the 0.8.x cycle this note read *"pinned at 0.8.0; the
 > protocol is at 0.8.2"*, which was the 5th wall behaving exactly as this document warns it

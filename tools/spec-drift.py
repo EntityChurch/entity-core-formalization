@@ -27,9 +27,33 @@ kept its bytes still reads as unchanged, which is correct: the models cite conte
 
 Exit status: 0 if nothing the models cite has moved, 1 otherwise. Suitable as a gate.
 
+--check-claims — the D15 half, added 2026-09-06
+-----------------------------------------------
+The three questions above are a REPORT, and a report nobody runs is a claim nobody checks.
+Eight canonical documents stated "`make specdrift` reports **no drift**" for ten days after
+the live spec reached 0.8.2.11, two of them in the strongest possible form ("byte-for-byte
+across all three normative files"). Nothing caught it, for three compounding reasons:
+
+  * `make specdrift` is wired `|| true`, so running it cannot fail;
+  * `make specdrift-gate`, which can, is invoked by no target;
+  * and the prose was tied to no derivation at all.
+
+That is exactly the hole `make runcount` closes for the matrix run total, one artifact over,
+and this flag is the same fix: every site that states the drift status is DECLARED here by
+anchor, and its claim must equal what the measurement above derives.
+
+WHAT MAKES THIS ONE DIFFERENT, and it is worth stating because it changes what a sufficient
+gate looks like. Every previous stale-claim finding in this repo went stale because WE
+changed something and missed a site -- the run total across two commits, the ledger counts
+across seven. This claim goes stale when SOMEBODY ELSE COMMITS, in a repo we do not own,
+with our tree untouched and every existing gate green. A gate that only runs on our own
+diffs cannot reach it in principle. So this one has to be run on a schedule or at a release
+boundary, not merely on change, and `make driftclaim` says so in its own output.
+
 Usage:
   tools/spec-drift.py --live ../entity-core-protocol/specs
   tools/spec-drift.py --live /tmp/pub-specs --format md
+  tools/spec-drift.py --live ../entity-core-protocol/specs --check-claims
 """
 
 from __future__ import annotations
@@ -51,6 +75,48 @@ TRACKS = {
     "Spin": ("spin/*.pml",),
     "Tamarin/ProVerif": ("tamarin/*.pv", "tamarin/*.spthy"),
 }
+
+# ── WHERE THE DRIFT STATUS IS CLAIMED IN PROSE (--check-claims) ─────────────────────────
+# One canonical phrasing, deliberately, so a single anchor reaches every site:
+#
+#     `make specdrift` reports **no drift**
+#     `make specdrift` reports **9 of 30 cited sections moved**
+#
+# Uniform phrasing is doing real work here beyond tidiness. The eight sites had eight
+# different wordings -- "no drift", "reports no drift", "the pin matches the live spec
+# byte-for-byte across all three normative files", "current against protocol 0.8.2" -- and
+# a gate cannot anchor on prose that says the same thing eight ways. The variety is also
+# what let the strongest claim (README's "byte-for-byte") drift furthest from the weakest.
+#
+# Matched against a NORMALIZED copy of each file (blockquote markers stripped, whitespace
+# collapsed) so that markdown line-wrapping and `> ` prefixes do not break the anchor. The
+# first draft matched raw text and failed six of nine sites on wrapping alone — a gate whose
+# green depends on where an author's editor broke a line asserts the line breaks, not the
+# claim.
+CLAIM_RE = r"`make specdrift` reports \*\*(no drift|\d+ of \d+ cited sections moved)\*\*"
+
+
+def normalize(text: str) -> str:
+    """Blockquote markers off, whitespace collapsed — so the anchor survives re-wrapping."""
+    return re.sub(r"\s+", " ", re.sub(r"^[ \t]*>[ \t]?", "", text, flags=re.M))
+
+CLAIM_SITES = [
+    ("README.md", "the pin note above the fold"),
+    ("README.md", "the Status heading block"),
+    ("AGENTS.md", "the Status paragraph"),
+    ("CHANGELOG.md", "the versioning preamble"),
+    ("CANONICAL-DOCS.toml", "the repo blurb"),
+    ("docs/STATUS.md", "the headline pin claim"),
+    ("docs/ASSURANCE-MAP.md", "the pin banner"),
+    ("docs/FINAL-ASSURANCE-SUMMARY.md", "the pin banner"),
+    ("docs/SPEC-DRIFT-ASSESSMENT.md", "the live-measurement banner"),
+]
+
+# README.md and docs/SPEC-DRIFT-ASSESSMENT.md are expected to carry the claim TWICE and
+# once respectively; the check counts occurrences per file rather than per row, so this
+# maps file -> how many times the anchor must appear. A file that grows a new unanchored
+# claim is NOT detected -- same acknowledged hole as runcount's, stated rather than hidden.
+CLAIM_COUNTS = {"README.md": 2}
 
 
 def read(path: str) -> str:
@@ -85,12 +151,72 @@ def secsort(sec: str):
     return [int(p) for p in re.findall(r"\d+", sec)] + [sec]
 
 
+def check_claims(root: str, moved: int, total: int) -> list[str]:
+    """Every declared site must state the drift status the measurement just derived.
+
+    D13 -- what does this assert, and what else satisfies it? It asserts that each declared
+    site makes a drift claim AND that the claim agrees with the derivation. Two failures are
+    deliberately treated the same way:
+
+      * a site that says "no drift" while sections have moved -- the live bug;
+      * a site that says NOTHING -- because deleting the sentence is the cheapest way to go
+        green, and a repo whose drift status is unstated is in exactly the position this
+        tool exists to prevent. runcount learned this one first.
+
+    What it does NOT assert: that the prose AROUND the anchor is accurate. A site can state
+    the right count in a paragraph that misdescribes what moved, and this will pass it.
+    """
+    want = "no drift" if moved == 0 else f"{moved} of {total} cited sections moved"
+    problems = []
+    for site in sorted({s for s, _ in CLAIM_SITES}):
+        whats = [w for s, w in CLAIM_SITES if s == site]
+        try:
+            found = re.findall(CLAIM_RE, normalize(read(os.path.join(root, site))))
+        except OSError as exc:
+            problems.append(f"{site}: cannot read ({exc})")
+            continue
+        need = CLAIM_COUNTS.get(site, 1)
+        if len(found) != need:
+            problems.append(
+                f"{site}: expected {need} drift claim(s) ({'; '.join(whats)}), found "
+                f"{len(found)}. A site that stops stating the drift status is how the "
+                f"status goes stale unnoticed -- restore the claim, or drop the row from "
+                f"CLAIM_SITES deliberately."
+            )
+            continue
+        wrong = sorted({f for f in found if f != want})
+        if wrong:
+            problems.append(f"{site}: claims {wrong}, derived {want!r}")
+    return problems
+
+
+def report_claims(problems: list[str], moved: int, total: int) -> str:
+    want = "no drift" if moved == 0 else f"{moved} of {total} cited sections moved"
+    n = len(CLAIM_SITES)
+    if problems:
+        lines = [f"CLAIM CHECK FAILED -- {len(problems)} site(s) disagree with the "
+                 f"measurement above (derived: {want!r}):"]
+        lines += [f"  - {p}" for p in problems]
+        lines.append("")
+        lines.append("The measurement is the source of truth. Fix the prose, not this tool.")
+        lines.append("Do NOT delete a claim to go green -- silence fails here too, by design.")
+        return "\n".join(lines)
+    return (f"CLAIM CHECK OK -- all {n} declared prose sites state {want!r}.\n"
+            "This asserts the STATUS, not that the prose around it describes the drift\n"
+            "correctly, and not that an undeclared site exists somewhere stating otherwise.\n"
+            "NOTE: this claim can go stale with NO commit in this repo -- it depends on a\n"
+            "sibling's tree. Running it only on our own diffs is insufficient in kind; run\n"
+            "it at a release boundary and on a schedule.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--pin", default=None, help="pinned snapshot dir (default: newest spec-data/*/)")
     ap.add_argument("--live", required=True, help="live spec dir, e.g. a sibling's specs/")
     ap.add_argument("--root", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ap.add_argument("--format", choices=("text", "md"), default="text")
+    ap.add_argument("--check-claims", action="store_true",
+                    help="assert every declared prose site states the derived drift status")
     args = ap.parse_args()
 
     pin_dir = args.pin
@@ -170,6 +296,17 @@ def main() -> int:
 
     if identical:
         emit("\npin matches the live spec exactly — no drift.")
+        # The claim check still runs: a document asserting drift that does not exist is
+        # wrong in the same way as one denying drift that does, and only one of the two
+        # feels like a failure. (The leanproof both-directions lesson, D13.)
+        if args.check_claims and core_pin is not None:
+            total = len([s for s in model_citations(args.root)
+                         if section_block(core_pin, s) is not None])
+            problems = check_claims(args.root, 0, total)
+            emit("")
+            emit(report_claims(problems, 0, total))
+            print("\n".join(out))
+            return 1 if problems else 0
         print("\n".join(out))
         return 0
 
@@ -227,6 +364,13 @@ def main() -> int:
 
     emit("\nEvery result in this repo remains a reproducible statement about the PIN.")
     emit("Sections listed as moved are where the pin no longer describes the live spec.")
+
+    if args.check_claims:
+        problems = check_claims(args.root, len(moved), len(resolved))
+        emit("")
+        emit(report_claims(problems, len(moved), len(resolved)))
+        print("\n".join(out))
+        return 1 if problems else 0
 
     print("\n".join(out))
     return 1 if moved else 0

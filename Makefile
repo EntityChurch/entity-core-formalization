@@ -31,9 +31,9 @@ include caps.mk
 MAKE ?= make
 
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
-        check-provers crosscheck matrix specdrift specdrift-gate leanseam \
+        check-provers crosscheck matrix specdrift specdrift-gate driftclaim leanseam \
         lean lean-image lean-smoke leanproof leanproof-neg \
-        coverage runcount clean caps
+        coverage runcount ledgercount clean caps
 
 # Where the live spec lives, for `make specdrift`. Override per-host:
 #   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
@@ -48,6 +48,10 @@ help:
 	@echo "  make matrix   green + negative controls + non-vacuity witnesses (full gate)"
 	@echo "  make test     alias of check — the proof matrix IS this repo's suite"
 	@echo "  make specdrift  has the spec moved under the pin? (host python3 only)"
+	@echo "  make ledgercount is the assumption ledger's shape stated correctly in prose?"
+	@echo "  make driftclaim does every doc STATE the drift status specdrift derives?"
+	@echo "                  Not in check/matrix: it can go stale with no commit here,"
+	@echo "                  so run it at a release boundary and on a schedule."
 	@echo "  make lean       the LEAN SEAM TIER: leanseam + leanproof + controls."
 	@echo "                  Needs the keystone sibling, so it is NOT in matrix —"
 	@echo "                  see docs/LEAN-SEAM.md §5/§7 for why a skip would be worse."
@@ -110,7 +114,7 @@ smoke:
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: coverage runcount check-tla check-spin check-provers
+check: coverage runcount ledgercount check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -125,7 +129,7 @@ check: coverage runcount check-tla check-spin check-provers
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix: coverage runcount
+matrix: coverage runcount ledgercount
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
@@ -162,6 +166,29 @@ specdrift:
 
 specdrift-gate:
 	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)"
+
+# --- driftclaim: does the PROSE state the drift status the measurement derives? ----------
+# D15's third enforcement point, after `coverage` and `runcount`, and it was earned the same
+# way: eight canonical documents said "`make specdrift` reports no drift" while all three
+# pinned files differed from live, two of them claiming "byte-for-byte across all three
+# normative files". The claim was tied to no derivation, `specdrift` is wired `|| true` so
+# running it cannot fail, and `specdrift-gate` — which can — was invoked by NO target.
+#
+# D13 — what does this assert? That every site in CLAIM_SITES states the derived status, and
+# that every site still states one AT ALL: silence fails here, because deleting the sentence
+# is otherwise the cheapest way to go green. What it does NOT assert: that the prose around
+# the anchor describes the drift correctly, or that no undeclared site contradicts it.
+#
+# WHY THIS ONE IS NOT LIKE THE OTHERS, and why it is not in `check` or `matrix`. Every other
+# stale-claim gate here guards a number WE make stale by editing our own tree, so running it
+# on our diffs suffices. This claim goes stale when a SIBLING REPO COMMITS — our tree
+# untouched, every other gate green. Running it only on change cannot reach that in
+# principle. It also needs ../entity-core-protocol, and `matrix` must run on a bare clone
+# with make + podman alone. So, like `leanseam`, it is EXCLUDED rather than skipped inside,
+# and it FAILS LOUDLY on a missing sibling instead of passing quietly. Run it at a release
+# boundary and on a schedule.
+driftclaim:
+	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)" --check-claims
 
 # --- leanseam: has the Lean side moved under the assumption ledger? ----------
 # docs/LEAN-SEAM.md records, per abstraction in the models, the proposition the
@@ -257,6 +284,34 @@ coverage:
 # accurate history to go green. Host python3 only, so it is safe in `check`.
 runcount:
 	@python3 tools/runcount.py
+
+# --- ledgercount: does the prose state the assumption ledger's ACTUAL shape? -------------
+# The third of the D15 derived-claim gates, and the one with the worst record behind it.
+# docs/LEAN-SEAM.md's row and verdict counts have been published WRONG four times: "eleven
+# CLOSED rows" across five files; the Class-L verdicts in the tier audit; "21 of 23 rows are
+# CLOSED and the two open ones are L1 and L7" (every number wrong AND the attribution — L1
+# and L7 were CLOSED-MODULO-H, and the actually-open rows were T4 and O4); and "14 CLOSED …
+# 2 OPEN", written two hours before O4 closed in the same session. `leanseam` and `leanproof`
+# derive THEOREM counts and say nothing about rows or verdicts, so none of the four was ever
+# reachable by an existing gate.
+#
+# D13 — what does this assert? The counts, parsed from the ledger itself, AND the row
+# structure (contiguous ids per class, so a silently deleted row fails rather than producing
+# a smaller number that still looks tidy), AND that every declared prose site states them.
+# What else satisfies it? Nothing silent — a site that stops making the claim fails.
+# What it does NOT assert: that any verdict is CORRECT. A row reading CLOSED that should read
+# OPEN passes here exactly as an honest one does; the ledger is a human reading of two texts
+# and `leanseam` says so in its own output.
+#
+# ITS FIRST DRAFT ANCHORED ROW COUNTS ONLY — and would have gone green on all four historical
+# errors, because every one of them was a VERDICT error and three had the row total right.
+# Found by flipping a verdict and watching it pass. `closed` and `open` are anchored now.
+#
+# Unlike `driftclaim`, this one belongs in `check` and `matrix`: it depends on nothing outside
+# this repo, so it goes stale only when we edit our own tree — which is exactly the condition
+# a change-triggered gate covers. Host python3 only.
+ledgercount:
+	@python3 tools/ledgercount.py
 
 clean:
 	$(MAKE) -C tla     clean

@@ -53,7 +53,7 @@ So what binds here is the honesty half of the framework:
   the gate that builds the *sibling keystone peer's* Lean proof track (`entity-lean` image,
   `make lean-image`) and grades its axiom sets. `make lean` = `leanseam` + `leanproof` +
   `leanproof-neg`; it needs the keystone checkout, so it is **excluded from `make matrix`**
-  rather than skipped inside it, and its 6 runs are counted separately from the 268. Maude 3.4 — Tamarin's required rewriting backend — is pinned via
+  rather than skipped inside it, and its 6 runs are counted separately from the 277. Maude 3.4 — Tamarin's required rewriting backend — is pinned via
   a Tamarin-blessed prebuilt binary in `tamarin/Containerfile.tamarin` (apt's 3.2 is too old).
 - Resource caps live in `caps.mk` (included by root + sub-Makefiles); `CAP_MEM=2g`,
   no swap (`CAP_SWAP == CAP_MEM` → the container is OOM-killed cleanly at the cap instead of
@@ -80,10 +80,14 @@ is the learning on-ramp; `docs/PROPERTIES.md` is the PROVEN/MODELED scorecard.
 - Per-spike deliverable: a `FORMALIZATION-REPORT`-style note (properties proved /
   counterexamples / scope boundaries / on-ramp pain / go-no-go).
 
-**Status:** pinned at `v0.8.2` and `make specdrift` reports **no drift** — the models
-transcribe the live spec. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
+**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.11** and `make specdrift` reports
+**9 of 30 cited sections moved**. Eight of the nine are additive clarification no model
+contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
+`tla/ConnCodes.tla` transcribes 400. Re-vendoring is deliberately **not** the next move
+(keystone has not upgraded yet); `docs/SPEC-DRIFT-ASSESSMENT.md` is the live measurement and
+`make driftclaim` gates every prose site that states the status. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**268-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+**277-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
 (15 ProVerif / 14 Tamarin lemmas), 100 negative controls and 13 non-vacuity witnesses.
 No inductive invariant is deferred; no control is known-weak.
@@ -97,9 +101,17 @@ the complementarity claim stops being prose. **It paid out on 2026-09-06:** the 
 residual it found was adopted by the keystone peer, §5.5a now has a theorem per pattern form,
 and both gates caught the movement — `leanseam` on the digests, `leanproof` on three new
 theorems **by name**, refusing to accept a re-declare without a re-read. **Do not trust a
-count of the ledger's rows that you did not derive:** it is 22 rows / 13 Class L, and a
-recalled figure has been published wrong here three times. `leanseam` and `leanproof` print
-the live numbers; the prose carrying them is ungated (`docs/STATUS.md` §Next item 4).
+count of the ledger's rows that you did not derive:** it is 22 rows / 13 Class L, **0 OPEN**,
+and a recalled figure has been published wrong here **four** times. Run **`make ledgercount`**
+— it parses the ledger and fails when a declared prose site disagrees. *Note what this line
+used to say and why it was wrong: "`leanseam` and `leanproof` print the live numbers." They do
+not. They derive THEOREM counts and say nothing about rows or verdicts, which is exactly why
+none of the four errors was reachable by a gate until `ledgercount` existed.*
+**Row T4 closed 2026-09-06 by being refuted** — the composed `Core` model carries **one** of
+six component invariants; the other five are manufactured by the refinement mapping
+(`tla/RefMap.tla`, `tla/CoreMapFree.tla`). "The composed model is checked and the components
+are checked" does not mean the composition is verified, and now there is a measurement of by
+how much.
 **`make coverage`** checks the coverage *claim* against the models' own `§`-citations,
 because two rows of the grid turned out to be phantoms, and **`make runcount`** derives the
 matrix run total from the gate tables and fails when a published site disagrees, because
@@ -285,6 +297,31 @@ assert any correspondence is correct. This is the strongest argument on record f
 put a machine on this half of the seam. Until then the ledger is a human reading, and its own
 rows say so.
 
+*Third and fourth enforcement points, 2026-09-06 — and the third one changes what "gate" has
+to mean here.* `make driftclaim` (`tools/spec-drift.py --check-claims`) and `make ledgercount`
+(`tools/ledgercount.py`). Both are the `runcount` shape applied one artifact over. What is new
+is the failure mode behind `driftclaim`: **eight canonical documents said "`make specdrift`
+reports no drift" while all three pinned spec files differed from live**, two of them in the
+strongest available form ("byte-for-byte across all three normative files"). Every one was
+true when written. **It went stale when a SIBLING REPO COMMITTED — our tree untouched, every
+existing gate green, no diff for a change-triggered gate to fire on.** Every previous
+stale-claim finding here went stale because *we* edited and missed a site. So:
+
+**A claim whose input lives outside this repo cannot be gated by anything that runs only on
+our diffs.** That is a difference in kind, not in thoroughness. `driftclaim` is therefore
+deliberately **excluded from `check` and `matrix`** and says in its own output that it must be
+run at a release boundary and on a schedule; `ledgercount`, whose input is our own file, is in
+both. Two compounding causes worth remembering: `make specdrift` is wired `|| true` so running
+it *cannot* fail (correct — drift is information), and `make specdrift-gate`, which can, **was
+invoked by no target for nine days**. A target nothing calls is not a gate.
+
+*And both first drafts failed the same way, which is now a standing note for this family.*
+`driftclaim`'s matched raw text and failed six of nine sites on **markdown line-wrapping**;
+`ledgercount`'s anchored row counts only and **would have gone green on all four historical
+errors**, because every one was a *verdict* error and three had the row total right. Neither
+was caught by reading the code. Both were caught by breaking the thing on purpose — D15's
+corollary, again, at a rate of two per session.
+
 ## Boundaries — do NOT modify
 
 - **An existing `spec-data/vX/` snapshot is frozen** — vendored, SHA-pinned. Model against
@@ -299,6 +336,15 @@ rows say so.
   *(This rule previously said "the architecture repo re-vendors." That named
   `entity-core-architecture`, which no longer exists — the same stale reference corrected
   elsewhere in this file. There is no external owner to wait on.)*
+  **`entity-core-protocol/specs/` is the source for the THREE CORE SPECS ONLY.** The
+  extension specs are **not** there and never were: all 26, including
+  `EXTENSION-IDENTITY.md` and `EXTENSION-ATTESTATION.md`, live in
+  **`../entity-system-architecture/specs/extensions/`**. This sentence used to imply one
+  upstream, and following it to vendor an extension finds nothing — which reads as *"the
+  spec is not written yet"* when in fact it is. `docs/STATUS.md` §Next item 12's Phase-3
+  blocker is therefore a **vendoring decision**, not an authorship dependency, and whether
+  this repo should pin from a second upstream at all is an open question to answer
+  deliberately rather than by copying files.
 - **`spec-data/MODELING-PIN` names the snapshot the models actually transcribe** — the one
   every published result is a statement about. Vendoring a newer snapshot does **not**
   move it. It moves only when the models have been re-validated against the new text, and

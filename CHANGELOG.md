@@ -10,12 +10,112 @@ accompanies protocol `0.8.2`, so the two line up when read side by side.
 
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
-**`v0.8.2`**. As of this release the two coincide: the models transcribe the same 0.8.2 text
-the version number names, and `make specdrift` reports **no drift** against the live spec.
-That has not always been true and the distinction is kept deliberately visible — the pin
-moves only as the last step of re-validating the models, never on a file copy.
+**`v0.8.2`**. The live protocol has since advanced to **0.8.2.11** and `make specdrift`
+reports **9 of 30 cited sections moved**. That gap is deliberate and visible rather than
+hidden: the pin moves only as the last step of re-validating the models, never on a file
+copy, so between a spec release and a re-validation this repository is *behind on purpose*.
+`docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance section by section.
 
 ## [Unreleased]
+
+### Fixed — eight documents claimed "no drift" while all three pinned spec files differed
+
+The live protocol reached **0.8.2.11** with the models pinned at **0.8.2**, and `make
+specdrift` measured **9 of 30 cited sections moved at this release**. Eight canonical
+documents stated the opposite; `README.md` and `docs/STATUS.md` stated it as *"the pin matches
+the live spec byte-for-byte across all three normative files."* All eight were true when
+written. *(Phrased in the past tense deliberately: the live status is stated once, in the
+sites `make driftclaim` gates, and a changelog entry is a statement about a release. The gate
+flagged this paragraph's first draft for minting a second live-looking claim — which is the
+`runcount` lesson, that a gate must never force you to edit accurate history to go green.)*
+
+Three failures compounded, and the third is the one worth keeping. `make specdrift` is wired
+`|| true`, so running it cannot fail — that is deliberate and still correct, because drift is
+information rather than a build break. `make specdrift-gate`, which *does* fail on drift, was
+invoked by no target at all. And the prose was tied to no derivation.
+
+**`make driftclaim`** closes it: nine declared sites by anchor, each required to state the
+derived status, with **silence treated as failure** because deleting the sentence is otherwise
+the cheapest way to green. Teeth-tested four ways, including the direction that does not feel
+like a failure — a document claiming drift that does not exist.
+
+The transferable part is *why it is not in `check` or `matrix`*: every previous stale-claim
+finding here went stale because we edited our own tree and missed a site. **This one went
+stale when a sibling repo committed** — our tree untouched, every existing gate green, no diff
+to fire on. A gate that runs only on our own diffs cannot reach a claim whose input lives
+outside the repo. `driftclaim` says so in its own output and asks to be run at a release
+boundary and on a schedule.
+
+**Nothing proved here is falsified**, because every result is quoted against the pin.
+`docs/SPEC-DRIFT-ASSESSMENT.md` is live again with the section-by-section measurement: eight
+of the nine moved sections are additive, two of them this repo's own §4.7 finding landing as
+spec text. **§4.7 is the one contradiction** — `connection_sequence_error` moved 400 → 409 and
+`tla/ConnCodes.tla` transcribes 400. The pin is deliberately **not** being moved yet: the
+keystone sibling has not upgraded, and re-targeting ahead of the peer that ships would put our
+assumption ledger and their Lean proofs on two different spec texts.
+
+### Added — the composition is checked at last, and the answer is a refutation (ledger T4)
+
+`Core` is the composed whole-protocol model; `Conn` and `Store` are components. They were
+checked independently with nothing relating them, recorded as assumption-ledger row **T4** —
+the last OPEN row. It is now **CLOSED — ASSUMPTION FALSE**.
+
+**`Core` is not a refinement of either.** It performs §4.6's two-step handshake in one step,
+and a refinement mapping lets the abstract spec stutter while the concrete one moves — not one
+concrete step performing two abstract ones. For `Store` it is starker: `Core` has no
+counterpart for the refcount, referrer set, write critical section or admission state. So the
+weaker claim was run instead — invariant implication under an explicit mapping
+(`tla/RefMap.tla`), with the components `INSTANCE`d so what is asserted is **their own
+invariant text** rather than a transcription. The two are not the same claim and the row does
+not blur them.
+
+**The contribution is the classifier.** A mapping that sends a component variable to a
+constant makes that component's invariant a tautology, and a model checker reports the
+identical green for "Core enforces this" and "the mapping asserts it" — the `StoreBounded`
+vacuity reproduced inside the fix for the composition gap. `tla/CoreMapFree.tla` runs each
+mapped invariant over **every type-correct valuation** instead of the reachable ones, one
+graded run per verdict: **1 CARRIED — §4.2's dispatch gate — and 5 MANUFACTURED.**
+
+Two by-products worth more than the headline. The first draft asserted all seven mapped
+invariants and **went green**, six of them unable to fail. And TLC's own vacuity warning
+caught **2 of the 6**: it flags a formula mentioning no variable, while the other four read a
+`Core` variable *through* the mapping and are still unfalsifiable — `NoUseAfterFree` reads
+`store` yet cannot fail because the referrer set is constant. A syntactic vacuity check
+catches vacuity visible in the formula, not vacuity manufactured by a mapping.
+
+Scope stated rather than assumed: **TLA+ only** (Spin has no instantiation mechanism for it,
+so the composition claim is unexamined there), and `Reentry`/`Revoke` are deliberately not
+mapped — a judgement, and the one claim here that was not run.
+
+Matrix **268 → 277 runs**.
+
+### Added — `make ledgercount`, because the count could not be stated safely without it
+
+Closing T4 moved a verdict, and the ledger's row/verdict counts have been published **wrong
+four times** ("eleven CLOSED rows" in five files; the Class-L verdicts in the tier audit;
+"21 of 23 rows … the two open ones are L1 and L7", every number and the attribution wrong;
+"14 CLOSED … 2 OPEN", stale within the session). Writing the new breakdown by hand meant using
+the mechanism that had failed four times.
+
+`make ledgercount` parses `docs/LEAN-SEAM.md` and checks row counts, verdict counts and **row
+structure** (contiguous ids per class) against every declared prose site. It corrects a claim
+this repo has been repeating: **`leanseam` and `leanproof` do not derive these numbers** — they
+derive *theorem* counts, which is why none of the four errors was ever reachable by a gate.
+
+**Its first draft anchored row counts only and would have gone green on all four** — every one
+was a *verdict* error and three had the row total right. Found by flipping a verdict and
+watching it pass. In `check` and `matrix`, since unlike `driftclaim` its input is our own file.
+
+### Fixed — the N=3 work was documented in one file and stale in eleven other places
+
+`docs/PROPERTIES.md` said *"Every Apalache result here fixes the peer/request set
+(`Peers = {A,B}`)"* and *"Every model — TLC, Spin and Apalache alike — fixes the peer set at
+2."* Both had been false since the N=3 work landed on 2026-08-30: `Reentry` and `Core` take
+`CONSTANT N` on a directed ring and are checked at 2 **and** 3 on all three engines. Worth
+noting the direction — **the stale claim made this repo look weaker than it was**, which is
+the direction nobody re-reads a document to catch. Found while adding the T4 wall, by no gate:
+`coverage` and `runcount` check a section set and a run total, and **nothing reads a prose
+sentence about a bound.**
 
 ### Changed — `Register`'s writes are sequenced, and the last thin positive is retired
 

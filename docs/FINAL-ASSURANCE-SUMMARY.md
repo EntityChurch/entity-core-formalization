@@ -1,6 +1,6 @@
 # FINAL ASSURANCE SUMMARY — entity-core-formalization
 
-**Status: current against protocol 0.8.2.** This is the capstone note over
+**Status: certifies protocol 0.8.2; the live spec is 0.8.2.11.** This is the capstone note over
 everything this repo produced: the TLA+ concurrency/liveness model and the
 Tamarin/ProVerif active-attacker model of the Entity Core Protocol design — each now
 independently cross-checked. It is written so a future reader (or a returning agent) can
@@ -37,8 +37,12 @@ If you are resuming work, read this capstone first — the optional leftovers ar
 in §5 (Findings and residual risk).
 
 > **Which spec version this capstone certifies.** Everything here certifies models written
-> against the SHA-pinned `spec-data/v0.8.2/` — the protocol at spec version **0.8.2**, the
-> current published line. `make specdrift` reports **no drift** against the live spec.
+> against the SHA-pinned `spec-data/v0.8.2/` — the protocol at spec version **0.8.2**. The
+> live spec is **0.8.2.11** and `make specdrift` reports **9 of 30 cited sections moved**, so
+> this capstone certifies 0.8.2 and nothing later. No result below is falsified by the
+> movement — eight of the nine moved sections are additive, and §4.7's `connection_sequence_error`
+> status change (400 → 409) contradicts `tla/ConnCodes.tla` only against text this capstone
+> does not claim. `docs/SPEC-DRIFT-ASSESSMENT.md` has the section-by-section measurement.
 >
 > This was not always so, and the history is worth keeping: the models were pinned at 0.8.0
 > while the protocol advanced to 0.8.2, and `docs/SPEC-DRIFT-ASSESSMENT.md` records how that
@@ -152,7 +156,7 @@ The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**268 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**277 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
 surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
 audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a
@@ -186,7 +190,8 @@ load-bearing ones:
   (abstract predicate / function symbol here); sign/verify are perfect symbolic
   primitives. Same trust boundaries Lean takes as axioms.
 - **Bounded in TLC — but the key safety invariants are now proven unbounded.** TLC is
-  exhaustive only at a tight bound (2 peers, 1–3 requests, small key sets) — the faithful
+  exhaustive only at a tight bound (2 peers — 2 *and* 3 for `Reentry`/`Core` — 1–3 requests,
+  small key sets) — the faithful
   worst case for the concurrency bugs (Class-G is deterministic at N=2). That bound is no
   longer the whole story: **Apalache proves each module's key safety invariant *inductive*
   (`Init⇒Inv`, `Inv∧Next⇒Inv'`), i.e. for all states, not just the enumerated ones**
@@ -257,8 +262,8 @@ bound.
    the composed Core-conjunction. The 5th wall is now **substantially narrowed** — two
    independent paradigms agree across the whole surface — but **not closed**: they could in
    principle share a misreading of the spec, so human review against `spec-data/v0.8.2/`
-   still owns it. Note "unbounded" means unbounded in *steps*: `Peers = {A,B}` is fixed in
-   every model, TLC, Spin and Apalache alike.
+   still owns it. Note "unbounded" means unbounded in *steps*, never in *peers*: the peer set
+   is fixed in every model — at 2 for nine of them, at 2 **and** 3 for `Reentry` and `Core`.
 2. **Liveness is bounded; safety is now unbounded (TLA+).** As §4 — the inductive Apalache
    proofs lift the key *safety* invariants to all-N; *liveness* (deadlock-/stall-freedom,
    settling, convergence) remains small-scope exhaustive in TLC + Spin.
@@ -283,14 +288,30 @@ bound.
 5. **Async/extension PROTOCOLS not modeled.** `EXTENSION-CONTINUATION/-SUBSCRIPTION/
    -COMPUTE` are not in the vendored snapshot; Phase 2 modeled only the §6.8 core
    property that governs them. Full protocols are Phase 3, gated on vendoring.
-6. **Every model fixes the peer set at 2 — this is the largest structural limit and no
-   engine here reaches past it.** TLC, Spin and Apalache alike run `Peers = {A,B}`;
-   Apalache's results are unbounded in *steps*, never in *peers*. A defect first appearing
-   at 3 peers is outside every result in this document. It is honestly disclosed throughout
-   and it is **not attacked**: the named technique is parameterized verification (Ivy's
-   decidable EPR fragment, `mypyvy`, or TLAPS), which proves an inductive invariant for all
-   N. Revocation propagation (§5.10) and cross-peer chain topology (§5.8) are where N > 2
-   is most plausible. `docs/STATUS.md` §Next item 5.
+6. **The peer set is fixed — at 2 for nine modules, at 2 *and* 3 for `Reentry` and `Core`,
+   and the remaining structural limit is the TOPOLOGY rather than the number.** TLC, Spin
+   and Apalache all check `Reentry` and `Core` at both bounds; Apalache's results are
+   unbounded in *steps*, never in *peers*. Three is what reaches the 3-cycle deadlock class
+   two peers cannot form — but it is **one topology**: a directed ring, one outbound request
+   per peer, one predecessor. A peer with several counterparties, or several concurrent
+   outbound requests, is modeled nowhere. A defect first appearing at 4 peers, or at 3 on a
+   non-ring dispatch graph, is outside every result in this document. Not attacked: the named
+   technique is parameterized verification (Ivy's decidable EPR fragment, `mypyvy`, or
+   TLAPS), which proves an inductive invariant for all N. `docs/STATUS.md` §Next item 5.
+
+   *(This item read "Every model fixes the peer set at 2 — this is the largest structural
+   limit" until 2026-09-06, and had been false since the N=3 work landed on 2026-08-30. It
+   was one of **eleven** live sites carrying the stale bound across **six** files; the N=3 work
+   reached `docs/STATUS.md` and nowhere else. Worth noticing the direction — the
+   stale claim made this repo look **weaker** than it was, which is the direction nobody
+   re-reads a document to catch, and no gate here reads a prose sentence about a bound.)*
+
+6a. **The composition is checked and carries one component property.** `Core` is not a
+   refinement of `Conn` or `Store`; under an explicit mapping, **1 of 6** component
+   invariants is carried and 5 are manufactured by the mapping (`tla/RefMap.tla`,
+   `tla/CoreMapFree.tla`, ledger row T4). "The composed model is checked and the components
+   are checked" does not mean the composition is verified. `Core`'s own invariants are
+   unaffected.
 7. **The Lean↔model seam is written down, the Lean side is now gated, and the
    correspondence itself is still a human reading.**
    `docs/ASSURANCE-MAP.md` divides labour: Lean owns the authority-logic interior, TLA+ and

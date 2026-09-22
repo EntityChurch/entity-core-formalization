@@ -92,8 +92,17 @@ Five of these deserve a note:
   the split read-modify-write is not.
 
 **Unbounded in STEPS, not in PEERS.** Every Apalache result here fixes the peer/request set
-(`Peers = {A,B}`) and proves the invariant for runs of any length over it. "Unbounded"
-invites the wrong reading and is worth stating plainly.
+and proves the invariant for runs of any length over it. "Unbounded" invites the wrong
+reading and is worth stating plainly.
+
+*This paragraph read "fixes the peer/request set (`Peers = {A,B}`)" until 2026-09-06, which
+had been false since 2026-08-30.* `Reentry` and `Core` take `CONSTANT N` and dispatch on a
+directed ring; `ReentryApalache` and `CoreApalache` prove `FramesNotInterleaved` and
+`InvComposed` **inductive at N = 3** as well as N = 2 (`tla/CoreApalache.tla`), and Spin
+re-encodes both at 3 via `-DNPEERS`. The remaining nine modules do fix their sets. The
+correction understates nothing and overstates nothing now, but it is worth noticing which
+direction it was wrong in: **the stale claim made this repo look weaker than it was**, which
+is the direction nobody re-reads a document to catch.
 
 Reproduce: `make -C tla apalache-green` (each: base case length 0 + inductive step length 1).
 
@@ -315,7 +324,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Eleven targets decide the 268 runs.
+     the finding is what made that discipline necessary). Eleven targets decide the 277 runs.
      **The counts below are re-derived from the gate tables in `tla/`, `spin/` and
      `tamarin/Makefile`, not carried forward:** this table read "Ten targets decide the 238
      runs" until 2026-08-30, two matrix growths after the fact, which is item 9 of
@@ -343,7 +352,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      moved.
 
      *A twelfth and thirteenth target, in a tier of their own* — `make lean`, **6 runs**,
-     excluded from the 268 because they need an `entity-core-keystone` checkout that a bare
+     excluded from the 277 because they need an `entity-core-keystone` checkout that a bare
      clone does not have (`docs/LEAN-SEAM.md` §7):
 
      | Target | Runs | Grades on |
@@ -414,9 +423,34 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
    about what a model would do, asserted without running it; it is retracted.* What remains
    genuinely outside every (a′) result is **the receiver's decode**: the models prove the
    writes do not interleave, not the decoder that would fail if they did.
-9. **Peers are fixed, everywhere.** Every model — TLC, Spin and Apalache alike — fixes the
-   peer set at 2. The Apalache results are unbounded in *steps*, not in *peers*. A defect
-   that first appears at 3 peers is outside every result in this document.
+9. **Peers are fixed — at 2 for nine modules, at 2 *and* 3 for `Reentry` and `Core`.**
+   The Apalache results are unbounded in *steps*, never in *peers*. `Reentry` and `Core`
+   take `CONSTANT N` on a directed ring and are checked at both bounds on all three engines,
+   which is what reaches the 3-cycle deadlock class two peers cannot form; the ring is still
+   **one topology**, so a peer with several counterparties or several concurrent outbound
+   requests is not modeled anywhere. A defect that first appears at 4 peers, or at 3 on a
+   non-ring graph, is outside every result in this document.
+   *(This item said "Every model — TLC, Spin and Apalache alike — fixes the peer set at 2"
+   until 2026-09-06. It had been false since the N=3 work landed on 2026-08-30 — a stale
+   claim in the load-bearing honesty document, found while adding item 10 rather than by any
+   gate. `make coverage` and `make runcount` check the section set and the run total; **no
+   gate reads a prose sentence about a bound**, and this is what that hole looks like.)*
+
+10. **The composition is checked, and it carries one component property.** `Core` is the
+    composed whole-protocol model; `Conn`, `Store`, `Reentry`, `Revoke` are the components.
+    Until 2026-09-06 nothing related them and the ledger recorded that as row T4. It is now
+    related by an explicit mapping (`tla/RefMap.tla`), and the measured answer is narrow:
+    **`Core` is not a refinement of `Conn` or `Store`** — it performs §4.6's two-step
+    handshake in one step, and it has no counterpart for `Store`'s refcount, referrer set,
+    write critical section or admission state — and of the six component invariants checked
+    under the mapping, **one is carried and five are manufactured by the mapping itself**
+    (`tla/CoreMapFree.tla`, one graded run per verdict). The one carried is §4.2's
+    dispatch gate.
+
+    So: "the composed model is checked and the components are checked" does **not** mean the
+    composition is verified, and this is the wall that says by how much. `Core`'s own
+    invariants are unaffected — they hold, with controls and a witness, exactly as before.
+    Full statement and the per-invariant table: `docs/LEAN-SEAM.md` row T4.
 
 ---
 

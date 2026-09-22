@@ -56,7 +56,17 @@
 \* (tla/Authority.tla — this module's `Honored` gate is the opaque composed verdict, which is
 \* what lets the revocation interleaving be the subject). Both exclusions are structural, not
 \* discretionary: neither property is expressible against this module's abstractions.
-EXTENDS Naturals, FiniteSets
+\*
+\* T4 — THE COMPOSITION IS NOW CHECKED, AND THE ANSWER IS MOSTLY NO. See the §T4 block at the
+\* end of this file, and tla/RefMap.tla. Until 2026-09-06 this module and the component
+\* modules were checked independently with nothing relating them, which is what ledger row T4
+\* recorded. They are now related by an explicit mapping, and the measured result is that
+\* `Core` carries ONE of the six component invariants of Conn and Store; the other five are
+\* manufactured by any mapping that types them, because Core has no state for them to be
+\* about. Read §T4 before reading "the composed model is checked" as "the composition is
+\* verified" — blocking exactly that inference is why T4 was recorded, and it is now a
+\* measurement instead of a flag.
+EXTENDS Naturals, FiniteSets, RefMap
 
 CONSTANTS Serialized,     \* FALSE = §6.11 fix (reader-demux: mutex spans the write only);
                           \* TRUE  = negative control: hold the per-connection mutex across send+recv
@@ -462,4 +472,122 @@ EventuallyResolved == \A p \in Peers : <>(cstate[p] = "done")
 \* Checking it GREEN would mean the interesting state is unreachable — i.e. the results above
 \* hold of an inert model. Expected verdict: VIOLATION.
 WitnessExchangeComplete == ~(\A p \in Peers : cstate[p] = "done")
+
+\* ===== §T4 — the composition, related to its components rather than asserted =====
+\*
+\* Ledger row T4 (docs/LEAN-SEAM.md Class T) recorded the assumption that "the composed
+\* verdict is the conjunction the component modules check separately", discharged by nothing.
+\* This block discharges as much of it as is true, and MEASURES the rest.
+\*
+\* WHAT WAS TRIED FIRST AND DOES NOT WORK: a standard refinement, `Core!Spec => Conn!Spec`
+\* under a mapping. It fails for a structural reason worth recording rather than working
+\* around. Core collapses the §4.6 handshake into ONE step — the `link` process assigns
+\* conn[p] := "established" directly — while Conn runs new -> hello_done -> established as
+\* two steps driven by a frame stream. A refinement mapping lets the abstract spec STUTTER
+\* while the concrete one moves; it does not let one concrete step perform two abstract ones.
+\* So no mapping of Core onto Conn's phase satisfies Conn's next-state relation, and the
+\* honest report is that **Core is not a refinement of Conn**. Same conclusion for Store, and
+\* more sharply: Core has no counterpart for Store's refcount, referrer set, write critical
+\* section or admission state at all. This is not a defect being disclosed — it is what
+\* "minimal composed essence" in this module's header MEANS, stated as a checkable fact.
+\*
+\* WHAT IS CHECKED INSTEAD: invariant implication under an explicit mapping (tla/RefMap.tla).
+\* The component modules are INSTANCEd through it, so what is asserted below is each
+\* component's OWN invariant text — `CONN(p)!DispatchedImpliesEstablished`, not a
+\* transcription of it into this module's vocabulary. A transcription is a place the two can
+\* silently diverge, which is the failure mode this whole block exists to close.
+\*
+\* THESE TWO ARE NOT THE SAME CLAIM AND MUST NOT BE BLURRED. Invariant implication says the
+\* composed model's reachable states satisfy the component's invariant under the mapping. It
+\* does NOT say the composition preserves the component's BEHAVIOUR. Anyone citing this
+\* result should cite it as the weaker one, because that is what was run.
+\*
+\* AND IT IS ONLY WORTH ANYTHING WITH THE CLASSIFIER. A mapping that sends a component
+\* variable to a constant turns that component's invariant into a tautology, and TLC reports
+\* the identical green for "Core enforces this" and "the mapping asserts it" — the
+\* `StoreBounded` vacuity one level up, inside the fix for it. tla/CoreMapFree.tla runs each
+\* of the seven against every type-correct valuation instead of the reachable ones. Measured
+\* verdicts, 2026-09-06:
+\*
+\*   CARRIED      1/7  Conn!DispatchedImpliesEstablished  (== this module's own
+\*                     DispatchNeedsEstablished, reached through Conn's text)
+\*   MANUFACTURED 6/7  Conn!TokenBounded, Conn!NoEstablishWithoutNonce,
+\*                     Store!StoreRaceFree, Store!NoUseAfterFree,
+\*                     Store!ResourceBounded, Store!CleanReject
+\*
+\* So the composed model genuinely carries ONE component property, and the §4.2 dispatch gate
+\* is the one it carries. Every other component invariant here is a statement about
+\* tla/RefMap.tla. That is a narrower claim than "the composition is verified" by a wide
+\* margin, and it is the claim the runs support.
+
+\* The mapping is per-connection because Conn models ONE responder's connection while Core
+\* runs N of them on a ring; quantifying over Peers checks the symmetry rather than assuming
+\* it, which is the mistake `Other(p)` made in this module's own history.
+CONN(p) == INSTANCE Conn WITH
+  MaxFrames       <- 1,
+  Enforce         <- TRUE,
+  DropFrame       <- FALSE,
+  pc              <- MapConnPc,
+  phase           <- MapPhase(conn[p]),
+  issuedNonce     <- MapIssuedNonce(conn[p]),
+  tokensIssued    <- MapTokens(conn[p]),
+  everEstablished <- MapEver(conn[p]),
+  dispatched      <- MapDispatched(cstate[p]),
+  inbox           <- MapInbox,
+  submitted       <- MapSubmitted,
+  answered        <- MapAnswered,
+  respHalted      <- MapRespHalted
+
+STORE(p) == INSTANCE Store WITH
+  NReq            <- 1,
+  MaxPending      <- 2,
+  MaxStore        <- 2,
+  Serialize       <- TRUE,
+  Admit           <- TRUE,
+  SilentDrop      <- FALSE,
+  SyncRefs        <- TRUE,
+  pc              <- MapStorePc,
+  store           <- MapStoreSet(store[p]),
+  rc              <- MapRc,
+  holders         <- MapHolders,
+  writers         <- MapWriters,
+  pending         <- MapPending,
+  rstate          <- MapRstate,
+  payload         <- MapPayload,
+  depth           <- MapDepth,
+  wrote           <- MapWrote,
+  tmp             <- 0
+
+\* THE ONE WITH CONTENT (classifier: CARRIED). Conn's own §4.2 pre-auth invariant, holding
+\* over Core's reachable states at every peer. Core states the same property for itself as
+\* DispatchNeedsEstablished; that these agree is the composition claim actually landing.
+RefinesConnDispatched == \A p \in Peers : CONN(p)!DispatchedImpliesEstablished
+
+\* AND THE OTHER SIX ARE DELIBERATELY NOT CHECKED HERE. The first draft of this block put all
+\* seven mapped invariants in CoreRefines.cfg. It went green — 331 distinct states, Core's
+\* count unchanged — and that green was worth almost nothing: six of the seven cannot fail
+\* over ANY Core behaviour, so the cfg would have added six conjuncts that could not fail to
+\* the largest model in the repo. That is `StoreBounded` exactly, in the fix for the gap
+\* `StoreBounded` is the cautionary tale for. Their content is the CLASSIFICATION, and the
+\* classification is run where it has teeth: tla/CoreMapFree.tla, one graded cfg each.
+\*
+\* They are not kept as drift detectors either, which was the other tempting reason. If
+\* Conn's or Store's invariant text moves, the CoreMapFree rows are the ones that notice —
+\* a manufactured row flipping to VIOLATED is a graded verdict change there. Keeping a
+\* second, weaker copy here would detect nothing the classifier misses.
+\*
+\* TLC SAW PART OF THIS BY ITSELF, AND THE PART IT MISSED IS THE INTERESTING ONE. Running
+\* the seven-invariant draft, TLC warned that `RefinesStoreRaceFree` and `RefinesStoreReject`
+\* are "constant-level formula[s] ... evaluate[d] to TRUE" — an independent confirmation of
+\* the manufactured verdict, in a channel the classifier does not read. But it flagged only
+\* **2 of the 6**. The other four (`TokenBounded`, `NoEstablishWithoutNonce`,
+\* `NoUseAfterFree`, `ResourceBounded`) all mention a Core variable through the mapping and
+\* are still tautologies over the whole type space — `NoUseAfterFree` reads `store` via
+\* MapStoreSet yet is unfalsifiable because MapHolders is constant. **A syntactic
+\* constant-level check catches vacuity that is visible in the formula; it does not catch
+\* vacuity manufactured by the mapping.** So "the tool would have told us" is false here, and
+\* that is the argument for CoreMapFree.tla existing at all rather than leaning on the
+\* warning. (It is also why those two warnings are not merely silenced: under D13 a tool
+\* warning is a build failure, and the way to clear these is to stop asserting formulas that
+\* assert nothing — which is what this note records doing.)
 ====

@@ -1,15 +1,98 @@
 # Spec-drift assessment — the pin vs the live spec
 
-> **RESOLVED — this document is now a historical record, not a live warning.** It measures
-> the drift that existed while the models were pinned at 0.8.0 and the protocol had advanced
-> to 0.8.2. That gap is closed: the models were re-validated against `spec-data/v0.8.2/`, the
-> normative surface 0.8.1/0.8.2 added was modeled, and `MODELING-PIN` moved to `v0.8.2` as
-> the last step. `make specdrift` now reports **no drift**.
->
-> The measurement is kept because it is what scoped the re-target — and because the method
-> (derive the dependency set from the `§`-citations the models carry, not from a prose
-> summary) is the reusable part. See `docs/STATUS.md` for what was modeled and where.
+> **LIVE — the pin is behind again, and this document is the measurement.** The models are
+> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.11**, and `make specdrift`
+> reports **9 of 30 cited sections moved**. §1 below is that measurement, taken 2026-09-06.
+> §2 onward is the previous cycle's — 0.8.0 vs 0.8.2, since resolved — kept because the
+> method is the reusable part and because a repo that deletes its last drift record has no
+> way to show the pattern is normal rather than alarming.
 
+---
+
+# 1. Live measurement — 0.8.2 pin vs 0.8.2.11 live
+
+**Measured 2026-09-06.** Reproduce with `make specdrift`; the prose sites that state the
+status are gated by `make driftclaim`.
+
+| | |
+|---|---|
+| Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
+| Live (`entity-core-protocol/specs`) | **0.8.2.11** · CBOR encoding 1.5 → 1.6 · type system also differs |
+| Core spec delta | +152 lines added, −33 removed |
+| **Sections the models cite that moved** | **9 of 30** |
+| Sections whose movement contradicts a model | **1** (§4.7) |
+| Green matrix against the pin | unaffected — every result is quoted against `v0.8.2` |
+
+**The pin is not being moved yet, and that is a decision rather than a backlog item.** The
+sibling `entity-core-keystone` has not upgraded to 0.8.2.11; re-vendoring and re-targeting
+the models before the peer that ships has moved would put this repo's assumption ledger and
+the peer's Lean proofs on two different spec texts, which is the one configuration that makes
+`docs/LEAN-SEAM.md` unreadable. Re-vendor is sequenced *after* the sign-off, per
+`spec-data/<pin>/MANIFEST.md` §"Re-vendor discipline".
+
+## What moved, and what each movement costs
+
+Classified by hand, because a section-touch count is not a semantic delta — the mistake §3
+below records an earlier draft of this document making.
+
+| § | model files | what changed | impact |
+|---|---|---|---|
+| §5.9 | 3 | **−152B** — a removed provenance citation (the three-impl measurement note) | **none.** The normative text is byte-identical |
+| §3.3 | 1 | +4.9KB — per-status default `code` values, the default-code force, satisfaction mode | **none.** `Reentry.tla` cites §3.3 for the **wire frame**, not the status table |
+| §3.6 | 4 | +488B — `peers` reachability note; the id-scope consequence sentence reworded | **none.** The four `Multisig*` theories cite §3.6 for `system/capability/multi-granter` threshold structure; no model encodes id-scope matching |
+| §6.2 | 12 | +4.3KB — the default self-grant shape (0.8.2.3); 404/501 scope clarifications | **none.** `requested_scope`, `internal_scope` and `grant_scope` occur in **zero** model files; `Register`/`Bootstrap` cite §6.2 for the five-write lifecycle |
+| §4.2 | 6 | +1.4KB — pre-hello `authenticate` → **401 `invalid_nonce`**; connect pre-authorized in *any* state | **confirms us.** The first half is this repo's own finding, landed. The second half is new unmodeled surface |
+| §5.2a | 1 | +1.4KB — connect-time row widened to "nonce absent, or `authenticate` before `hello`"; new pre-dispatch row | **confirms us**, in a second site |
+| §4.6 | 6 | +784B — the step numbering is a normative order; lowest-numbered failing step wins | new modelable surface, no contradiction |
+| §6.5 | 6 | +891B — step 3 is a **gate**, not an ordering preference; names a foreign-namespace privilege escalation | new modelable surface. Models cite §6.5 for the verdict gate and dispatch-after-establishment, not step 3 |
+| **§4.7** | **3** | **+7.0KB** | **the one contradiction — see below** |
+
+### §4.7 — the one section where the live text contradicts a model
+
+`tla/ConnCodes.tla` and `spin/conncodes.pml` transcribe §4.7's status table. Four things
+moved under them:
+
+1. **`connection_sequence_error` moved 400 → 409.** `ConnCodes.tla`'s `NormativeStatus`
+   maps it to 400 (via the `OTHER` arm, line 128). Against 0.8.2.11 that constant is wrong,
+   and `StatusMatchesCode` would be transcribing a status the spec no longer fixes.
+2. **`incompatible_key_type` is retired** — MUST NOT be emitted. Not modeled (the module
+   declares the negotiation codes out of scope), so no impact beyond the transcription note.
+3. **A new row**: unknown connect operation → `400 invalid_request`, in any state.
+   Reachable in this module's phase machine, and currently unmodeled.
+4. **A new half-open rule**: an unauthenticated `ping` after `hello` but before
+   `authenticate` is `409 connection_sequence_error`. Also a phase-machine claim.
+
+**The contested cell is resolved, in our favour.** `ConnCodes.tla`'s header documents
+`ConnCodesSeqReadingBug.cfg` as *"not a bug we injected — it is a conformant reading of the
+spec, and that is the point."* At 0.8.2.11 that reading is **no longer conformant**: row 10's
+parenthetical was narrowed exactly as this repo argued (`docs/PROPERTIES.md` §D.1). So when
+the pin does move, the model gets **simpler** — the contested-cell constant collapses and the
+control demotes from "a conformant reading" to an ordinary injected defect. That is the whole
+finding being banked, and it is worth noting the direction: **the drift here is a repo's own
+argument coming back to it as spec text.**
+
+## What this measurement does not assert
+
+- **Not that the models would pass at 0.8.2.11.** Nothing has been re-run against the new
+  text and nothing can be, because the models transcribe 0.8.2. Only a re-vendor and
+  re-validation can speak to the current spec, and that is the point of keeping the two
+  statements apart.
+- **Not that additive text is harmless.** "Additive" means it contradicts nothing modeled;
+  §4.6's step-ordering rule and §6.5's step-3 gate are both new *obligations* a peer must
+  meet, and neither has a model. They are backlog, not absolution.
+- **Not that the 30 cited sections are the right 30.** Coverage is bounded by what the
+  models chose to cite — the standing limit of this method, §3 below.
+
+---
+
+# 2. Previous cycle — 0.8.0 pin vs 0.8.2 live (RESOLVED)
+
+> **Historical record.** This measured the drift that existed while the models were pinned at
+> 0.8.0 and the protocol had advanced to 0.8.2. That gap was closed: the models were
+> re-validated against `spec-data/v0.8.2/`, the normative surface 0.8.1/0.8.2 added was
+> modeled, and `MODELING-PIN` moved to `v0.8.2` as the last step. Kept because it is what
+> scoped that re-target, and because the method — derive the dependency set from the
+> `§`-citations the models carry, not from a prose summary — is the reusable part.
 
 **Measured 2026-08-27.** Reproduce with `make specdrift`.
 

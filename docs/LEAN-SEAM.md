@@ -361,12 +361,89 @@ sound only if a prover result covers the abstracted part, and nothing else says 
 | T1 | `tla/Conn.tla`, `spin/conn.pml` — §4.6 signatures / PoP abstracted; the nonce-echo check modeled as state | An attacker cannot produce a valid signed handshake response binding a nonce it did not receive | `tamarin/Binding.{pv,spthy}` (channel binding), `tamarin/BindingReplay.{pv,spthy}` (replay) | **CLOSED** |
 | T2 | `tla/Register.tla`, `spin/register.pml` — grant-signature crypto abstracted | A handler grant cannot be forged | `tamarin/Unforge.{pv,spthy}` | **CLOSED** |
 | T3 | `tla/Store.tla`, `spin/store.pml` — crypto abstracted; payload size / chain depth symbolic over/under-limit | The over/under-limit distinction is what the §4.9/§4.10 rules turn on, not the magnitudes | — (modelling choice, declared in the module header; no proposition to discharge) | **N/A — device** |
-| T4 | `tla/Core.tla`, `spin/core.pml` — `Honored` = the composed verdict | The composed verdict is the conjunction the component modules check separately | **nothing** — the composition is asserted, not proved. `Core` and the per-subsystem modules are checked independently; no refinement proof links them | **OPEN** |
+| T4 | `tla/Core.tla` — `Honored` = the composed verdict | The composed verdict is the conjunction the component modules check separately | `tla/RefMap.tla` (the mapping), `CoreRefines.cfg` (implication), `CoreMapFree*.cfg` (the classifier) — **and the runs refute the assumption**: 1 of 6 component invariants is carried, 5 are manufactured by the mapping | **CLOSED — ASSUMPTION FALSE** |
 | T5 | `tla/Authority.tla` — `Covers` two-point scope, deliberately **disjoint** | Nothing about the protocol. Disjointness is a modelling device that makes consulting the wrong authority observable | — | **N/A — device** |
 
-**T4 is the one that matters** and it is already on the work-list as the refinement-proof
-item (`docs/STATUS.md` §Next). It is recorded here because "the composed model is checked
-and the components are checked" reads, wrongly, as "the composition is verified."
+**T4 was the one that mattered, and it closed on 2026-09-06 by being refuted.** It was
+recorded here because "the composed model is checked and the components are checked" reads,
+wrongly, as "the composition is verified." That inference is now measured, and it is worse
+than the row feared: the composed model carries **one** of the six component invariants of
+`Conn` and `Store`.
+
+### T4 — what was run, and why the answer is a refutation rather than a proof
+
+**Refinement was attempted and does not hold, for a structural reason.** `Core` collapses
+§4.6's handshake into one step (`conn[p] := "established"`); `Conn` runs new → hello_done →
+established as two. A refinement mapping lets the abstract spec *stutter* while the concrete
+one moves — it does not let one concrete step perform two abstract ones. So no mapping of
+`Core` onto `Conn`'s phase satisfies `Conn`'s next-state relation, and **`Core` is not a
+refinement of `Conn`**. For `Store` it is starker: `Core` has no counterpart for the
+refcount, the referrer set, the write critical section or the admission state. The
+checkpoint that scoped this predicted the shape for `Revoke` and it generalizes.
+
+**So the weaker claim was run instead: invariant implication under an explicit mapping**
+(`tla/RefMap.tla`). The component modules are `INSTANCE`d through it, so what is asserted is
+each component's **own invariant text**, not a transcription of it into `Core`'s vocabulary.
+*These are not the same claim as refinement and this ledger does not blur them: implication
+says the reachable states satisfy the invariant, not that the composition preserves
+behaviour.*
+
+**And the implication result is worth nothing without the classifier, which is the real
+contribution.** A mapping that sends a component variable to a constant makes that
+component's invariant a tautology, and TLC reports the identical green for *"Core enforces
+this"* and *"the mapping asserts it"* — `StoreBounded`'s vacuity reproduced inside the fix
+for the composition gap. `tla/CoreMapFree.tla` therefore runs each mapped invariant against
+**every type-correct valuation** rather than the reachable ones, one graded cfg each:
+
+| component invariant | § | verdict | why |
+|---|---|---|---|
+| `Conn!DispatchedImpliesEstablished` | §4.2 | **CARRIED** | a type-correct valuation violates it, so the mapping does not force it — `Core`'s green is a fact about its dispatch gate |
+| `Conn!TokenBounded` | §4.2 | MANUFACTURED | `Core` models no token issuance; the mapping's range is `{0,1}` |
+| `Conn!NoEstablishWithoutNonce` | §4.6 | MANUFACTURED | `Core` has no nonce (row T1) |
+| `Store!StoreRaceFree` | §4.8 | MANUFACTURED | `Core` has no write critical section |
+| `Store!NoUseAfterFree` | §4.8 | MANUFACTURED | `Core` has no refcount or referrer set |
+| `Store!ResourceBounded` | §4.9(b) | MANUFACTURED | the same shape `Core.tla` already removed as vacuous |
+| `Store!CleanReject` | §4.10 | MANUFACTURED | `Core` has no admission state |
+
+**TLC confirmed part of this independently, and the part it missed is the argument for the
+classifier.** Running the seven mapped invariants over `Core`, TLC warned that two are
+"constant-level formula[s] … evaluate[d] to TRUE". Only **two of the six** — the other four
+mention a `Core` variable through the mapping and are still unfalsifiable;
+`NoUseAfterFree` reads `store` yet cannot fail because the referrer set is constant. **A
+syntactic constant-level check catches vacuity visible in the formula, not vacuity
+manufactured by the mapping.** "The tool would have told us" is false here.
+
+**Scope, stated rather than left to be assumed.** This is a **TLA+-only** result; `spin/core.pml`
+is dropped from the row because Spin has no instantiation mechanism to state it with, so the
+composition claim is unexamined on that track. The mapping covers `Conn` and `Store` — the
+two the scoping named as the clean candidates. `Reentry` and `Revoke` are **not** mapped:
+`Revoke`'s `Verdict1` is a function of three inputs that `Core` abstracts to `~revoked`, so
+its invariants would be manufactured for the same reason `Store`'s are, and running them
+would add rows without adding information. That is a judgement, not a measurement, and it is
+the one thing here that is asserted rather than run.
+
+**What this row now says.** The composed model is a real, checked artifact — its own
+invariants (`FramesNotInterleaved`, `DispatchNeedsEstablished`, `ServeNeedsEstablished`,
+`NoServeWhenRevoked`, `EventuallyResolved`) hold, with controls and a witness, and nothing
+about that changed. What is *not* true, and was quietly assumed before today, is that
+checking it also checks the components. It checks §4.2's dispatch gate and nothing else they
+own.
+
+**Ledger state — derived, and now gated.** As of 2026-09-06, after this row closed, the
+ledger is **22 rows** (13 Class L, 5 Class T, 4 Class O): **15 CLOSED**, 1 CLOSED — ASSUMPTION
+FALSE (this row), 1 CLOSED-MODULO-H (L1), 2 N/A — device, 3 BY-DESIGN, and **0 OPEN**.
+
+Those figures are produced by `make ledgercount`, which parses this file and fails if any
+declared prose site disagrees. It exists because **this count has been published wrong four
+times** — "eleven CLOSED rows" across five files, the Class-L verdicts in the tier audit,
+"21 of 23 rows … the two open ones are L1 and L7" (every number wrong and the attribution
+too), and "14 CLOSED … 2 OPEN" written two hours before O4 closed. `leanseam` and
+`leanproof` print *theorem* counts and say nothing about rows or verdicts, so until now
+nothing tied this. It asserts the counts and the row structure; it does **not** assert that
+any verdict is correct.
+
+The prior scoping, including the prediction that `Core` may not be a refinement at all, is in
+`docs/status/CHECKPOINT-2026-09-06-WORKLIST-T4-NEXT.md` §4 — it was right.
 
 ---
 
@@ -605,7 +682,8 @@ rejected checkResourceScope_no_targets_deny proofs/EntityCoreProofs/CapabilityPr
   counterexamples through the Lean executable model and asserting the abstract predicate's
   value matches — is the first thing on this list that would put a machine on it, and it is
   on the work-list rather than done.
-- **It does not cover bounds.** `Peers = {A,B}`, the TLC state-space limits and the
+- **It does not cover bounds.** The peer bounds (2 everywhere, 2 and 3 for `Reentry`/`Core`),
+  the TLC state-space limits and the
   bounded-liveness results are scope limits, not assumptions about an abstraction. They live
   in `docs/COVERAGE-MATRIX.md` and `docs/PROPERTIES.md`.
 - **It is not a claim that the Lean proof is correct.** It is a claim about which Lean

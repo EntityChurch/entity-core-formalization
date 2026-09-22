@@ -134,7 +134,9 @@ task and the request-layer deadline are always-eventually-enabled). Without it,
 
 ## 7. TLC bounds (Reentry.cfg)
 
-`MaxReq = 2`, `MaxLiveKeys = 2`, `Peers = {A,B}`, both reentry directions enabled.
+`MaxReq = 2`, `MaxLiveKeys = 2`, `N = 2`, both reentry directions enabled. *(The module took
+`Peers = {A,B}` when this note was written; it takes `CONSTANT N` on a directed ring since
+2026-08-30 and `Reentry3.cfg` runs the same properties at N = 3.)*
 Start small enough to be push-button; raise only if green and we want confidence.
 `-deadlock` checking ON for the serialized variant (a true deadlock = no successor
 state is the cleanest possible Class-G witness; TLC reports it directly).

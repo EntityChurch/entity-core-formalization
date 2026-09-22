@@ -188,9 +188,15 @@ use `--init=Init --length=0` for the base case and `--cinit=ConstInitBug*` for t
   it: *"each invariant is proven separately"* is precisely what a **composition** invariant is
   not, and the deadlock it was said to corroborate is **liveness**, which Apalache cannot
   prove either way — so neither half of the rationale actually bore on the deferred item.
-- **Unbounded in STEPS, not in PEERS.** Every Apalache result here fixes `Peers = {A,B}` and
-  proves the invariant for runs of any length over that set. A defect first appearing at 3
-  peers is outside every result on this page.
+- **Unbounded in STEPS, not in PEERS.** Every Apalache result here fixes the peer set and
+  proves the invariant for runs of any length over it. **`Reentry` and `Core` are checked at
+  N = 2 *and* N = 3** on all three engines (`ReentryApalache` / `CoreApalache` prove
+  `FramesNotInterleaved` and `InvComposed` inductive at 3); the other nine modules fix theirs
+  at 2. A defect first appearing at 4 peers — or at 3 on a dispatch graph other than the
+  directed ring — is outside every result on this page.
+  *(This bullet read "fixes `Peers = {A,B}`" until 2026-09-06, false since the N=3 work landed
+  on 2026-08-30. One of eleven live sites across six files carrying that stale bound; the
+  count is derived from the diff, not recalled. See `CHANGELOG.md`.)*
 - **The 5th wall is narrowed, not closed.** Two independent paradigms now agree across the
   whole modeled surface — but they could in principle share a misreading of the spec. Independent
   encoding + independent engine *narrow* the fidelity gap substantially; only human review

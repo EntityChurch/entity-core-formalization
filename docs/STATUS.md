@@ -1,13 +1,18 @@
 # entity-core-formalization — status
 
-_Updated: 2026-08-30 · this line: 0.8.2_
+_Updated: 2026-09-06 · this line: 0.8.2_
 
-> **The models track the live spec.** Every model in this repo is written against the
-> SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core Protocol at spec
-> version **0.8.2** — the current published line, and what peers are building to.
-> `make specdrift` reports **no drift**: the pin matches the live spec byte-for-byte across
-> all three normative files. The results below are a statement about the protocol as it
-> stands today.
+> **The models are pinned at 0.8.2; the live spec is 0.8.2.11.** Every model in this repo is
+> written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
+> Protocol at spec version **0.8.2**. `make specdrift` reports **9 of 30 cited sections
+> moved**, so the results below are a statement about **0.8.2** and not about the protocol as
+> it stands today.
+>
+> This paragraph said *"the models track the live spec … byte-for-byte across all three
+> normative files"* until 2026-09-06, in this file and seven others, while all three files
+> differed. It was true when written and went false without a commit in this repo — see
+> §Next item 14 for why that is a different failure mode from every previous stale claim
+> here, and `docs/SPEC-DRIFT-ASSESSMENT.md` for what the drift actually costs.
 
 ## Where it is
 
@@ -73,7 +78,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 268 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 277 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -98,7 +103,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   gates, exact set per declaration in both directions, tied to the ledger's own pin block,
   with five controls (`neg-sorry`, `neg-axiom`, `neg-ungate`, `neg-dropfile`, `neg-broken`)
   each required to fail for its own reason on the declarations it names. **6 runs, separate
-  from the 268** — they need the sibling
+  from the 277** — they need the sibling
   checkout, and every published number here is reproducible from a bare clone.
   `docs/LEAN-SEAM.md` §7.
 - **The tier was then audited before it was committed, and the audit found five things.**
@@ -114,8 +119,8 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 
 | slice | runs |
 |---|---|
-| TLC green (11 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero`) | 15 |
-| TLC negative controls | 40 |
+| TLC green (11 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero` + `CoreRefines` + 6 T4 classifier rows) | 22 |
+| TLC negative controls | 42 |
 | TLC non-vacuity witnesses | 15 |
 | Apalache inductive (24 invariants × base+step, + 2 at N=3) | 52 |
 | Apalache negative controls | 24 |
@@ -123,7 +128,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 | Spin negative controls | 39 |
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
-| **total** | **268** |
+| **total** | **277** |
 
 Plus **6 runs in the Lean seam tier** (`make lean`: 1 green + 5 negative controls), counted
 separately and deliberately: they require an `entity-core-keystone` checkout, so they are not
@@ -471,12 +476,27 @@ item 4.
      described their code incorrectly in a published document.
    - **Keystone should run this gate too, and the packet says so.** Our gate covers our
      ledger's rows; it does not put a check in the repo where a `sorry` would be *written*.
-   - **The ledger's own counts are ungated, and they just moved.** Class L went 11 rows / 9
-     CLOSED / 2 CLOSED-MODULO-H → **13 / 12 / 1**, and the gate table 37 → 40, across seven
-     prose sites. `leanseam` and `leanproof` both *derive* these numbers and print them; no
-     check ties the prose to the derivation. That is exactly the hole `make runcount` was
-     built to close for the matrix total, one artifact over — and the counts were hand-edited
-     this time, which is how the 258 went stale three times.
+   - **~~The ledger's own counts are ungated.~~ CLOSED 2026-09-06 — `make ledgercount`,
+     built because the count could not be stated safely without it.** Closing T4 changed a
+     verdict, and the correct new breakdown could not be written down without either
+     hand-counting (the mechanism that had failed four times) or a tool. So the tool.
+
+     It parses `docs/LEAN-SEAM.md` itself — Class L from its `### L<n>` sections and their
+     `**Verdict:**` lines, Classes T and O from their tables — and checks the row counts,
+     the verdict counts and the **row structure** (contiguous ids per class, so a silently
+     deleted row fails rather than yielding a smaller number that still looks tidy) against
+     every declared prose site. Correction to what this bullet used to say: **`leanseam` and
+     `leanproof` do not derive these numbers.** They derive *theorem* counts and say nothing
+     about rows or verdicts, which is precisely why none of the four errors was ever
+     reachable by an existing gate. It is in `check` and `matrix` — unlike `driftclaim`, it
+     depends on nothing outside this repo, so a change-triggered gate is sufficient in kind.
+
+     **Its first draft anchored row counts only — and would have gone green on all four
+     historical errors**, because every one of them was a *verdict* error and three had the
+     row total right. Found by flipping a verdict and watching it pass, not by review.
+     Teeth-tested three ways (flipped verdict, deleted verdict line, deleted row → id gap),
+     each failing for its own stated reason. It asserts the counts and the structure; it does
+     **not** assert that any verdict is correct.
    - **Differential trace checking** — replay Apalache `.itf.json` counterexamples through the
      Lean executable model (or a reference peer) and assert the abstract predicate's value
      matches. The ledger is a human reading of two texts and `make leanseam` only detects that
@@ -490,15 +510,20 @@ item 4.
 
      *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
      §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
-     attribution. Derived now: the ledger is **22 rows** — 13 Class L, 5 Class T, 4 Class O —
-     of which **14 CLOSED, 1 CLOSED-MODULO-H (L1), 2 OPEN (T4, O4), 2 N/A-device, 3
-     BY-DESIGN**. The two rows that were genuinely **OPEN** were never L1 and L7 — those were
-     CLOSED-MODULO-H, a different verdict — they were T4, the unproved composition, and O4,
-     the unmodeled `δ`. **This is the third time a recalled ledger count has been published
-     here**, after "eleven CLOSED rows" in five files and the Class-L verdicts in the audit.
-     The counts are derived by `leanseam` and `leanproof` and nothing ties the prose to the
-     derivation — see the ungated-counts item above, which this is now the strongest argument
-     for.)*
+     attribution. Derived now, **by `make ledgercount` rather than by hand**: the ledger is
+     **22 rows** — 13 Class L, 5 Class T, 4 Class O — of which **15 CLOSED**, 1 CLOSED —
+     ASSUMPTION FALSE (T4), 1 CLOSED-MODULO-H (L1), 2 N/A-device, 3 BY-DESIGN, and **0 OPEN**. *(This same sentence has now been wrong twice more than the bullet it
+     corrects: it read "14 CLOSED … 2 OPEN (T4, O4)" until O4 closed two hours later, then
+     "15 CLOSED … 1 OPEN (T4)" until T4 closed on 2026-09-06. Both were true when written.
+     **That is four ungated ledger counts published wrong, and the fifth was only avoided
+     because the gate now exists** — it was built in the same session precisely because the
+     count could not be stated safely without it.)* The two rows that were genuinely **OPEN**
+     were never L1 and L7 — those were CLOSED-MODULO-H, a different verdict — they were T4,
+     the unproved composition, and O4, the unmodeled `δ`. **This is the third time a recalled
+     ledger count has been published here**, after "eleven CLOSED rows" in five files and the
+     Class-L verdicts in the audit. `leanseam` and `leanproof` derive *theorem* counts and say
+     nothing about rows or verdicts, which is why they never caught any of this;
+     `make ledgercount` is what now ties the prose to the derivation.)*
      **But note what the L7 correction says about this item's premise:** the ledger's open
      rows were re-read once and one of them was materially wrong. A human reading of two texts
      degrades exactly this way, which is the argument *for* the machine check, not against it.
@@ -585,12 +610,52 @@ item 4.
    does safety/induction by construction. **TLAPS** machine-checks liveness proofs (fairness,
    well-founded ordering); deadlock-freedom for `Core` proved rather than model-checked would
    be the headline result this repo does not yet have.
-7. **Other techniques not yet used.** A **refinement proof** that the composed `Core` model
-   actually refines the individual modules (the standard TLA+ move; today they are checked
-   separately and the composition is asserted, not proved — recorded as ledger row **T4**,
-   the one OPEN row in Class T). Alloy for `Register`'s index↔tree-walk coherence.
-   CryptoVerif for computational-model results. §6.11(c) per-request deadlines, which are
-   what would make Class-G a liveness bug rather than a crash.
+7. **~~A refinement proof relating `Core` to its components.~~ DONE 2026-09-06 — and it is a
+   REFUTATION, which is the more useful result.** Ledger row **T4**, the last OPEN row, is
+   closed as **CLOSED — ASSUMPTION FALSE**.
+
+   **`Core` does not refine `Conn` or `Store`, for a structural reason worth keeping.** Core
+   collapses §4.6's handshake into one step (`conn[p] := "established"`); `Conn` runs
+   new → hello_done → established as two. A refinement mapping lets the *abstract* spec
+   stutter while the concrete one moves — it does not let one concrete step perform two
+   abstract ones. So no mapping satisfies `Conn`'s next-state relation. For `Store` it is
+   starker: `Core` has no counterpart for the refcount, referrer set, write critical section
+   or admission state at all. The scoping checkpoint predicted exactly this shape for
+   `Revoke` and it generalized.
+
+   **So the weaker claim was run: invariant implication under an explicit mapping**
+   (`tla/RefMap.tla`), with the component modules `INSTANCE`d so what is asserted is their
+   **own invariant text** rather than a transcription. *Implication and refinement are not
+   the same claim and the row does not blur them.*
+
+   **The contribution is the classifier, not the implication.** A mapping that sends a
+   component variable to a constant makes that component's invariant a tautology, and TLC
+   reports the identical green for "Core enforces this" and "the mapping asserts it" — the
+   `StoreBounded` vacuity reproduced *inside the fix for the composition gap*.
+   `tla/CoreMapFree.tla` runs each mapped invariant over **every type-correct valuation**
+   instead of the reachable ones, one graded cfg per verdict:
+   **1 CARRIED (§4.2's dispatch gate), 5 MANUFACTURED.**
+
+   Two things fell out that are worth more than the result itself:
+   - **The first draft asserted all seven mapped invariants and went green.** Six could not
+     have failed. Catching that needed the classifier, not review.
+   - **TLC's own vacuity warning caught 2 of the 6.** It flags "constant-level formula …
+     evaluates to TRUE" — but only where the formula mentions no variable. The other four
+     read a `Core` variable *through the mapping* and are still unfalsifiable;
+     `NoUseAfterFree` reads `store` yet cannot fail because the referrer set is constant.
+     **A syntactic vacuity check catches vacuity visible in the formula, not vacuity
+     manufactured by a mapping.** "The tool would have told us" was false.
+
+   +9 runs (268 → 277). **Scope stated rather than assumed:** TLA+-only (Spin has no
+   instantiation mechanism to state it with, so the composition claim is unexamined there),
+   and `Reentry`/`Revoke` are deliberately not mapped — `Revoke`'s `Verdict1` is a function
+   of three inputs `Core` abstracts to `~revoked`, so its invariants would be manufactured
+   for the same reason `Store`'s are. *That last part is a judgement, not a measurement, and
+   it is the one claim here that was not run.*
+
+   **Still not used:** Alloy for `Register`'s index↔tree-walk coherence. CryptoVerif for
+   computational-model results. §6.11(c) per-request deadlines, which are what would make
+   Class-G a liveness bug rather than a crash. **TLAPS** for liveness (item 6).
 8. **Widen the TLA+ bounds** — 3-peer / churned-store. *(The other half of this item,
    ~~sequenced-write `Register`~~, is done — see item 13.)*
 9. **~~Nothing checks a number in prose.~~ CLOSED 2026-08-30 — `make coverage` **and**
@@ -666,6 +731,22 @@ item 4.
 12. **Phase 3 extension-protocol attacker models** stay gated on vendoring `EXTENSION-*`,
     which is still not in `spec-data/`. Note that §5.8's registry rows and §5.9's continuation
     depth brake are now modeled at the *core* level, so the gate is narrower than it was.
+
+    **The blocker is narrower again, and this item has been misleading — corrected
+    2026-09-06.** As written it reads as though the extension specs do not exist yet. **They
+    do: all 26**, including `EXTENSION-IDENTITY.md` and `EXTENSION-ATTESTATION.md`, in
+    `../entity-system-architecture/specs/extensions/`. The reason nobody here had noticed is
+    that `AGENTS.md` named `entity-core-protocol/specs/` as *the* re-vendor source — true for
+    the three core specs, and there are no `EXTENSION-*` files there at all, so following the
+    rule finds nothing and the absence reads as authorship rather than location. `AGENTS.md`
+    is corrected.
+
+    So the gate is a **vendoring decision**, not a dependency on anyone writing anything:
+    whether this repo should SHA-pin from a **second upstream repo** is a real question — the
+    pin discipline, `make specdrift` and `MODELING-PIN` all currently assume one — and it
+    should be answered deliberately, not by discovering the files and copying them. Nothing
+    has been vendored. If identity/attestation formalization is wanted, **that decision is
+    step one**, and it is an architecture question rather than a modeling one.
 13. **~~Vacuity, the last of it.~~ DONE 2026-09-06 — no thin positive remains.**
     `Register`'s correct-model atomicity was near-tautological because the five §6.2 writes
     landed in **one assignment**: `tree[h] \in {{}, FACETS}` restated the assignment and could
@@ -693,3 +774,43 @@ item 4.
       — which is the defect its own header names. The old verdict was an incidental side effect
       of the collapsed-write shape, so this is a control that went from failing for a
       neighbouring reason to failing for its stated one.
+14. **~~"`make specdrift` reports no drift" was published in eight canonical documents while
+    all three pinned files differed from live.~~ CLOSED 2026-09-06 — `make driftclaim`. The
+    finding is the mechanism, not the stale sentence.**
+
+    The live spec had reached **0.8.2.11** with the pin at **0.8.2** and **9 of 30 cited
+    sections moved**. Two sites stated it in the strongest available form — *"the pin matches
+    the live spec **byte-for-byte across all three normative files**"* (`README.md`,
+    `docs/STATUS.md`). Every one of the eight was true when written.
+
+    **Three failures compounded, and the third is the one worth keeping:**
+    - `make specdrift` is wired **`|| true`** — running it cannot fail, by design, because
+      drift is information rather than a build break. That design is still right.
+    - `make specdrift-gate`, which *does* fail on drift, is invoked by **no target** — not
+      `check`, not `matrix`, nothing. It has existed unreferenced since 2026-08-28.
+    - The prose was tied to **no derivation at all**. That is precisely the hole `make
+      runcount` closes for the matrix total and `make coverage` closes for the section set,
+      one artifact over — the third instance of D15's residue, found the same way.
+
+    **Why this one is not like the other two, which is the transferable part.** Every previous
+    stale-claim finding here went stale because *we* edited our own tree and missed a site: the
+    run total across two commits, the ledger counts across seven. This claim went stale
+    **when a sibling repo committed** — our tree untouched, every existing gate green, no diff
+    for a change-triggered gate to fire on. **A gate that runs only on our own diffs cannot
+    reach a claim whose input is outside the repo, in principle and not by oversight.** So
+    `driftclaim` is deliberately *not* in `check` or `matrix` (it also needs the sibling, the
+    `leanseam` constraint) and its own output says it must run at a release boundary and on a
+    schedule. Making it a pre-commit gate would have been the intuitive fix and the wrong one.
+
+    D13 asked of it: it asserts every declared site states the derived status, **and that every
+    site still states one at all** — silence fails, because deleting the sentence is otherwise
+    the cheapest way to green. Teeth-tested four ways by breaking it, including the direction
+    that does not feel like a failure (**a document claiming drift that does not exist**, the
+    `leanproof` both-directions lesson). Its first draft matched raw text and failed six of
+    nine sites on **markdown line-wrapping alone** — a gate whose green depends on where an
+    author's editor broke a line asserts the line breaks, not the claim; it matches a
+    normalized copy now.
+
+    What it does **not** assert, stated in the tool: that the prose *around* the anchor
+    describes the drift correctly, and that no undeclared site says otherwise. Same
+    acknowledged hole as `runcount`'s.

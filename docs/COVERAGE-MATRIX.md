@@ -24,7 +24,7 @@ another.**
 
 | Engine | Family | The question it answers | How it works | What it CANNOT do |
 |---|---|---|---|---|
-| **TLC** | model checker (explicit-state) | *Does any interleaving of concurrent activities break this property, at a small fixed size?* | Enumerates **every reachable state** of the model at a bound (2 peers, 3–4 requests) and checks each one. | Say anything beyond the bound. A defect needing 3 peers is invisible. |
+| **TLC** | model checker (explicit-state) | *Does any interleaving of concurrent activities break this property, at a small fixed size?* | Enumerates **every reachable state** of the model at a bound (2 peers — 2 and 3 for `Reentry`/`Core` — 3–4 requests) and checks each one. | Say anything beyond the bound. A defect needing 4 peers, or 3 on a non-ring topology, is invisible. |
 | **Apalache** | model checker (symbolic, SMT/Z3) | *Does the property hold in **every** reachable state, for runs of **any** length?* | Proves it **inductive**: `Init ⇒ Inv` and `Inv ∧ Next ⇒ Inv'`. If both discharge, no counterexample can exist. | **Liveness.** It does safety and induction by construction. Deadlock-freedom is not expressible. |
 | **Spin** | model checker (explicit-state, different formalism) | *Does an **independently written** model of the same design agree?* | Promela processes + C verifier. Models here are written **from the spec**, not translated from the TLA+. | Same bound limitation as TLC. Its value is independence, not reach. |
 | **ProVerif** | protocol verifier (symbolic, Dolev–Yao) | *Can an **active network attacker** with unbounded sessions produce a forgery/escalation/replay?* | Resolution over Horn clauses; unbounded sessions, attacker controls the network. | Crypto is **perfect and symbolic**. No bit-level cryptanalysis. Concurrency/liveness out of scope. |
@@ -311,10 +311,10 @@ The precise ceiling on each claim. Nothing here is hidden in a footnote elsewher
 
 | Result class | Exact bound | What that excludes |
 |---|---|---|
-| TLC safety | 2 peers; 3–4 concurrent requests; 3 store keys; 3 dispatch slots | a defect first appearing at 3+ peers or 5+ requests |
+| TLC safety | 2 peers (**2 and 3** for `Reentry`/`Core`, directed ring); 3–4 concurrent requests; 3 store keys; 3 dispatch slots | a defect first appearing at 4+ peers, at 3 on a non-ring topology, or at 5+ requests |
 | TLC liveness | same, and `Store` liveness runs at `NReq = 3` where safety runs at 4 | TLC's liveness graph exhausts the 2 GB cap at 4 — stated in both cfg headers |
 | Spin | same bounds, independent encoding; `-DNFAIR=3` for 8-process fairness | same as TLC; Spin adds independence, not reach |
-| Apalache | **unbounded in steps**, over the module's fixed peer/request set | not unbounded in *peers* — `Peers = {A,B}` is fixed, as in every module |
+| Apalache | **unbounded in steps**, over the module's fixed peer/request set | not unbounded in *peers* — the set is fixed at 2, or at 2 **and** 3 for `Reentry`/`Core` |
 | Apalache (`Bounds` only) | **also unbounded over the constants**, constrained only by §5.9's ratio | the one place the numbers are symbolic rather than chosen |
 | ProVerif / Tamarin | unbounded sessions, unbounded attacker, **perfect symbolic crypto** | cryptanalysis; timing/side channels; implementation bugs |
 | All of it | a property of a **model**, relative to the **5th wall** | see below |

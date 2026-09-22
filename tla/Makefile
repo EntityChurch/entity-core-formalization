@@ -128,6 +128,15 @@ TLC_WITNESS := \
 # handlers, because the tree is partial in flight BY DESIGN — so the control now fails on the
 # defect its own header names, "a half-built handler is dispatch-visible without its grant".
 # The old verdict was an incidental side effect of the collapsed-write shape.
+#
+# ONE ROW HERE IS NOT A DEFECT CONTROL. `CoreMapFree|CoreMapFreeCarried` is T4's classifier
+# (tla/CoreMapFree.tla): it asserts a component invariant, under the Core->component mapping,
+# over every TYPE-CORRECT valuation. Its required violation is GOOD NEWS — it exhibits a
+# valuation the mapping does not force, which is what proves the composed model's green on
+# the same formula (CoreRefines) is a fact about Core rather than about the mapping. It lives
+# in this table because "must be violated, on this named formula" is exactly what this
+# grader asserts, not because anything is broken. Its six MANUFACTURED siblings are in
+# TLC_GREEN_PAIRS, where a passing green is likewise the finding rather than the success.
 TLC_NEG := \
   "Reentry|ReentryBug|Deadlock reached" \
   "Reentry|ReentryFrameBug|Invariant FramesNotInterleaved is violated" \
@@ -168,7 +177,9 @@ TLC_NEG := \
   "ConnCodes|ConnCodesSeqReadingBug|Invariant PreHelloAuthIsInvalidNonce is violated" \
   "Bootstrap|BootstrapEarlyIndexBug|Invariant BootAllOrNothing is violated" \
   "Bootstrap|BootstrapGateBug|Invariant NoRegistrationBeforeBootstrap is violated" \
-  "Bootstrap|BootstrapConnectBug|Invariant ConnectPreAuthorized is violated"
+  "Bootstrap|BootstrapConnectBug|Invariant ConnectPreAuthorized is violated" \
+  "Core|CoreRefinesGateBug|Invariant RefinesConnDispatched is violated" \
+  "CoreMapFree|CoreMapFreeCarried|Invariant FreeConnDispatched is violated"
 
 .PHONY: tlc-green apalache-green green tlc-witness tlc-neg
 # D13 applied to the GREEN sweep, not only to the controls. This target used to grade on
@@ -200,10 +211,27 @@ tlc_asserts = grep -qE '^[[:space:]]*(INVARIANT|PROPERTY)' $(1).cfg || { \
 # window only, or attached it to the wrong operand still passes Revoke.cfg (which admits
 # delta = 1 and therefore EXPECTS a wider window) and fails here. D13 applied to a green
 # row: "the invariants hold" is satisfied by a model with the wrong window.
+#
+# THE CoreMapFreeMfg* ROWS ARE GREEN ROWS WHOSE GREEN IS THE FINDING, NOT THE SUCCESS.
+# They are T4's classifier (tla/CoreMapFree.tla): each asserts a component invariant, under
+# the Core->component refinement mapping, over EVERY type-correct valuation rather than the
+# reachable ones. Holding there means the invariant is a tautology of the MAPPING and says
+# nothing about Core — "MANUFACTURED". A violation would be the interesting outcome and
+# would move the row to CARRIED (which is CoreMapFreeCarried, in TLC_NEG for that reason).
+# So these six sit in the green sweep while asserting that six component properties are NOT
+# carried by the composed model. Anyone reading the gate table should read them that way
+# round; each cfg says so in its own header.
 TLC_GREEN_PAIRS := \
   "Reentry|Reentry3" \
   "Core|Core3" \
-  "Revoke|RevokeDeltaZero"
+  "Revoke|RevokeDeltaZero" \
+  "Core|CoreRefines" \
+  "CoreMapFree|CoreMapFreeMfgConnTokens" \
+  "CoreMapFree|CoreMapFreeMfgConnNonce" \
+  "CoreMapFree|CoreMapFreeMfgStoreRace" \
+  "CoreMapFree|CoreMapFreeMfgStoreUAF" \
+  "CoreMapFree|CoreMapFreeMfgStoreBounded" \
+  "CoreMapFree|CoreMapFreeMfgStoreReject"
 
 tlc-green:
 	@for s in $(TLC_GREEN); do \

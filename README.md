@@ -11,12 +11,14 @@ security** (Tamarin / ProVerif).
 > which files, and which SHA-256 each result is about. Restating a version number in prose
 > is how a repo ends up publishing three different answers to one question.
 >
-> Today `spec-data/MODELING-PIN` reads `v0.8.2` — spec version **0.8.2**, the current
-> published line. `make specdrift` reports **no drift**: the pin matches the live spec
-> byte-for-byte across all three normative files. Results here are reproducible statements
-> about the protocol as it stands today. The pin moves only as the last step of
-> re-validating the models against a new snapshot, never on a file copy, so this sentence
-> and the models cannot come apart silently — `make specdrift` is what keeps it honest.
+> Today `spec-data/MODELING-PIN` reads `v0.8.2` — spec version **0.8.2**. The live spec has
+> since advanced to **0.8.2.11**, and `make specdrift` reports **9 of 30 cited sections moved**.
+> Results here are reproducible statements about **0.8.2**, not about the protocol as it
+> stands today. The pin moves only as the last step of re-validating the models against a new
+> snapshot, never on a file copy — so a repo in this state is one doing the honest thing
+> slowly, not one that has lost track. `docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance
+> section by section; `make driftclaim` is what stops this sentence and the measurement from
+> coming apart, and it failed the day it was written.
 
 This is a sibling project to `entity-core-protocol` (the spec authority — it publishes
 the three specifications this repo models), `entity-core-keystone` (per-language peer
@@ -47,11 +49,19 @@ available for a delegated-authority protocol:
 
 Full picture: **`docs/ASSURANCE-MAP.md`**.
 
-## Status: current against protocol 0.8.2
+## Status: verified against protocol 0.8.2; live spec is 0.8.2.11
 
-The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **no drift**
-against the live spec — results here are statements about the protocol as it stands, not
-about a previous release.
+The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **9 of 30 cited
+sections moved** — so results here are statements about **0.8.2**, and the pin is behind the
+live spec by eleven point revisions.
+
+What that does and does not mean, measured rather than asserted
+(`docs/SPEC-DRIFT-ASSESSMENT.md`): **eight of the nine moved sections are additive** — new
+normative clarification that no model contradicts, and in two cases text that adopts a
+finding from this repo. The ninth, **§4.7**, is the one place the live text contradicts a
+model: `connection_sequence_error` moved from **400** to **409**, and `tla/ConnCodes.tla`
+transcribes 400. Nothing proved here is falsified, because every result is quoted against
+the pin — but a reader wanting a statement about 0.8.2.11 does not have one yet.
 
 ### What is verified, and by what
 
@@ -127,7 +137,7 @@ ProVerif toolchain) runs everything; the model checkers are all containerized.
 ```
 make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
-make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (268 runs)
+make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (277 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
 make coverage  # does the coverage claim match what the models actually cite?
@@ -157,7 +167,7 @@ AGENTS.md                 ← repo-specific agent guidance (build/test, layout, 
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
   COVERAGE-MATRIX.md      ← section x engine, the limits, what is NOT covered (start here)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 268-run matrix
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 277-run matrix
   STATUS.md               ← rolling status: where it is, what is next
   SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls
