@@ -21,9 +21,21 @@
 # gate prints is the UNEXAMINED obligation count, deliberately: the number a reader sees is the
 # size of the hole, not the fact that somebody wrote it down.
 
+# WIDENED 2026-09-16 from two sites to five. The other three were live canonical claims that
+# no gate read -- `docs/PROPERTIES.md`, `docs/FINAL-ASSURANCE-SUMMARY.md` and
+# `docs/status/FINDINGS-INDEX.md`, the last of which is the very table AGENTS.md D15's eleventh
+# shape names as the place a stale figure survives longest because its own header says not to
+# quote it. All three were found by grepping the NUMBER, which is the half of D14's rule that
+# catches a stale claim rather than a withdrawn one. The two dated 2026-09-14 documents (the
+# audit and the keystone routing note) are deliberately NOT declared: a figure a document states
+# about its own session is history, and a gate that makes you rewrite history to go green is the
+# defect `tools/runcount.py`'s first draft had.
 claim_sites = [
   "docs/COVERAGE-MATRIX.md",
+  "docs/FINAL-ASSURANCE-SUMMARY.md",
+  "docs/PROPERTIES.md",
   "docs/STATUS.md",
+  "docs/status/FINDINGS-INDEX.md",
 ]
 
 [track.attestation]
@@ -68,8 +80,8 @@ note        = ""
 [track.core]
 spec                 = "spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md"
 total                = 365
-cited_obligations    = 237
-uncited_obligations  = 128
+cited_obligations    = 235
+uncited_obligations  = 130
 
 [[track.core.uncited]]
 section     = "1.4"
@@ -81,7 +93,15 @@ note        = ""
 section     = "3.5"
 obligations = 10
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by pin-overridden models, and the SECTION-vs-OBLIGATION gap is widest here: of this
+row's ten obligations the `tamarin/Resolution*` theories transcribe exactly ONE -- *"Verification
+algorithms MUST compare `signer` against the expected identity hash ... MUST NOT skip this
+check"* -- and what they show about it is a LIMIT rather than a verification: the check is
+address-against-address, so it passes unchanged on a forged envelope and is not a defence
+against entity substitution. The invariant-pointer path, the lowercase-hex path rule and the
+cross-peer signature-discoverability MUST are modeled nowhere.
+"""
 
 [[track.core.uncited]]
 section     = "6.9a"
@@ -132,7 +152,15 @@ note        = ""
 section     = "1.8"
 obligations = 6
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by pin-overridden models, and this is the section the retarget exists for: item 1's
+RESOLUTION INTEGRITY obligation, with its two conformant mechanisms, is 0.8.2.23 text and is NOT
+IN THE PIN AT ALL. `tamarin/Resolution.{pv,spthy}` and `tamarin/ResolutionDiscard.{pv,spthy}`
+transcribe item 1 at `v0.8.2.25`, one theory per mechanism, each with its own control.
+ITEMS 2-5 ARE MODELED NOWHERE -- trust-validated-hash, store-original, forward-original,
+preserve-unknown-fields -- which is most of this row's six obligations and is why the section is
+not credited. `docs/LEAN-SEAM.md` O23.
+"""
 
 [[track.core.uncited]]
 section     = "9.0"
@@ -186,7 +214,12 @@ note        = ""
 section     = "1.2"
 obligations = 2
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by pin-overridden models (the `tamarin/Resolution*` family at `v0.8.2.25`), so the
+row stays UNEXAMINED. Those theories ASSUME this section rather than verify it: `h` is a free
+one-way injective symbol, which is §1.2's address space at the §7.3 crypto wall. Collision
+resistance and format-code interpretation are assumptions of that model, not results of it.
+"""
 
 [[track.core.uncited]]
 section     = "1.3"
@@ -204,13 +237,41 @@ note        = ""
 section     = "3.1"
 obligations = 2
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by pin-overridden models. THE PIN'S OWN TEXT HERE IS THE SUBJECT: *"The content_hash
+MUST match the map key"*, an obligation on the ENVELOPE with no enforcing operation on the
+receiver and no vector -- D17's trigger -- which `entity-core-protocol` 0.8.2.23 closed as a
+capability and identity forgery. `tamarin/ResolutionBug.{pv,spthy}` exhibits that forgery and
+`tamarin/Resolution.{pv,spthy}` shows the repair closing it, both against `v0.8.2.25`. So this
+section has been read against the models as closely as any in the repo and is STILL UNEXAMINED
+under this gate's definition, because nothing verifies the PIN's reading -- there is no
+enforcing operation in the pin's reading to verify. Audit:
+docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md.
+"""
 
 [[track.core.uncited]]
 section     = "3.9"
 obligations = 2
 disposition = "UNEXAMINED"
 note        = ""
+
+[[track.core.uncited]]
+section     = "4.7"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = """
+NEW ROW 2026-09-16, AND IT IS A PUBLISHED NUMBER GETTING WORSE FOR THE RIGHT REASON. §4.7 was
+counted as examined until today, on the strength of `tla/ConnCodes.tla`, its Apalache port and
+`spin/conncodes.pml` -- all three of which were RETARGETED to `spec-data/v0.8.2.25` on
+2026-09-15, because `connection_sequence_error` moved 400 -> 409 at 0.8.2.4 and the pin
+transcribes the superseded status. `make coverage` removed §4.7 from Matrix A that day and said
+so out loud (the core pair fell 29 -> 27); this gate went on counting its obligations as
+examined for a further day, because `measure()` walked every model without the `model_pins`
+partition `coverage-check.py` already applied. Two gates over one artifact, disagreeing
+silently. Fixed in `tools/obligations.py`.
+The section IS modeled, thoroughly and on three engines, against `v0.8.2.25`. Nothing here
+verifies it AS THE PIN STATES IT, and that is what this row records.
+"""
 
 [[track.core.uncited]]
 section     = "6.7"
@@ -228,7 +289,13 @@ note        = ""
 section     = "1.1"
 obligations = 1
 disposition = "UNEXAMINED"
-note        = ""
+note        = """
+Cited ONLY by pin-overridden models (`tamarin/ResolutionDiscard.{pv,spthy}`,
+`ResolutionDiscardBug.pv`, at `spec-data/v0.8.2.25`), so nothing here verifies it AS THE PIN
+STATES IT and the row stays UNEXAMINED. What those models DO use is the materialized form
+`{type, data, content_hash}` this section requires: mechanism (b) of §1.8 item 1 addresses by
+that field, which is the whole reason it needs validating.
+"""
 
 [[track.core.uncited]]
 section     = "1.11"

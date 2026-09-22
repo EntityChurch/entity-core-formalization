@@ -62,17 +62,25 @@ tamarin-interactive:
 # kill switch, see PHASE2-FORMALIZATION-REPORT.md). Bug controls run separately.
 # Added at 0.8.2: Malformed (§5.6 CAP-6a unrepresentable-temporal-field ingest) and
 # ChainTopology (§5.8 conformance topology — a NON-ISSUING third-party verifier).
+# Added 2026-09-16: `Resolution` and `ResolutionDiscard` are the two conformant mechanisms
+# §1.8 item 1 offers for RESOLUTION INTEGRITY — the `included`-map indirection, the abstraction
+# every other theory in this directory makes and `docs/LEAN-SEAM.md` O23 books. They are the
+# first theories here that give the adversary the ADDRESS as well as the term. Both are pinned
+# to `spec-data/v0.8.2.25` (TRACKS.toml [track.core.model_pins]): the obligation on the
+# RECEIVER does not exist at the core pin, where §3.1 states only the envelope property.
 PV_GREEN := Binding BindingReplay Caveats ChainTopology DeepChain DeepChainN DepthBound \
-            Expiry Malformed Multisig MultisigKN NoEscalation PersistentRecheck Revoke Unforge
+            Expiry Malformed Multisig MultisigKN NoEscalation PersistentRecheck \
+            Resolution ResolutionDiscard Revoke Unforge
 TM_GREEN := Binding Caveats ChainTopology DeepChain DeepChainN DepthBound \
-            Expiry Malformed Multisig MultisigKN NoEscalation PersistentRecheck Revoke Unforge
+            Expiry Malformed Multisig MultisigKN NoEscalation PersistentRecheck \
+            Resolution ResolutionDiscard Revoke Unforge
 
 # NEGATIVE CONTROLS. Each is graded against its declared verdict table below (PV_NEG_EXPECT /
 # TM_NEG_EXPECT) — NOT against "did something fail", which is what the earlier criterion asked
 # and which the corresponding SECURE theory also satisfied. See the DECLARED VERDICTS header.
 PV_NEG := BindingBug BindingReplayBug CaveatsBug ChainTopologyBug DeepChainBug DeepChainNBug \
           DepthBoundBug ExpiryBug MalformedBug MultisigBug MultisigKNBug NoEscalationBug \
-          PersistentRecheckBug RevokeBug UnforgeBug
+          PersistentRecheckBug ResolutionBug ResolutionDiscardBug RevokeBug UnforgeBug
 # `BindingReplayBug` was on disk but in NO gate list until the second gate audit — so
 # `Binding.spthy`'s `no_replay` lemma, which the green slice counts and the reports quote, had
 # **no negative control running anywhere in the matrix**. Its control existed and worked; it
@@ -82,7 +90,7 @@ PV_NEG := BindingBug BindingReplayBug CaveatsBug ChainTopologyBug DeepChainBug D
 # "15 ProVerif / 14 Tamarin" split is that packaging difference, not a coverage gap.)
 TM_NEG := BindingBug BindingReplayBug CaveatsBug ChainTopologyBug DeepChainBug DeepChainNBug \
           DepthBoundBug ExpiryBug MalformedBug MultisigBug MultisigKNBug NoEscalationBug \
-          PersistentRecheckBug RevokeBug UnforgeBug
+          PersistentRecheckBug ResolutionBug ResolutionDiscardBug RevokeBug UnforgeBug
 
 # ============================================================================================
 # DECLARED VERDICTS — the grading tables for both provers, both slices.
@@ -145,6 +153,10 @@ PV_EXPECT := \
   "NoEscalation|AcceptedDeleg\([^,]*,narrow\(scopeAdmin\)\)|false" \
   "PersistentRecheck|AcceptLate|true" \
   "PersistentRecheck|AcceptEarly|false" \
+  "Resolution|^RESULT event\(AcceptedLeaf|true" \
+  "Resolution|^RESULT not event\(AcceptedLeaf|false" \
+  "ResolutionDiscard|^RESULT event\(AcceptedLeaf|true" \
+  "ResolutionDiscard|^RESULT not event\(AcceptedLeaf|false" \
   "Revoke|Accept\(pk\(skGr\[\]\)\)|true" \
   "Revoke|Accept\(pk\(skGo\[\]\)\)|false" \
   "Unforge|^RESULT event\(AcceptedRoot|true" \
@@ -190,6 +202,10 @@ PV_NEG_EXPECT := \
   "NoEscalationBug|AcceptedDeleg\([^,]*,narrow\(scopeAdmin\)\)|false" \
   "PersistentRecheckBug|AcceptLate|false" \
   "PersistentRecheckBug|AcceptEarly|false" \
+  "ResolutionBug|^RESULT event\(AcceptedLeaf|false" \
+  "ResolutionBug|^RESULT not event\(AcceptedLeaf|false" \
+  "ResolutionDiscardBug|^RESULT event\(AcceptedLeaf|false" \
+  "ResolutionDiscardBug|^RESULT not event\(AcceptedLeaf|false" \
   "RevokeBug|Accept\(pk\(skGr\[\]\)\)|false" \
   "RevokeBug|Accept\(pk\(skGo\[\]\)\)|false" \
   "UnforgeBug|^RESULT event\(AcceptedDeleg|false"
@@ -314,6 +330,10 @@ TM_EXPECT := \
   "NoEscalation|accepted_reachable|verified" \
   "PersistentRecheck|revoked_never_passes|verified" \
   "PersistentRecheck|reused_twice|verified" \
+  "Resolution|no_unissued_leaf|verified" \
+  "Resolution|accepted_reachable|verified" \
+  "ResolutionDiscard|no_unissued_leaf|verified" \
+  "ResolutionDiscard|accepted_reachable|verified" \
   "Revoke|revoked_never_passes|verified" \
   "Revoke|accept_reachable|verified" \
   "Unforge|root_unforgeable|verified" \
@@ -353,6 +373,10 @@ TM_NEG_EXPECT := \
   "NoEscalationBug|accepted_reachable|verified" \
   "PersistentRecheckBug|revoked_never_passes|falsified" \
   "PersistentRecheckBug|reused_twice|verified" \
+  "ResolutionBug|no_unissued_leaf|falsified" \
+  "ResolutionBug|accepted_reachable|verified" \
+  "ResolutionDiscardBug|no_unissued_leaf|falsified" \
+  "ResolutionDiscardBug|accepted_reachable|verified" \
   "RevokeBug|revoked_never_passes|falsified" \
   "RevokeBug|accept_reachable|verified" \
   "UnforgeBug|deleg_unforgeable|falsified"

@@ -15,7 +15,7 @@ exactly one **track**, declared in [`TRACKS.toml`](TRACKS.toml) and gated by `ma
 
 | Track | Subject | Spec owner | Status |
 |---|---|---|---|
-| **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 95 model files, 326 runs, pinned at `spec-data/v0.8.2` (3 of them at `v0.8.2.25`) |
+| **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 103 model files, 334 runs, pinned at `spec-data/v0.8.2` (11 of them at `v0.8.2.25`) |
 | **attestation** | The signed-edge substrate: `attesting → attested`, four mandatory indexes, the supersedes chain | `entity-system-architecture` | **modeled** — 3 modules (§5.7 index invariants; §4.3/§5.1–5.3 liveness and the chain walks; §4.3's revocation recursion), 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
 | **quorum** | K-of-N signer rosters; `quorum-update` / `quorum-publish`; `current_signer_set(as_of)` | `entity-system-architecture` | **modeled** — 3 modules (§4.2 the signer-set resolver and its clock; §4.2/§4.2.1 the arrival-time trust model; §4.1 K-of-N), 100 runs, **TLC and Apalache on all three**, pinned at `spec-data/ext-quorum-v1.2` |
 | **identity** | Cert chains, rotation by handoff, rotation by recovery, retirement | `entity-system-architecture` | **modeled** — 3 modules (§6.3 the arrival convergence point; §9.4 compromise-recovery validation; §3.6 topology dispatch and §9.2 key confinement), 139 runs, **TLC and Apalache on all three** — no module on this track is left on a single engine, pinned at `spec-data/ext-identity-v3.10` |
@@ -185,7 +185,7 @@ ProVerif toolchain) runs everything; the model checkers are all containerized.
 ```
 make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
-make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (633 runs)
+make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (641 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
 make trackcheck # which proof track is each model file on? (TRACKS.toml)
@@ -219,7 +219,7 @@ AGENTS.md                 ← repo-specific agent guidance (build/test, layout, 
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
   COVERAGE-MATRIX.md      ← section x engine, the limits, what is NOT covered (start here)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 633-run matrix
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 641-run matrix
   STATUS.md               ← rolling status: where it is, what is next
   SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls

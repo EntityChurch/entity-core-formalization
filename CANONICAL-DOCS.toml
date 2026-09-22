@@ -68,7 +68,7 @@ group = "Overview"
 [[doc]]
 path  = "docs/FINAL-ASSURANCE-SUMMARY.md"
 title = "Final Assurance Summary (capstone)"
-blurb = "What was proved, how far it goes, what it deliberately does not say; the 633-run re-verification matrix."
+blurb = "What was proved, how far it goes, what it deliberately does not say; the 641-run re-verification matrix."
 group = "Assurance"
 
 [[doc]]

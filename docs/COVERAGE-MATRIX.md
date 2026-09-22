@@ -290,8 +290,8 @@ originated findings on, which is the argument against reading a productive track
 one. The gate requires a written disposition for every uncited obligation-bearing section from
 a closed vocabulary (`modeled-elsewhere` / `out-of-scope` with a reason / `UNEXAMINED`), and it
 prints the **UNEXAMINED** total as its headline so the number a reader sees is the size of the
-hole rather than the fact that someone wrote it down. On `core`, **128 of 365 core obligations
-sit in sections no model cites**. Of those, **120 of 365 core obligations are UNEXAMINED**; the
+hole rather than the fact that someone wrote it down. On `core`, **130 of 365 core obligations
+sit in sections no model cites**. Of those, **122 of 365 core obligations are UNEXAMINED**; the
 remaining 8 are §9.1, an index that restates obligations stated normatively elsewhere.
 
 **What it still does not assert, stated here because that is the whole lesson of this
@@ -309,14 +309,20 @@ Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
 ## 3f. Matrix A-OFFPIN — sections modeled against a NEWER snapshot than the core pin
 
 ⛔ **These rows are NOT part of the coverage pair above, and the pair went DOWN because of
-them.** `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` transcribe
-**`spec-data/v0.8.2.25`**, not the core pin `v0.8.2` — declared in `TRACKS.toml` under
-`[track.core.model_pins]`, marked in each file, and gated by `make trackcheck` §E in both
-directions. `make coverage` holds their citations out of Matrix A and requires them here
-instead; `make specdrift` measures them against `.25`.
+them.** **Eleven** model files transcribe **`spec-data/v0.8.2.25`** rather than the core pin
+`v0.8.2` — `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` (the
+`conncodes` subject, 2026-09-15) and the eight `tamarin/Resolution*` files (the `resolution`
+subject, 2026-09-16). Each is declared in `TRACKS.toml` under `[track.core.model_pins]`, marked
+in the file itself, and gated by `make trackcheck` §E in both directions. `make coverage` holds
+their citations out of Matrix A and requires them here instead; `make specdrift` measures them
+against `.25`.
 
-**Why they moved off the pin.** §4.11 *does not exist* at `v0.8.2`, and §4.7's out-of-order
-row carries a different status there (400 at the pin, **409** since 0.8.2.4). A model cannot
+**Why they moved off the pin — and the two subjects moved for DIFFERENT reasons.** For
+`conncodes` a section MOVED: §4.11 does not exist at `v0.8.2`, and §4.7's out-of-order row
+carries a different status there (400 at the pin, **409** since 0.8.2.4). For `resolution` an
+obligation DID NOT EXIST: §3.1 at the pin states the map-key binding as a property of the
+ENVELOPE and names no operation on the receiver, and the receiver's obligation — with the two
+mechanisms that discharge it — arrived as §1.8 item 1 at 0.8.2.23. Either way a model cannot
 transcribe both texts, and a model transcribing the newer one is not evidence about the older.
 
 ⭐ **The cost is the honest part. §4.7 and §5.2a were Matrix A rows until 2026-09-15 and are
@@ -329,9 +335,29 @@ reads as though the risk was handled.*
 
 | § | area | property class | TLC | Apalache | Spin | ProVerif | Tamarin |
 |---|---|---|---|---|---|---|---|
+| **1.1** | **entity structure** | **the materialized form `{type, data, content_hash}` a (b)-mechanism peer ingests** | | | | ● | ● |
+| **1.2** | **content addressing** | **the address is `h({type, data})`; `content_hash` itself is not hashed** | | | | ● | ● |
+| **1.8** | **entity fidelity — RESOLUTION INTEGRITY** | **an entity used in an authority decision is resolved only through an address verified against its content; BOTH conformant mechanisms, each with its own control** | | | | ● | ● |
+| **3.1** | **envelope / `included` map** | **the map-key ↔ `content_hash` binding, as a property an ACTIVE ATTACKER cannot violate** | | | | ● | ● |
+| **3.5** | **`system/peer`, `system/signature`** | **the normative `signer` check is address-level and is NOT a defence against entity substitution** | | | | ● | ● |
 | **4.7** | **connection error codes** | **MUST-emit reason-code contract; status per code; state conflict is 409; address before authentication** | ● | ● | ● | | |
 | **4.11** | **pre-admission refusals** | **the coded-frame obligation; drop and bare-close as DISTINCT failures; cause → code** | ● | ● | ● | | |
 | **5.2a** | **verdict-to-status enumeration** | **reason codes distinct** | ● | ● | ● | | |
+
+⭐ **The five §1/§3 rows are the `resolution` subject, added 2026-09-16, and they are the first
+rows in this document that exist because a defect was found by somebody else.** `0.8.2.23`
+closed a capability and identity forgery that turned on the `included`-map indirection; no
+model here could see it, because every prover theory took capabilities and chain links as TERMS
+off `In(...)` and there was therefore no address to forge (`docs/LEAN-SEAM.md` **O23**).
+`tamarin/Resolution.{pv,spthy}` and `tamarin/ResolutionDiscard.{pv,spthy}` give the adversary
+the ADDRESS as well as the term, one per conformant mechanism, each with its own control.
+
+⛔ **What these rows do NOT credit, stated here because §3a is the record of what happens when a
+row's label outruns its models.** They say nothing about SCOPE — that the leaf an attacker can
+mint is worth minting is §5.6's property and `NoEscalation`'s — nothing about §5.5's MULTI-SIG
+arms, whose per-constituent `included[candidate]` lookups are in this defect's class and are
+**not modeled**, and nothing about the local content-store arm of the resolver. The §1.8 row's
+two dots are two engines on two mechanisms, not five lookup sites on a whole section.
 
 ⛔ **§4.11 arm (f) is NOT in the row above.** The conformance paragraph names *"a pre-admission
 refusal arriving while an admitted request is in flight on the same connection MUST NOT cost

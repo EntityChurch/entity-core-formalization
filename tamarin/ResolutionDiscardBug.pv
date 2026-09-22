@@ -1,0 +1,155 @@
+(* NEGATIVE CONTROL for ResolutionDiscard.pv — MECHANISM (b) WITHOUT §1.8 ITEM 1 AT ONE
+ * INGRESS. ProVerif.
+ *
+ * MODELING-PIN-OVERRIDE: v0.8.2.25
+ *
+ * THIS CONTROL IS THE ONE THE SPEC ASKED FOR IN WORDS AND NOBODY HAS RUN.
+ * §1.8 item 1: "⚠ Mechanism (b) depends on this item running at EVERY ingress and MUST NOT be
+ * adopted without it: addressing by `content_hash` is safe only because that field has itself
+ * been validated, and a peer that skips the validation pass has re-created the defect one
+ * level down, with the address an unvalidated wire field again."
+ *
+ * The injected defect is ONE MISSING EQUATION, at ONE of five ingress sites:
+ *     if cGranterL = h(bGranterL) then
+ * is gone. The other four entries are still validated on receipt, the resolution step still
+ * addresses "exclusively by content_hash", and the peer still implements mechanism (b) in
+ * every other respect. It differs from `ResolutionDiscard.pv` by nothing else.
+ *
+ * WHAT IT MEASURES, AND WHY THE WORD "EVERY" IS LOAD-BEARING RATHER THAN EMPHATIC.
+ * The property this falsifies is the SAME query `ResolutionBug.pv` falsifies, and the attack
+ * is the same attack — the adversary's own `system/peer` entity answering the lookup at the
+ * honest granter's address, every address-level check passing, no honest key used. The only
+ * difference is which wire field carried the unvalidated address: a map KEY in the pre-repair
+ * algorithm, the entity's own `content_hash` FIELD here. That is precisely what "the defect
+ * one level down" means, and a peer in this state is INDISTINGUISHABLE ON THE WIRE from
+ * `ResolutionDiscard.pv`'s: both answer identically on every well-formed envelope, and the
+ * envelopes that separate them are exactly the envelopes an honest peer never sends.
+ *
+ * SO IT IS THE SHAPE §1.8's OWN MECHANISM CHOICE CREATES: (a) is one check at one site and
+ * cannot be partially adopted; (b) is a check at N sites and can be adopted at N-1 of them,
+ * with no verdict, no error and no conformance vector separating the two. That asymmetry
+ * between the two "MUST implement at least one" arms is not stated in the section, and it is
+ * what `docs/status/ROUTING-2026-09-16-*` is about. This control is its evidence.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+(* ---- symbolic signatures (§7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* ---- content addressing (§1.2) ---- *)
+fun h(bitstring): bitstring.
+
+(* ---- entities (§3.5, §3.6) ---- *)
+fun peerE(pkey): bitstring [data].
+fun capE(bitstring, bitstring, bitstring): bitstring [data].
+fun sigE(bitstring, bitstring, bitstring): bitstring [data].
+const noparent: bitstring [data].
+
+(* THE MATERIALIZED FORM (§1.1, §3.1). `ent(body, ch)` is `{type, data, content_hash}`: the
+ * structural root plus the hash it CLAIMS to have. §1.1: "All entities MUST include
+ * content_hash". §1.2: "Input: {type, data} only. content_hash itself is NOT hashed" — which
+ * is why `h` here applies to the body and never to the `ent`. Mechanism (b) addresses by the
+ * second component; §1.8 item 1 is what makes the second component trustworthy. *)
+fun ent(bitstring, bitstring): bitstring [data].
+
+free skP: skey [private].
+free skA: skey [private].
+
+event IssuedLeaf(bitstring, bitstring).
+event AcceptedLeaf(bitstring, bitstring).
+
+(* (1) NO LEAF WITHOUT ITS GRANTER'S KEY — the same property `Resolution.pv` states, so that
+ * "mechanism (b) is as good as mechanism (a)" is a comparison of two verdicts on ONE query
+ * rather than two claims about two queries.
+ * EXPECTED VERDICT: `is true`. *)
+query ga: bitstring, gb: bitstring;
+  event(AcceptedLeaf(ga, gb)) ==> event(IssuedLeaf(ga, gb)).
+
+(* (2) NON-VACUITY — and it carries more weight here than in the (a) twin, because this
+ * verifier has FIVE more destructuring `let`s in front of the first security check and a
+ * theory that decodes nothing accepts nothing.
+ * EXPECTED VERDICT: `is false` — the reachable event falsifies the `not event(...)` form. *)
+query ga: bitstring, gb: bitstring; event(AcceptedLeaf(ga, gb)).
+
+(* ---- honest principals. Identical to Resolution.pv except that everything a peer PUBLISHES
+ * is published in materialized form as well, because that is what a (b) peer ingests. ---- *)
+
+let Proot(addrP: bitstring, addrA: bitstring) =
+  let rootcap = capE(addrP, addrA, noparent) in
+  out(net, (rootcap, sigE(h(rootcap), addrP, sign(h(rootcap), skP)))).
+
+let Adeleg(addrA: bitstring) =
+  in(net, (rootcap: bitstring, gb: bitstring));
+  let capE(gaR, =addrA, =noparent) = rootcap in
+  let leaf = capE(addrA, gb, h(rootcap)) in
+  event IssuedLeaf(addrA, gb);
+  out(net, (leaf, sigE(h(leaf), addrA, sign(h(leaf), skA)))).
+
+(* ---- THE VERIFIER, MECHANISM (b) ---- *)
+let VerifierDiscardKeyNoValidate(localPeerE: bitstring) =
+  in(net, ( leaf: bitstring, leafSig: bitstring, rootSig: bitstring,
+            eParent: bitstring, eGranterL: bitstring, eGranteeL: bitstring,
+            eGranterR: bitstring, eGranteeR: bitstring ));
+
+  (* ===== THE DECODE BOUNDARY — §1.8 item 1, "validate on receipt" =====
+   * Every ingested entity is checked against its own declared hash, ONCE, here. There is no
+   * wire key in this theory to drop: dropping it is modeled by its absence. *)
+  let ent(bParent,   cParent)   = eParent   in  if cParent   = h(bParent)   then
+  let ent(bGranterL, cGranterL) = eGranterL in  (* <-- ITEM 1 SKIPPED AT THIS INGRESS *)
+  let ent(bGranteeL, cGranteeL) = eGranteeL in  if cGranteeL = h(bGranteeL) then
+  let ent(bGranterR, cGranterR) = eGranterR in  if cGranterR = h(bGranterR) then
+  let ent(bGranteeR, cGranteeR) = eGranteeR in  if cGranteeR = h(bGranteeR) then
+
+  (* ===== RESOLUTION — address exclusively by the VALIDATED content_hash =====
+   * Each lookup site matches the address the chain names against the `content_hash` of the
+   * entity offered, and uses the entity's BODY. This is the arm §5.2a describes as the one
+   * where a mis-addressed entry is never detected as such: "the lookup simply MISSES, and a
+   * miss inherits the row of the step that missed." In this theory a miss is a stuck branch,
+   * which is the correct model of a DENY and says nothing about which row it is. *)
+  let capE(gaL, gbL, pL) = leaf in
+  if pL   = cParent   then
+  if gaL  = cGranterL then
+  if gbL  = cGranteeL then
+
+  let capE(gaR, gbR, =noparent) = bParent in
+  if gaR  = cGranterR then
+  if gbR  = cGranteeR then
+
+  (* Root trust (§5.5) — against the RESOLVED BODY, as in the (a) twin. *)
+  if bGranterR = localPeerE then
+
+  (* Per-level validation, root link then leaf link (§5.5, §3.5 signer check). *)
+  let sigE(=h(bParent), =gaR, sbR) = rootSig in
+  let peerE(kR) = bGranterR in
+  let (=h(bParent)) = checksign(sbR, kR) in
+
+  let sigE(=h(leaf), =gaL, sbL) = leafSig in
+  let peerE(kL) = bGranterL in
+  let (=h(leaf)) = checksign(sbL, kL) in
+
+  (* Delegation linkage (§5.5). *)
+  if gbR = gaL then
+  event AcceptedLeaf(gaL, gbL).
+
+process
+  let addrP = h(peerE(pk(skP))) in
+  let addrA = h(peerE(pk(skA))) in
+  out(net, pk(skP));
+  out(net, pk(skA));
+  out(net, peerE(pk(skP)));
+  out(net, peerE(pk(skA)));
+  (* The materialized forms, which is how a (b) peer receives them (§1.1: entities carry
+   * content_hash at every protocol boundary). Publishing the WELL-FORMED ones is what the
+   * honest path needs; the attacker's ability to build ILL-formed ones is `ent`'s being a
+   * public constructor, which is what the Bug twin turns on. *)
+  out(net, ent(peerE(pk(skP)), h(peerE(pk(skP)))));
+  out(net, ent(peerE(pk(skA)), h(peerE(pk(skA)))));
+  ( !Proot(addrP, addrA) | !Adeleg(addrA) | !VerifierDiscardKeyNoValidate(peerE(pk(skP))) )

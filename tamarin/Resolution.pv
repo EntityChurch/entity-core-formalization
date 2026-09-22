@@ -1,0 +1,225 @@
+(* NEW THEORY — RESOLUTION INTEGRITY: the `included`-map indirection, with the ADDRESS in
+ * the adversary's hands as well as the term. ProVerif.
+ *
+ * MODELING-PIN-OVERRIDE: v0.8.2.25
+ *   The property this theory is about does not exist at the core pin. `spec-data/v0.8.2`
+ *   §3.1 states "The content_hash MUST match the map key" as a property of the ENVELOPE and
+ *   names no operation on the receiver; the obligation on the RECEIVER — and the two
+ *   mechanisms that discharge it — arrived at 0.8.2.23 and is §1.8 item 1 at this snapshot.
+ *   Transcribing a repair against a snapshot that does not contain it is not possible, so
+ *   this file and its three siblings are declared in `TRACKS.toml` [track.core.model_pins]
+ *   and measured against `spec-data/v0.8.2.25` by `make specdrift`. The whole SUBJECT moves,
+ *   never one file (`AGENTS.md`, "RETARGET A WHOLE SUBJECT").
+ *
+ * WHY THIS THEORY EXISTS, AND WHY IT IS LATE.
+ * Every other theory in this directory takes capabilities, signatures and identities as
+ * TERMS off `In(...)`. The verifier destructures what it received. That is a faithful model
+ * of everything the chain *says* and no model at all of how the verifier *finds* it — and
+ * §5.2 / §5.5 do not receive entities, they RESOLVE them:
+ *
+ *     author        = included[execute.data.author]          (§5.2 step 2)
+ *     capability    = included[execute.data.capability]      (§5.2 step 3)
+ *     chain         = collect_authority_chain(cap, fn(hash) { included[hash] })   (§5.5)
+ *     granter       = included[current.data.granter]         (§5.5 per-level)
+ *     root_granter  = included[root.data.granter]            (§5.5 root trust)
+ *     grantee_id    = included[current.data.grantee]         (§5.5 PR-3)
+ *
+ * `included` is a wire-supplied map. Until 0.8.2.23 nothing in the normative algorithm
+ * verified that the entity found under a key IS the entity that key names, so an observer
+ * of any capability chain could mint a leaf off it up to the parent's scope WITHOUT the
+ * grantee's key: put your own `system/peer` entity under the honest granter's address, and
+ * every ADDRESS-level check in §5.5 still passes — the addresses are the honest ones — while
+ * `verify_signature(sig, granter)` runs against your key. `docs/LEAN-SEAM.md` O23 books that
+ * abstraction; this file is the first model in the repo that does not make it.
+ *
+ * THE FOUR THEORIES AND WHAT EACH ONE IS FOR.
+ *   Resolution.pv           mechanism (a) BIND THE KEY   — §1.8 item 1, the RECOMMENDED arm
+ *   ResolutionBug.pv        no binding at all            — the pre-0.8.2.23 algorithm
+ *   ResolutionDiscard.pv    mechanism (b) DISCARD THE KEY — §1.8 item 1's second arm
+ *   ResolutionDiscardBug.pv mechanism (b) WITHOUT item 1 — the ⚠ the section states in words
+ *
+ * `ResolutionBug` is an ORDINARY NEGATIVE CONTROL and not a finding row, for the reason
+ * `tla/Makefile:TLC_FINDING` gives: its defect is FIXED UPSTREAM. Modeling the pin's reading
+ * here would be a finding whose retirement condition had already fired before it was written.
+ *
+ * WHAT IS IN THE MODEL (§5.5, single-sig, two links):
+ *   - `included` as an adversary-chosen resolution for EVERY lookup site, not as a term;
+ *   - `content_hash` as a real address: `h/1`, one-way and injective (the §7.3 crypto wall
+ *     extended to hashing — collision resistance is ASSUMED here, not proved);
+ *   - the address-level checks §5.5 actually makes: `sig.data.signer == current.data.granter`,
+ *     `parent.data.grantee == current.data.granter`, parent resolution by `data.parent`;
+ *   - §5.5 root trust, and PR-3 grantee resolution;
+ *   - §1.8 item 1 mechanism (a), the whole subject of this file.
+ *
+ * WHAT IS ABSTRACTED AWAY (D11 — an unstated abstraction is how a green proof coexists with
+ * a live attack, which is the lesson this theory exists because of):
+ *   - SCOPE. The minted leaf's authority is "up to the parent's scope"; that the parent's
+ *     scope is worth stealing is §5.6's subject and `NoEscalation.pv`'s. This theory proves
+ *     the leaf is MINTABLE, not what it is worth. The two compose; neither states the other.
+ *   - DEPTH. Two links, fixed. `DepthBound.pv` owns `max_depth` and `collect_authority_chain`'s
+ *     loop; nothing here bounds a walk.
+ *   - MULTI-SIG. §5.5's M3/M4/M6 arms (`granter is a multi-granter`) are not modeled;
+ *     `Multisig.pv` / `MultisigKN.pv` own the threshold logic. THE MULTI-SIG ROOT ARM RESOLVES
+ *     `included[candidate]` PER CONSTITUENT AND IS THEREFORE IN THIS DEFECT'S CLASS — it is
+ *     out of THIS file's scope, not out of the class, and `docs/LEAN-SEAM.md` O23 says so.
+ *   - REVOCATION and TEMPORAL validity — `Revoke.pv`, `Expiry.pv`.
+ *   - THE §5.4 MATCHER — Lean's, as everywhere here.
+ *   - The local CONTENT STORE arm of `check_creator_authority`'s resolver. §5.5 says the two
+ *     arms "differ in trust ... the content store is content-addressed locally, so its address
+ *     is verified by construction". Only the `included` arm is modeled, which is the arm that
+ *     is not.
+ *
+ * THE ROOT-TRUST READING IS A DECISION AND IT IS DECLARED HERE (D12 — never paraphrase a spec
+ * claim from a summary into a modelling assumption). §5.5 writes the root check as
+ * `root_granter.data.peer_id != local_peer_id`. At v7.65 `system/peer` HAS NO `peer_id` FIELD
+ * — §3.5 declares `{public_key, key_type}` and says outright "peer_id MUST NOT appear in the
+ * system/peer entity's hashable basis". The transcription here is the only reading that has a
+ * referent: the RESOLVED ENTITY is the local peer's identity entity. That reading is what puts
+ * the root check in this defect's class at all; an address comparison
+ * (`hash_equals(root.data.granter, local_peer_hash)`) would be immune to entity substitution
+ * and is a DIFFERENT algorithm. Both readings satisfy the sentence. See the routing note.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+(* ---- symbolic signatures (§7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* ---- content addressing (§1.2) ----
+ * `h` is a free constructor with no destructor: the adversary can COMPUTE h(m) for any m it
+ * knows (hashing is public — it must be, or the attack below could not be expressed), and
+ * cannot invert it or find a collision. That is the §1.2 address space at the §7.3 wall.
+ * An address in this theory is therefore exactly what the protocol says it is: h of the
+ * entity's `{type, data}`, with `content_hash` itself not hashed (§1.2). *)
+fun h(bitstring): bitstring.
+
+(* ---- entities (§3.5, §3.6) ---- *)
+fun peerE(pkey): bitstring [data].                       (* system/peer {public_key} — v7.65 *)
+fun capE(bitstring, bitstring, bitstring): bitstring [data].
+    (* system/capability/token {granter: hash, grantee: hash, parent: hash} *)
+fun sigE(bitstring, bitstring, bitstring): bitstring [data].
+    (* system/signature {target: hash, signer: hash, signature: bytes} *)
+const noparent: bitstring [data].                        (* data.parent is null — the root link *)
+
+(* ---- the two honest peers ----
+ * P is the VERIFIER'S OWN peer: the local peer, and therefore the sole root authority for
+ * its own capabilities (§5.5 "Root trust"). A is an honest grantee of a root cap and the
+ * granter of the leaf link. The attacker is the environment and mints its own key. *)
+free skP: skey [private].
+free skA: skey [private].
+
+(* ---- events ---- *)
+event IssuedLeaf(bitstring, bitstring).     (* A's KEYHOLDER issued a leaf: granter -> grantee *)
+event AcceptedLeaf(bitstring, bitstring).   (* the verifier ALLOWed a chain whose leaf is this *)
+
+(* ================= THE LEMMAS ================= *)
+
+(* (1) NO LEAF WITHOUT ITS GRANTER'S KEY.
+ * A chain the verifier accepts has a leaf link that the granter named in that link actually
+ * issued. This is the property 0.8.2.23 restored: it is FALSE of the pre-repair algorithm,
+ * with the honest addresses and honest signature-signer fields untouched, because the only
+ * thing the attacker changes is WHICH ENTITY THE MAP ANSWERS WITH.
+ * EXPECTED VERDICT: `is true`. Falsified by ResolutionBug.pv and ResolutionDiscardBug.pv. *)
+query ga: bitstring, gb: bitstring;
+  event(AcceptedLeaf(ga, gb)) ==> event(IssuedLeaf(ga, gb)).
+
+(* (2) NON-VACUITY. Lemma (1) is a correspondence and a verifier that never accepts satisfies
+ * it for free — and this verifier is a chain of eleven destructuring `let`s and equality
+ * tests, so "nothing is ever accepted" is the likely failure mode of a mistyped one, not an
+ * exotic one. Asserts the honest two-link chain IS accepted.
+ * EXPECTED VERDICT: `is false` — a reachable event falsifies the `not event(...)` form. *)
+query ga: bitstring, gb: bitstring; event(AcceptedLeaf(ga, gb)).
+
+(* ---- honest principals ---- *)
+
+(* P, the local peer, issues the root link P -> A and the detached signature over it (§3.5:
+ * signatures point TO the content they sign; the signed entity does not reference them). *)
+let Proot(addrP: bitstring, addrA: bitstring) =
+  let rootcap = capE(addrP, addrA, noparent) in
+  out(net, (rootcap, sigE(h(rootcap), addrP, sign(h(rootcap), skP)))).
+
+(* A holds the P-rooted cap and delegates a leaf to whatever grantee address it is asked for.
+ * A delegates FREELY on purpose: it makes lemma (1) a statement about ISSUANCE rather than
+ * about who the attacker can talk into a grant, and it means the attacker holding a leaf A
+ * really issued is NOT a violation — which is the honest boundary of this property. Wielding
+ * a leaf issued to someone else is `Binding.pv`'s subject, not this one. *)
+let Adeleg(addrA: bitstring) =
+  in(net, (rootcap: bitstring, gb: bitstring));
+  let capE(gaR, =addrA, =noparent) = rootcap in    (* A only delegates under a cap granted to A *)
+  let leaf = capE(addrA, gb, h(rootcap)) in
+  event IssuedLeaf(addrA, gb);
+  out(net, (leaf, sigE(h(leaf), addrA, sign(h(leaf), skA)))).
+
+(* ---- THE VERIFIER (§5.2 step 3 -> §5.5), MECHANISM (a) ----
+ *
+ * `localPeerE` is the verifier's OWN identity entity. It is a parameter and not read off the
+ * wire, which is the one thing a verifier genuinely knows.
+ *
+ * The input is the envelope AND the map's answers. Modeling `included` as a per-lookup-site
+ * adversary-chosen resolution — rather than as a data structure — is the strongest form: the
+ * attacker picks the whole map, and the lookups the verifier performs are fixed by the
+ * envelope exactly as §5.5 fixes them. `rX` is what `included[...]` returned at site X.
+ *)
+let VerifierBindKey(localPeerE: bitstring) =
+  in(net, ( leaf: bitstring, leafSig: bitstring, rootSig: bitstring,
+            rParent: bitstring,        (* included[leaf.data.parent]        — §5.5 collect *)
+            rGranterL: bitstring,      (* included[leaf.data.granter]       — §5.5 per-level *)
+            rGranteeL: bitstring,      (* included[leaf.data.grantee]       — §5.5 PR-3 *)
+            rGranterR: bitstring,      (* included[root.data.granter]       — §5.5 root trust *)
+            rGranteeR: bitstring ));   (* included[root.data.grantee]       — §5.5 PR-3 *)
+  let capE(gaL, gbL, pL) = leaf in
+
+  (* ===== §1.8 item 1, MECHANISM (a): BIND THE KEY =====
+   * "on accepting a received `included` map, reject any entry whose key is not
+   *  content_hash({type, data}) of the entity under it".
+   * Five entries, five keys, one equation each. This is the whole repair. *)
+  if pL = h(rParent) then
+  if gaL = h(rGranterL) then
+  if gbL = h(rGranteeL) then
+
+  (* collect_authority_chain(leaf, fn(hash) { included[hash] }) — one hop, then root. *)
+  let capE(gaR, gbR, =noparent) = rParent in
+  if gaR = h(rGranterR) then
+  if gbR = h(rGranteeR) then
+
+  (* Root trust (§5.5): the root granter's identity entity is the local peer's.
+   * See the header for why this is the reading, and what the other one would be. *)
+  if rGranterR = localPeerE then
+
+  (* Per-level validation, root link. find_signature by target (§5.2 find_signature), then
+   * the NORMATIVE signer check (§3.5: "MUST compare `signer` against the expected identity
+   * hash ... Implementations MUST NOT skip this check"), then verify against the RESOLVED
+   * granter identity. Note the order: the signer check is address-vs-address and passes on
+   * the forged envelope; it is the LAST line that the substitution reaches. *)
+  let sigE(=h(rParent), =gaR, sbR) = rootSig in
+  let peerE(kR) = rGranterR in
+  let (=h(rParent)) = checksign(sbR, kR) in
+
+  (* Per-level validation, leaf link. Same three steps, one level down. *)
+  let sigE(=h(leaf), =gaL, sbL) = leafSig in
+  let peerE(kL) = rGranterL in
+  let (=h(leaf)) = checksign(sbL, kL) in
+
+  (* Delegation linkage (§5.5): parent.data.grantee == current.data.granter. Address-level,
+   * and it passes on the forged envelope too — both sides are the honest address of A. *)
+  if gbR = gaL then
+  event AcceptedLeaf(gaL, gbL).
+
+process
+  let addrP = h(peerE(pk(skP))) in
+  let addrA = h(peerE(pk(skA))) in
+  out(net, pk(skP));
+  out(net, pk(skA));
+  (* The identity entities themselves travel in `included` (§5.8 chain inclusion), so the
+   * attacker holds them and their addresses. Publishing them is not a weakening: it is what
+   * makes the honest addresses available to be used honestly and abused dishonestly. *)
+  out(net, peerE(pk(skP)));
+  out(net, peerE(pk(skA)));
+  ( !Proot(addrP, addrA) | !Adeleg(addrA) | !VerifierBindKey(peerE(pk(skP))) )

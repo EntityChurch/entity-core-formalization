@@ -208,8 +208,17 @@ TRACK_PROSE_SITES = [
     # module landed. Anchored on `modules?` now, so module COUNT is not part of the anchor --
     # it is prose the gate does not check, and pinning a gate to a number it does not assert
     # is how a correct edit gets reported as a missing claim.
+    #
+    # ... AND THE PATTERN BELOW OPENED WITH THE LITERAL `95 model files` UNTIL 2026-09-16, four
+    # words under the sentence forbidding exactly that. Adding eight model files to `core` made
+    # the anchor stop matching, so the gate reported "the site NO LONGER STATES the per-track
+    # split" -- a true message naming the wrong defect, on a site that was merely stale. Same
+    # failure as `tools/ledgercount.py` anchoring on `**40 rows**` (D19's third anti-pattern,
+    # 2026-09-14): NEVER ANCHOR A MATCHER ON A NUMBER IT DOES NOT ASSERT, including one that
+    # merely sits NEXT TO the number it does. The file-count is `\d+` now and stays unchecked
+    # by this gate; `make trackcheck` is what counts model files.
     ("README.md", "the proof-tracks table",
-     r"95 model files, (\d+) runs.*?modules?.*?, (\d+) runs.*?modules?.*?, (\d+) runs"
+     r"\d+ model files, (\d+) runs.*?modules?.*?, (\d+) runs.*?modules?.*?, (\d+) runs"
      r".*?modules?.*?, (\d+) runs"),
 ]
 

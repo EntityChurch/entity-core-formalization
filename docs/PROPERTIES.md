@@ -168,10 +168,10 @@ Reproduce: `make -C tla tlc-green`, `make -C spin green`; full gate `make matrix
 
 ## B. Active-attacker protocol security (Tamarin / ProVerif track)
 
-### B1 — MODELED, symbolic Dolev-Yao (unbounded sessions, perfect crypto): 14 lemmas
+### B1 — MODELED, symbolic Dolev-Yao (unbounded sessions, perfect crypto): 16 lemmas
 
-Two independent provers in lockstep (ProVerif proves all 15 incl. `BindingReplay`;
-Tamarin proves 14). Unbounded in sessions/attacker behaviour; crypto is ideal.
+Two independent provers in lockstep (ProVerif proves all 17 incl. `BindingReplay`;
+Tamarin proves 16). Unbounded in sessions/attacker behaviour; crypto is ideal.
 
 > **What the 15-vs-14 actually is, since the count invites the wrong reading.** It is a
 > *packaging* difference, not a coverage gap. **Both provers prove no-replay.** Tamarin proves
@@ -203,6 +203,35 @@ Tamarin proves 14). Unbounded in sessions/attacker behaviour; crypto is ideal.
 | Multisig / MultisigKN | K-of-N threshold cannot be bypassed | §5.7 |
 | Revoke | revocation under an active attacker | §5.1 |
 | PersistentRecheck | no "trusted-forever" fail-open; re-check persists | §6.8 |
+| ⭐ **Resolution / ResolutionDiscard** | **RESOLUTION INTEGRITY — no chain link is accepted without its granter's key, when the adversary controls the `included` map's ADDRESSES as well as its terms. One theory per conformant mechanism of §1.8 item 1** | **§1.8 item 1 · §3.1 · §5.2 · §5.5 — at `spec-data/v0.8.2.25`, NOT at the pin** |
+
+⭐ **On `Resolution` and what it says about every row above it.** Every other theory in this
+table takes capabilities, signatures and identities as **terms** off `In(...)`: the verifier
+destructures what it received, so *"resolve entity by address"* has no representation and there
+is no address to forge. That abstraction was **undeclared** until 2026-09-14, when
+`entity-core-protocol` `0.8.2.23` closed a capability and identity forgery that exploited
+exactly it — **enabled by text that was in our pin** (§3.1's map-key MUST, with no enforcing
+operation and no vector). It is `docs/LEAN-SEAM.md` **O23**, and it is why §D.1's retraction
+**R13** exists.
+
+`Resolution.{pv,spthy}` and `ResolutionDiscard.{pv,spthy}` are the first theories here that give
+the adversary the ADDRESS. Read three things in this order. **(1)** The forgery is *exhibited*:
+`ResolutionBug` removes ONE of five key bindings — at `included[leaf.data.granter]` — and the
+adversary mints a leaf off an observed chain with every address-level check in §5.5 passing,
+because every address in the envelope is the honest one and only the *entity the map answers
+with* is substituted. The honest granter's key is never used. **(2)** Both of §1.8's conformant
+mechanisms close it, on both provers. **(3)** `ResolutionDiscardBug` is the control §1.8 asks for
+in words and nobody had run: mechanism (b) with item 1 skipped at **one of five** ingresses is
+falsified by the same attack, one level down, and is **wire-indistinguishable** from its green
+twin. Routed as
+`docs/status/ROUTING-2026-09-16-a-*` — the two mechanisms are not equally robust to partial
+adoption, and the §1.8 ruling `entity-core-go` asked arch for has a third answer.
+
+⛔ **What this does NOT extend to the rows above it. One subject of thirteen carries the
+indirection; twelve still abstract it**, so O23 stays OPEN and every other active-attacker
+result in this document remains conditional on it. Nor does it reach §5.5's **multi-sig** arms,
+whose per-constituent `included[candidate]` lookups are in the same defect's class and are
+modeled nowhere.
 
 **On `ChainTopology` and what it says about `DeepChain`.** `DeepChain`/`DeepChainN`
 prove the §5.5a granter-frame property with the verifier seated as the **root issuer**.
@@ -215,7 +244,7 @@ asymmetry: canonicalizing against the root frame leaves the verifier-namespace l
 **still true** while falsifying the root-namespace one. `DeepChain` is not retracted; it is
 **not sufficient on its own**, and that is now recorded rather than assumed.
 
-Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each falsified.
+Reproduce: `make -C tamarin green`; 17 ProVerif + 17 Tamarin bug controls each falsified.
 
 ---
 
@@ -238,7 +267,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
 3a. **Four subjects rest on ONE engine, and they are named rather than inferred.**
    `docs/CORROBORATION.md` is the ledger and `make enginecount` is its gate (D16, added
    2026-09-09): per subject, which engines have a **green** on it, derived from the gate tables
-   rather than from which files exist. **33 of 35** subjects carry two or more; the two that do
+   rather than from which files exist. **34 of 36** subjects carry two or more; the two that do
    not are both on `core` — `revokemech` (zero — genuinely non-terminating, excluded from the
    matrix by design) and `core-refinement` (TLC, T4's classifier, deliberately last).
    **No extension subject is single-engine as of 2026-09-09.**
@@ -365,7 +394,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Seventeen targets decide the 633 runs.
+     the finding is what made that discipline necessary). Seventeen targets decide the 641 runs.
 
      **This table carries no run counts, deliberately — corrected 2026-09-07.** It used to,
      and they were stale: `tlc-neg` sat at 40 against a real 45, `tlc-green` at 15 against 24,
@@ -400,12 +429,15 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      diffs cannot see it go stale.
 
      *A twelfth through fifteenth target, in a tier of their own* — `make lean`, **12 runs**,
-     excluded from the 277 because they need an `entity-core-keystone` checkout that a bare
-     clone does not have (`docs/LEAN-SEAM.md` §7):
+     excluded from `make matrix`'s total because they need an `entity-core-keystone` checkout
+     that a bare clone does not have (`docs/LEAN-SEAM.md` §7). *(This said "excluded from the
+     277" until 2026-09-16 — a live figure stated in a paraphrase `make runcount` does not
+     match, stale through every increment to 641. The subject is named here and the value is
+     the gate's.)*
 
      | Target | Runs | Grades on |
      |---|---|---|
-     | `leanproof` | 1 | the **axiom set** of all 40 `#print axioms` gates against `lean/proof-gate.expect`, in both directions, + every ledger-pinned theorem present + no undeclared warning + the image's Lean == keystone's `lean-toolchain` pin |
+     | `leanproof` | 1 | the **axiom set** of EVERY `#print axioms` gate against `lean/proof-gate.expect`, in both directions, + every ledger-pinned theorem present + no undeclared warning + the image's Lean == keystone's `lean-toolchain` pin |
      | `leanproof-neg` | 5 | the declared reason codes per control **and the declarations each names** — `SORRY_AX`, `UNTRUSTED_AXIOM`, `MISSING_GATE` (declaration-level and file-level), `BUILD_ERROR` pinned to its error kind. Graded on counts alone in its first draft; that is below the standard `TM_NEG_EXPECT` set, and the session audit corrected it |
      | `leanlemma` | 1 | **our own** Lean results about the peer's definitions (`lean/lemmas/`, the A-31 star-free theorem and the K2 differential): the axiom set of every gate under our namespace, the `#eval` output **one-to-one** against `lean/lemma-gate.expect`, and every declared prose site still stating a figure the sweep produces |
      | `leanlemma-neg` | 5 | `sorry`, broken proof, deleted gate line, a **narrowed differential input set** (`neg-eval`, which reports a perfectly clean sweep about a smaller question), and `neg-site`, which perturbs the declared prose sites in memory three ways |
@@ -694,7 +726,7 @@ trusted-forever fail-open, at the modeled bound.
 > as terms, so there is no address to forge (`content_hash` occurs **0** times across the 60
 > files in `tamarin/`). That is not a limit that was disclosed and accepted; it was undisclosed
 > until this date. It is booked as `docs/LEAN-SEAM.md` **O23**, measured as part of
-> **120 of 365 core obligations are UNEXAMINED** (`make obligations`), and audited in
+> **122 of 365 core obligations are UNEXAMINED** (`make obligations`), and audited in
 > `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
 >
 > **Read every "admits no X" in this document as "no model here exhibits X", and read the

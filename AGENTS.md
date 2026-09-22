@@ -89,7 +89,13 @@ So what binds here is the honesty half of the framework:
   `make lean-image`) and grades its axiom sets. `make lean` = `leanseam` + `leanproof` +
   `leanproof-neg` + **`leanlemma` + `leanlemma-neg`**; it needs the keystone checkout, so it is
   **excluded from `make matrix`** rather than skipped inside it, and its 12 runs are counted
-  separately from the 277. **`leanproof` grades THEIR proofs; `leanlemma` grades OURS**
+  separately from **`make matrix`'s total** — *no figure here, deliberately: this clause read
+  "separately from the 277" from the day the tier was built until 2026-09-16, through every
+  increment to 641, with `make runcount` green at all eight of its declared sites. The gate
+  reads the canonical phrasing (`**N-run** matrix`) and this is a PARAPHRASE, which is D15's
+  fifth shape and D20's mechanism: the matcher cannot see a sentence that states the number in
+  other words, so the repair is to state the SUBJECT and let the gate own the value.*
+  **`leanproof` grades THEIR proofs; `leanlemma` grades OURS**
   (`lean/lemmas/`, built inside a copy of their tree against their own definitions) — two claims
   about two trees, deliberately two targets, so a typo of ours cannot redden the gate whose only
   job is reporting movement in a tree we do not control. **The 12 is hand-maintained**: the lean
@@ -414,13 +420,18 @@ mentions. The scope-disclaimer tripwire passed all thirty — it matches *discla
 
 **Where findings are tracked, 2026-09-08 — FOUR categories, and three of them had no home until
 this date.** `docs/status/FINDINGS-INDEX.md` is the single index; read it before any handoff.
-It covers: **spec defects** (26 across three extension protocols, 24 machine-checked, in five
+It covers: **spec defects** — 26 across the three **extension** protocols, 24 machine-checked, in five
 routing notes — three per-track plus TWO that second engines added to a track already routed,
 `ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md` and
 `ROUTING-2026-09-09-IDENTITY-ARRIVAL-PATH-STATE.md`); **validation-surface defects** (V1–V3, new, in
-`ROUTING-2026-09-08-VALIDATION-SURFACE.md`); **implementation divergences** (D1–D19 in
-`docs/status/CONFORMANCE-DIVERGENCE-REGISTER.md`); and **our own open work** (the ledger's OPEN
-rows and the one subject with no second engine).
+`ROUTING-2026-09-08-VALIDATION-SURFACE.md`); **CORE-track spec defects, which that sentence's
+"three extension protocols" does not cover and did not used to exist** (`P-2`…`P-8` in
+`docs/status/TRACKER-entity-core-protocol.md` — the `system/peer` `.data.peer_id` sites and the
+§5.5a granter-frame set, 2026-09-16); **implementation divergences** (in
+`docs/status/CONFORMANCE-DIVERGENCE-REGISTER.md` — **do not quote a count or an id range from
+here; derive it**, `grep -cE '^\| D[0-9]+ \|'` for rows and the register's own `awk` one-liner for
+the class table, both of which have been published wrong); and **our own open work** (the ledger's
+OPEN rows and the one subject with no second engine).
 
 **The divergence register is the one to understand, because the gap it closes was invisible.**
 Every spec finding here was written with a census of what `entity-core-{go,rust,py}` do — this
@@ -517,8 +528,12 @@ in place with the wrong sentence left standing.
 (§5.8) is a single backtick removed from a cross-reference row.
 ⭐ **§4.7 WAS the exception and is not any more, 2026-09-15.** `connection_sequence_error` moved
 400 → 409 at 0.8.2.4 while `tla/ConnCodes.tla` transcribed 400; that module, its Apalache port
-and `spin/conncodes.pml` are now **retargeted to `spec-data/v0.8.2.25`** and measure **0 of 11
-cited sections moved**. ⛔ **They are therefore NOT statements about the pin, and the mechanism
+and `spin/conncodes.pml` are now **retargeted to `spec-data/v0.8.2.25`**. ⛔ **Do not quote a
+figure for the off-pin group from memory: `make specdrift` reports ONE number for ALL files
+sharing a snapshot, so it moved from `0 of 11` to `0 of 21` the moment a SECOND subject
+retargeted to `.25` (the eight `tamarin/Resolution*` files, 2026-09-16) — a live figure going
+stale because a different subject landed, with every gate green. It is not a declared
+`driftclaim` site; derive it.** ⛔ **They are therefore NOT statements about the pin, and the mechanism
 for saying so is a gate rather than a sentence:** `[track.core.model_pins]` in `TRACKS.toml`,
 a `MODELING-PIN-OVERRIDE:` marker in each file, both directions checked by `make trackcheck` §E,
 their citations held out of the coverage pair by `make coverage` and measured against their own
@@ -537,7 +552,16 @@ byte-identical**, so this is the §6.8 shape again: movement around the clause w
 is new is arm **(f)**, the multiplexed one: *a pre-admission refusal arriving while an admitted
 request is in flight on the same connection MUST NOT cost that request its response.*
 `entity-system-architecture` records (`KC-2`) that it **cannot be inferred from the other five
-and has never been driven anywhere** — it is a concurrency claim on a shared connection, which
+and has never been driven anywhere** — ⛔ *and the second half of that went stale on 2026-09-15,
+the day after it was written: `entity-core-go` drove arm (f) 3-way
+(`preadmission_multiplex_inflight_survives`), quoting the very sentence. **The warrant is better
+now, not worse.** Their own comment says the obvious form of the arm is satisfied by a bare close
+that drains, so they added a discriminator — a second request on the same connection — which
+tests a property §4.11 explicitly leaves to the peer (*"whether it closes afterwards is its own
+choice"*), and they have an OPEN ask to arch to split arm (a) so that it would not. **Arm (f)'s
+decisive distinction is therefore not wire-decidable as the text stands**, which is `ECP-R24`'s
+shape and the conformance seat's missing third disposition. Quote THAT, not the stale clause* —
+it is a concurrency claim on a shared connection, which
 is `tla/Reentry.tla`'s exact subject and a wire suite's blind spot. See
 `docs/SPEC-DRIFT-ASSESSMENT.md` §1d.
 **§5.4 and §6.8 moved on 2026-09-11/12 (spec 0.8.2.20/21) and BOTH were previously classified
@@ -573,10 +597,18 @@ sections touched — so no finding changes. Read both halves: the file-level ans
 section-level answer are different questions and this repo publishes the second one.
 Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**633-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+**641-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
-(15 ProVerif / 14 Tamarin lemmas), 100 negative controls and 13 non-vacuity witnesses.
-No inductive invariant is deferred; no control is known-weak.
+(**17 ProVerif / 16 Tamarin** green theories), 100 negative controls and 13 non-vacuity
+witnesses. No inductive invariant is deferred; no control is known-weak.
+⛔ **Four numbers, one sentence, ONE of them gated.** `make runcount` declares this paragraph a
+site and reads the **641** and nothing else. The prover pair said `15 / 14` until 2026-09-16,
+when the `resolution` subject made it 17 / 16 — derivable from `PV_GREEN`/`TM_GREEN` and
+therefore corrected here, and it had been wrong for as long as it took to notice. **The 100 and
+the 13 are hand-maintained, correspond to no table this repo derives, and are NOT corrected
+here because nobody has re-derived them** — saying so is cheaper than a figure that looks
+checked. This is the unread-facet shape (D15, thirteenth) inside the paragraph that announces
+the gate, and D20 is its sibling: ask of a gated sentence which of its claims the gate reads.
 
 Two things are new and change how you read the rest. **`docs/LEAN-SEAM.md`** is the
 assumption ledger — per abstraction in the models, the proposition relied on and the Lean
@@ -663,7 +695,7 @@ question of it and answered by building all three cases: **a `sorry` is a *warni
 so lake prints `Build completed successfully` and exits 0**; a hand-written `axiom`
 replacing a proof exits 0 with no warning at all; only a proof that fails to type-check
 exits non-zero. Exit status catches one failure mode in three, and misses the two a proof
-check exists for. `make leanproof` grades the **axiom set** of all 40 `#print axioms` gates
+check exists for. `make leanproof` grades the **axiom set** of EVERY `#print axioms` gate
 against `lean/proof-gate.expect` in both directions, ties them to the ledger's own pin
 block, and fails on any undeclared warning. Two transferable pieces: **a gate a sibling repo
 says it has is a gate you have not checked**, and *a `sorry` reported as a warning* is the
@@ -750,7 +782,7 @@ verb you expect to find.
 
 *Tenth instance, 2026-09-09 — **`make lean` IS GREEN AND K1 IS REAL AT THE SAME TIME, AND
 NEITHER GATE IS BROKEN.*** The Lean tier asserts two things: `leanseam` says the cited text has
-not moved, `leanproof` grades the **axiom set** of all 40 `#print axioms` gates in both
+not moved, `leanproof` grades the **axiom set** of EVERY `#print axioms` gate in both
 directions. Both pass. And `scopeSubset` — the §5.6 attenuation check the ledger's sharpest row
 (L5) rests on — **does not implement the section it is named after.** §3.6's id-scope pattern
 grammar is **normative at our own pin** (0.8.1, F40): `operations` and `peers` match literally.
@@ -1064,6 +1096,46 @@ breaking one.* Promoting a third proof track did not fail anything, and that was
 Neither is numbered: this is D15's mechanism in a fifth and sixth shape, not a new one. The
 standing rule holds — if it bites where the mechanism is genuinely different, give it a number.
 
+*The fifth shape bit again on 2026-09-16, and the useful half is that it ends in NO GATE.*
+**Three live sites said the Lean tier's 12 runs are counted separately from "the 277"** —
+`AGENTS.md` §Build, `docs/PROPERTIES.md` §C's grader inventory, `docs/STATUS.md`'s Lean-tier
+paragraph — with `make runcount` green at all **eight** of its declared sites throughout. The
+total went 277 → 641 in the interval. Nothing was mis-derived and no matcher was wrong: the gate
+reads the canonical phrasing (`**N-run** matrix`), and *"separately from the 277"* is a
+**paraphrase with the number embedded as a definite noun**, which is a shape no declared-site
+list can reach because nothing derives the set of documents that paraphrase a figure. Found by
+reading, while re-deriving an unrelated count for a counterpart packet. **All three are repaired
+by DELETING the value** — they now name `make matrix`'s total as a subject and let the gate own
+the number, which is D20's rule applied to prose rather than to a regex.
+
+⛔ **And the gate that should follow does not exist, deliberately, with the reason measured.**
+Two candidates were tried and both fail:
+- **A `retractcheck` row on the phrasing.** Viable and nearly worthless: it catches the literal
+  string `the 277` and says nothing about `the 641` going stale next. The registry already
+  carries this limit in its own words for the §QUORUM:4.2.1 scope retraction — *a phrasing
+  tripwire cannot see a claim whose words survive their own correction* — and this is its
+  complement, a tripwire that sees only the words it was given.
+- **A `runcount` tripwire for a three-digit number used as a definite noun.** Measured before
+  proposing: `grep -noE 'the \*{0,2}[0-9]{3}'` over the live doc set returns ~20 hits and the
+  MAJORITY are **HTTP status codes** — `the 400`, `the 401`, `the 403`, `the 404`, `the 409` —
+  plus obligation counts (`the 120`, `the 122`), a pair count (`the 624`) and a peer's check
+  total (`the 778`). Suppressing those needs a hand-maintained list of numbers that are not run
+  totals, which is the artifact-of-ours denominator D19 exists to refuse. **A gate whose
+  exclusion list is longer than its finding is not a gate.**
+So this one stays a discipline, and the enforcement point is the D14 grep, run by a human: **when
+a derived figure moves, grep the OLD VALUE, not the new sentence.** Recorded here rather than
+quietly fixed, because *"we found it and built no gate"* is the outcome most likely to be left
+out of a write-up, and leaving it out is how the next session assumes one exists.
+
+*Also corrected in the same pass, same mechanism, different figure:* **four live sites said
+`make leanproof` grades "all 40 `#print axioms` gates"** (`AGENTS.md` ×2, `docs/PROPERTIES.md`,
+`docs/FINAL-ASSURANCE-SUMMARY.md`, `docs/STATUS.md` ×2 — six in total). It is **41** since
+keystone's `fee2e422` added `matchesSegNM_trans`, and `lean/proof-gate.expect` was updated on
+2026-09-15 while none of the prose was. **The repair is the same and it is the better one: the
+gate's actual assertion is EVERY declaration, exhaustively, in both directions** — a count was
+never what it asserted, so the sites now say `every` and cannot go stale again. *A figure that
+restates an exhaustive claim as an arithmetic one is strictly worse than the claim.*
+
 *Eleventh shape, 2026-09-09 — **A DISCLAIMER IS NOT A GATE**, and it is worse than nothing
 because it reads as though the risk was handled.* `docs/status/FINDINGS-INDEX.md`'s open-work
 table carries the sentence **"Do not quote these from here. Run `make ledgercount`, `make
@@ -1192,6 +1264,51 @@ ARGUMENT, not just the number the gate names.** A count going stale is an embarr
 going stale looks like nothing from the inside. Both sites are corrected with the stale clause left
 standing and marked. Not numbered: D15's mechanism in a fifteenth medium, and the standing rule
 holds.
+
+*Sixteenth shape, 2026-09-16 — **A CLAIM ABOUT SOMEONE ELSE'S STATE, DECIDABLE ONLY BY THEIR
+INSTRUMENT, THAT WE HAD BEEN PUBLISHING AS A CONSERVATIVE DEFAULT.*** All three `TRACKER-*.md` and
+`FINDINGS-INDEX.md` carried *"every row is `committed` — written and committed in this tree, and
+**never announced**."* It was chosen deliberately, as the humble reading, and it was never
+**measured**. `entity-system-arch-tools` ships `spec inbound`, which is the tool the receiving seat
+uses to decide what has reached them; running it read-only over the cohort took two minutes and
+returned two things our default could not express. **(1) Arch's ledger cites all six extension
+packets by name and deliberately rules none of them — *received and parked*, a third state none of
+our trackers had, and the one most of those rows are actually in.** **(2) Our single `owed` row was
+a FALSE OBLIGATION WE MANUFACTURED**: `ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md` carried
+`**To:** architecture review, then entity-core-protocol docs/proposals/` — prose, on a line shared
+with `**Date:**` — which parses, names no repository, and contains a token matching arch's alias,
+so a packet that went to `entity-core-protocol`, **was adopted there and was ruled**, sat on arch's
+books as outstanding for seventeen days.
+
+**Three things generalize.** First: **a conservative default is still a claim**, and it is the kind
+that never gets audited because being wrong in the humble direction does not feel like being wrong.
+Second: **when a claim is about another seat's state, the instrument that decides it usually belongs
+to that seat** — read their trees, then *run their tool on ours*. `docs/status/INBOUND.md` has that
+step now; it was built to ask *"has anything arrived for us"* and structurally could not ask *"has
+anything of ours arrived for them."* Third, for D14's grep list: **a wrong-but-parseable `To:`
+field**, which their own standard names — *"indistinguishable from a right one to every instrument
+there is"* — and which is worse than no addressee, because it manufactures a defect record against
+a seat that does not have the defect. *Not numbered: D15's mechanism — what decides this claim, and
+what else satisfies it — in a sixteenth medium.*
+
+*And a smaller one the same day, worth the two lines because it cost a draft:* **`AGENTS-STANDARD.md`'s
+*cite by `(symbol, path, commit)`, not line numbers* is not stylistic and we had not been following
+it in packets.** `entity-core-protocol` advanced **twice** while a packet against it was being
+written (0.8.2.26 → 0.8.2.27), moving the cited region eleven lines. Every claim survived; the
+citations did not. **The distinction to keep: a line number into `spec-data/` is a PIN and cannot
+move; a line number into a sibling's live tree is a claim with a half-life of hours.** And the same
+session found the mirror image — **item `0******` of our own `docs/STATUS.md` §Next stated §6.8's
+authority discriminator in the 0.8.2.21 wording, which 0.8.2.22 superseded and explicitly names as
+one of the things the rule is NOT.** A model transcribed from the worklist would have encoded the
+refuted reading and gone green. **D12's rule points at summaries of a spec; a §Next item is one.**
+
+*And the ninth shape bit again the same day and was stopped by a control rather than by the rule.*
+A cohort-wide search for `AUTHZ-ATTENUATION-FOREIGN-GRANTER` returned **zero**, and *"the three
+conformance gates §5.5a names do not exist"* got as far as a draft paragraph — a false accusation
+against two seats. The search was malformed. **The positive control caught it** (a term known to be
+present also returned zero); the vectors exist in keystone and conformance. This rule has been
+written down since 2026-09-08. **Eight days is how long a written rule lasts against a plausible
+zero; the control is what actually works.**
 
 *And the same fire produced the session's actual finding, INSIDE A BLIND SPOT WE HAD PUBLISHED.*
 Classifying whether §5.4's movement cost a model meant reading all nine of its citations — and all
@@ -1469,7 +1586,7 @@ engines" be quoted as "corroborated" without the sentence that says what it corr
 `docs/CORROBORATION.md` declares subject → files → engines; the gate derives the engine set from
 the **green** tables in the three engine Makefiles and fails on any disagreement, on a model file
 in no subject, on a single-engine subject with no written reason, on a stale exemption, and on a
-prose site whose corroboration pair has drifted. It is **33 of 35** subjects overall and **9 of 9**
+prose site whose corroboration pair has drifted. It is **34 of 36** subjects overall and **9 of 9**
 on the extension tracks; do not quote either number without running it.
 
 *It earned its keep in the hour it was written, on the derivation rather than the arithmetic.*
@@ -1646,6 +1763,61 @@ were already written correctly, which is how it survived.
 have found this one any faster than asking D17's question of §3.1 would have. The rule is about
 **where the list comes from**, not about exhaustiveness.
 
+*And its third anti-pattern is now `D20` below*, promoted 2026-09-16 on a third bite in a third
+shape. It is numbered after this candidate rather than folded into it because the mechanism is
+different: D19 is about **where a denominator comes from**, D20 is about **whether the gate can
+still see the sentence**.
+
+### D20 — a gate recognises a claim through a MATCHER, and the matcher must not depend on the claim's own value
+
+**Anchor a claim-checking pattern on the part of the sentence that does not move — the noun, the
+prose, the structure. Never on the number it checks, never on a number beside it, and never on a
+derived value used as the key that decides whether a pair is one of ours.** A matcher that
+depends on the value stops matching exactly when the value goes stale, which is the one moment
+the gate exists for.
+
+*Why this is a discipline and not a note.* The failure is not "the gate missed it". The gate
+**speaks**, and says something true about the wrong defect, or says nothing while reporting OK.
+Three bites, three shapes, each with a source commit:
+
+- **The literal it checks** (2026-09-14, `tools/ledgercount.py`). Two STATUS patterns anchored on
+  `**40 rows**`. The ledger moved to 41, the pattern stopped matching, and the gate reported
+  *"the site went silent"* — a **true message naming the wrong defect**, sending the next reader
+  to look for a deleted claim that was merely stale. Recorded as D19's third anti-pattern.
+- **A literal BESIDE the one it checks** (2026-09-16, `tools/runcount.py`). The README per-track
+  pattern opened with `95 model files, (\d+) runs…` — the file count is a number that gate does
+  **not** assert, four words under its own comment saying *"pinning a gate to a number it does
+  not assert is how a correct edit gets reported as a missing claim"*. Adding eight model files
+  produced exactly that message. **The rule was written and violated in the same expression**,
+  which is the argument for a gate over a comment.
+- **A DERIVED value used as the classifier** (2026-09-16, `tools/enginecount.py`), and this one
+  is the shape that ratifies it, because it is not a literal at all. The site check validated
+  every `N of M` *whose M is one of OUR denominators*. A subject was added, the total went
+  35 → 36, and every site still saying `33 of 35` had a denominator that was no longer ours —
+  `continue`d past, invisible. `seen` then came out **True anyway**, off the correct `9 of 9`
+  extension pair in the same sentence, so neither the wrong-pair branch nor the no-pair branch
+  fired. **Four live sites, including this file and the gate's own ledger, read `33 of 35` with
+  `make enginecount` GREEN.** The previous hardening of that same function had closed the
+  wrong-NUMERATOR case and left the wrong-DENOMINATOR case open — the fix one shape short.
+
+*The test to apply, in these words:* **what does this matcher do when the number it watches
+changes?** If the answer is "stops matching", the gate reports silence as the defect. If the
+answer is "skips the pair", it reports nothing at all. Neither is a gate.
+
+*Enforcement.* Every claim-checking matcher in `tools/` classifies by an invariant token, with
+the value-keyed arm underneath it as a fallback rather than as the whole test —
+`enginecount.py`'s `BY_NOUN` is the pattern to copy, and it carries its own limit in a comment
+(*a pair with neither our denominator nor a recognised noun is still invisible*). **And a gate
+is teeth-tested on THREE inputs, not one: a wrong numerator, a wrong DENOMINATOR, and a deleted
+claim — plus the restore.** The middle one is new to the checklist and is the one that was never
+run; every gate in this repo had been broken on its numerator and none on its denominator.
+
+*And the reason it survived: the two gates it hid in are gates about staleness.* `enginecount`
+exists to stop a corroboration pair drifting, `runcount` to stop a run total drifting. A reader
+seeing them green reads it as *"the numbers were checked"*, which is D15's eleventh shape wearing
+a green light instead of a disclaimer: **a self-aware gate is where a stale figure survives
+longest**, for the same reason a self-aware caveat is.
+
 ## Boundaries — do NOT modify
 
 - **An existing `spec-data/vX/` snapshot is frozen** — vendored, SHA-pinned. Model against
@@ -1678,9 +1850,12 @@ have found this one any faster than asking D17's question of §3.1 would have. T
   no row fails, a redundant override (same as the track pin) fails, and a snapshot that does
   not exist fails. `spec-drift` then measures that file against its own pin and `coverage`
   holds its citations out of the track's coverage pair, into the `offpin_heading` grid.
-  **This does NOT move `MODELING-PIN` and is not a step toward moving it.** Three files use it
-  today (`ConnCodes`, its Apalache port, `conncodes.pml` → `v0.8.2.25`), because §4.11 does not
-  exist at the core pin at all.
+  **This does NOT move `MODELING-PIN` and is not a step toward moving it.** **Two subjects,
+  eleven files, both → `v0.8.2.25`:** `conncodes` (2026-09-15), because §4.11 does not exist at
+  the core pin at all; and `resolution` (2026-09-16, the eight `tamarin/Resolution*` files),
+  because §1.8 item 1's obligation on the RECEIVER does not exist there either — the pin states
+  only §3.1's envelope-side property, which is the unenforced MUST the 0.8.2.23 forgery used.
+  **Derive this pair rather than quoting it**; it was `three files` for exactly one day.
   ⛔ **Two rules come with it, both learned in the hour it was built.** (1) **RETARGET A WHOLE
   SUBJECT, NEVER ONE FILE.** `docs/CORROBORATION.md` credits `conncodes` to three engines;
   three engines on three different texts is one reading per snapshot presented as agreement,
@@ -1691,6 +1866,19 @@ have found this one any faster than asking D17's question of §3.1 would have. T
   alternative was a paragraph in each module header, which would have left 29 standing and made
   it false — D15's eleventh shape, **a disclaimer is not a gate**, applied before it bit rather
   than after.
+  ⛔ **A THIRD RULE, 2026-09-16, AND IT IS THE ONE THE MECHANISM COST US: `model_pins` IS A NEW
+  DIMENSION OF THE REGISTRY, SO EVERY GATE THAT READS `models` IS A SITE.** `coverage-check.py`
+  was written with the partition and `obligations.py` — two days older, and the tool whose whole
+  reason to exist is a denominator that is NOT ours — was not. So it went on counting §4.7's
+  **pin** obligations as *"inside a section a model cites"* for a day after `make coverage` had
+  removed §4.7 from Matrix A and said out loud that nothing verifies it as the pin states it.
+  Two gates over one artifact, one excluding off-pin citations and one including them, both
+  green, published one paragraph apart — D15's own *make them disagree out loud or make them
+  share the definition*, unapplied inside a gate built to apply it. They share the lookup now,
+  the split is printed beside the headline, and **a section cited only by a pin-overridden model
+  must carry a note in `docs/OBLIGATIONS.toml`.** The published hole went **120 → 122 of 365**,
+  which is the fix working. *When you add a field to `TRACKS.toml`, grep `tools/` for
+  `["models"]` before you add the first row.*
 - **Ratified / superseded phase reports are historical record.** The phase outcomes are
   lineage; `docs/FINAL-ASSURANCE-SUMMARY.md` is the single live capstone pointer — don't
   rewrite closed reports to look current.

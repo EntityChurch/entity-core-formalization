@@ -66,6 +66,29 @@ WHAT THIS DOES *NOT* ASSERT, AND THE GAP IS THE POINT
     LOWER BOUND on the surface and an UPPER BOUND on nothing.
   * NOT that `UNEXAMINED` is safe. It is the honest state, not an acceptable one.
 
+A PIN-OVERRIDDEN MODEL IS NOT EVIDENCE ABOUT THE PIN, AND THIS TOOL SAID IT WAS
+------------------------------------------------------------------------------
+Until 2026-09-16 `measure()` walked `track["models"]` entire. `coverage-check.py` does not: a
+file declared in `[track.<name>.model_pins]` transcribes a NEWER snapshot, so its citations are
+held out of the pin's coverage pair and pushed into the off-pin grid -- the whole reason the
+published core pair fell 29 -> 27 on 2026-09-15. This tool credited those same citations AGAINST
+THE PIN'S OBLIGATION DENOMINATOR, so retargeting three modules to `v0.8.2.25` left §4.7's and
+§5.2a's PIN obligations counted as "inside a section a model cites" while no model here
+transcribes that text any more. Two gates over one artifact, one excluding off-pin citations and
+one including them, both green, published one paragraph apart.
+
+That is D15's own rule going unapplied INSIDE the tool built to supply a denominator from the
+pin: *when two tools derive a number from the same input, make them disagree out loud or make
+them share the definition.* They share it now -- the partition is the same `model_pins` lookup
+-- and the split is printed rather than folded away, because a silent exclusion is how the
+first version of this went wrong in the other direction.
+
+The correction moves the number the WRONG WAY ON PURPOSE: the published hole goes 120 -> 122,
+because §4.7 stops counting as examined-at-the-pin. A gate whose fix makes its own headline
+worse is the gate behaving correctly. The off-pin split is printed beside the headline and
+every section in it must carry a note -- see `check_decl` -- so the exclusion is stated in this
+repo's own file rather than inferred from two gates disagreeing.
+
 D13 -- what else satisfies a green here? A tree where every uncited obligation-bearing section
 is dispositioned `UNEXAMINED`. That is deliberately allowed and deliberately loud: the tool
 prints the UNEXAMINED obligation count as its headline, so the number a reader sees is the size
@@ -138,15 +161,25 @@ def measure(track_name: str, track: dict) -> dict:
     text = spec.read_text(encoding="utf-8")
     secs = {n: t for n, t in sections(text).items() if re.match(r"^\d+\.\d+", n)}
 
+    # A pin-overridden model transcribes a different snapshot, so its citations are evidence
+    # about THAT text and not about this one. Same partition, same source of truth, as
+    # `coverage-check.py` -- see the module docstring for what happened when they differed.
+    overrides: dict[str, str] = track.get("model_pins", {}) or {}
+
     cited: set[str] = set()
+    offpin: set[str] = set()
     missing_models = []
     for rel in track.get("models", []):
         p = ROOT / rel
         if not p.exists():
             missing_models.append(rel)
             continue
+        sink = offpin if rel in overrides else cited
         for m in CITATION.finditer(p.read_text(encoding="utf-8", errors="ignore")):
-            cited.add(m.group(1))
+            sink.add(m.group(1))
+    # Reported, not merged: a section cited by BOTH an on-pin and an off-pin model is examined
+    # at the pin, and only the off-pin-ONLY set is the exclusion this partition creates.
+    offpin_only = offpin - cited
     if missing_models:
         die(
             f"track {track_name!r}: {len(missing_models)} declared model file(s) do not exist "
@@ -165,6 +198,8 @@ def measure(track_name: str, track: dict) -> dict:
         "uncited_sections": len(uncited),
         "uncited_obligations": sum(uncited.values()),
         "uncited": dict(sorted(uncited.items(), key=lambda kv: (-kv[1], kv[0]))),
+        "offpin_only": sorted(s for s in offpin_only if rows.get(s, 0) > 0),
+        "offpin_obligations": sum(rows.get(s, 0) for s in offpin_only),
     }
 
 
@@ -328,6 +363,22 @@ def main() -> int:
                     f"track {name!r}: §{sec} is dispositioned {disp!r} with no note. That "
                     f"disposition is a claim and has to say why."
                 )
+            # A SECTION A PIN-OVERRIDDEN MODEL CITES MUST SAY SO, whatever its disposition.
+            # There is deliberately NO `offpin-modeled` disposition: the vocabulary's unit is
+            # the SECTION and a retarget covers some of a section's obligations and not others
+            # -- §3.5 carries ten MUSTs and `Resolution.*` transcribes exactly one of them --
+            # so a whole-section "modeled, just off-pin" label would inflate the examined set
+            # by the same reasoning D19 was written to refuse (*a section is not an
+            # obligation*). These rows stay `UNEXAMINED`, which is the true statement: nothing
+            # here verifies them AS THE PIN STATES THEM, which is the identical sentence
+            # `docs/COVERAGE-MATRIX.md` §3f uses about the coverage pair. What is REQUIRED is
+            # the note, so a reader is not left to infer that nobody looked.
+            if sec in m.get("offpin_only", []) and not row.get("note"):
+                problems.append(
+                    f"track {name!r}: §{sec} is cited ONLY by a pin-overridden model and its "
+                    f"row has no note. The retarget took this section out of the pin's "
+                    f"examined set; say which model, which snapshot, and what it does cover."
+                )
         for sec in declared_rows:
             if sec not in m["uncited"]:
                 problems.append(
@@ -335,6 +386,15 @@ def main() -> int:
                     f"a model or carries no obligations -- the row is stale, remove it"
                 )
 
+        if m.get("offpin_only"):
+            print(
+                f"  of those, OFF-PIN MODELED    : {m['offpin_obligations']:4d}   "
+                f"in §{', §'.join(m['offpin_only'])}"
+            )
+            print(
+                "     (a model covers these against a NEWER snapshot, so nothing here verifies"
+                "\n      them as the PIN states them -- the same exclusion `make coverage` makes)"
+            )
         unex = sum(
             r.get("obligations", 0)
             for r in d.get("uncited", [])

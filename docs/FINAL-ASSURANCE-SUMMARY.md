@@ -171,7 +171,7 @@ The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**633 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**641 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
 surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
 audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a
@@ -284,7 +284,7 @@ bound.
 > The claim as written is true. It is kept, unedited, with this box beside it, because the
 > failure is not a wrong sentence — it is a **true sentence whose scope nobody could check**.
 > `docs/LEAN-SEAM.md` **O23** names the abstraction; `make obligations` measures the class
-> (**120 of 365 core obligations are UNEXAMINED**);
+> (**122 of 365 core obligations are UNEXAMINED**);
 > `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md` is the audit.
 
 **Residual risk, ranked (carried verbatim from the reports — not papered over):**
@@ -375,7 +375,7 @@ bound.
    its shape are kept on the record in `docs/LEAN-SEAM.md` §4.1 rather than deleted.)*
 
    **The Lean side is now gated; the correspondence is not.** `make leanproof` (2026-08-30)
-   builds the peer's proof track and asserts the axiom set of all 40 `#print axioms` gates,
+   builds the peer's proof track and asserts the axiom set of every `#print axioms` gate,
    so a cited theorem cannot quietly acquire a `sorry` or an extra axiom. It had to be built
    here because nothing ran the proofs anywhere: the keystone peer documents
    `lake build EntityCoreProofs` as its proof check in four places and invokes it from none —

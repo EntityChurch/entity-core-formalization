@@ -18,6 +18,55 @@ copy, so between a spec release and a re-validation this repository is *behind o
 
 ## [Unreleased]
 
+### Added — the adversary now gets the ADDRESS as well as the term, and the forgery is exhibited (2026-09-16)
+
+Four new prover theories and two new engines' worth of runs: `tamarin/Resolution.{pv,spthy}`
+and `tamarin/ResolutionDiscard.{pv,spthy}` with a negative control each, on ProVerif and
+Tamarin, in `make matrix` (633 → **641 runs**).
+
+**Why they are the first of their kind here.** Every other theory in this repository takes
+capabilities, signatures and identities as *terms* the verifier receives — so *"resolve an
+entity by its address"* had no representation, and there was no address to forge. §5.2 and §5.5
+do not receive entities; they **resolve** them, by key, out of a wire-supplied map. That
+unstated abstraction is why a green active-attacker result could coexist with a live capability
+forgery, which `entity-core-protocol` closed at `0.8.2.23` on text that was inside this
+repository's own modelling pin.
+
+These theories carry the indirection. The forgery is **exhibited**: remove one of five key
+bindings and an observer of any capability chain mints a leaf off it, with every address in the
+envelope honest, every address-level check in §5.5 passing, and the granter's key never used.
+Both of the conformant mechanisms the specification offers close it.
+
+**And the new result is about the choice between those mechanisms.** The specification warns
+that its second mechanism *"depends on this item running at every ingress"*. That warning is now
+measured: a peer running it at four ingresses out of five is falsified by the same attack, one
+level down, and is **indistinguishable on the wire** from a conformant peer — the envelopes that
+separate them are exactly the ones an honest peer never sends. The first mechanism is one check
+at one site and cannot be half-adopted; the second is a check at N sites and N−1 looks like N.
+
+### Fixed — two claim gates were green over numbers they could no longer see (2026-09-16)
+
+`make enginecount` validated every `N of M` whose denominator was one of its own derived
+figures. Adding a subject moved the total, so four live sites stating the *previous* pair had a
+denominator that was no longer recognised and were skipped — and a second, still-correct pair in
+the same sentence satisfied the "does it state a pair at all" check. `make runcount` failed in
+the opposite direction on the same afternoon, reporting that a site had *stopped making its
+claim* when the site was merely stale, because its pattern was anchored on a neighbouring number
+that had also moved.
+
+Both are the same root cause and it is now a named discipline: **a gate recognises a claim
+through a matcher, and the matcher must not depend on the claim's own value.** Matchers classify
+by an invariant token now. The teeth-testing checklist gained a third input — a wrong
+*denominator* — which had never been run against any gate here.
+
+### Fixed — the obligation gate credited models that transcribe a different snapshot (2026-09-16)
+
+`make coverage` holds a pin-overridden model's citations out of the pin's coverage claim;
+`make obligations` did not, so obligations inside a section only an off-pin model cites went on
+counting as examined. The two share the partition now, the split is printed beside the headline,
+and the published figure moved from **120 to 122 of 365 core obligations unexamined** — the hole
+getting bigger because the measurement got honest.
+
 ### Added — a model may now pin to a different snapshot than its track, and it is a gate rather than a sentence (2026-09-15)
 
 `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` now transcribe
@@ -228,7 +277,7 @@ to be carried by **at least two structurally different engines**, and a result c
 must say so by name. **`docs/CORROBORATION.md`** is the ledger — per modeled subject, which
 engines have a *green* result on it, and every subject that rests on a single engine listed
 individually with the reason — and **`make enginecount`** derives the whole thing from the gate
-tables and fails when any published figure disagrees. It is **33 of 35** subjects on two or more
+tables and fails when any published figure disagrees. It is **34 of 36** subjects on two or more
 engines, **9 of 9** on the three extension protocols.
 
 The ledger says in its own text what a second engine does **not** buy, because the number is

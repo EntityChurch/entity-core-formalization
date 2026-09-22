@@ -22,8 +22,8 @@ _Updated: 2026-09-14 · this line: 0.8.2_
 > *"forgery … under an active attacker, at the modeled bound."* That sentence was saved only
 > by four words nobody reads. The audit is
 > `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`; the measurement it
-> produced: **120 of 365 core obligations are UNEXAMINED**. The wider figure is that
-> **128 of 365 core obligations sit in sections no model cites**. Gated by `make obligations`.
+> produced: **122 of 365 core obligations are UNEXAMINED**. The wider figure is that
+> **130 of 365 core obligations sit in sections no model cites**. Gated by `make obligations`.
 >
 > This paragraph said *"the models track the live spec … byte-for-byte across all three
 > normative files"* until 2026-09-06, in this file and seven others, while all three files
@@ -40,7 +40,7 @@ separately.
 
 | Track | Subject | Status |
 |---|---|---|
-| `core` | Entity Core Protocol | **modeled** — 95 model files, 326 runs, pinned at `spec-data/v0.8.2` (3 of them at `v0.8.2.25`) |
+| `core` | Entity Core Protocol | **modeled** — 103 model files, 334 runs, pinned at `spec-data/v0.8.2` (11 of them at `v0.8.2.25`) |
 | `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
 | `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 100 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-quorum-v1.2` |
 | `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 139 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-identity-v3.10` |
@@ -104,6 +104,135 @@ it. See §Next item 4 and `docs/LEAN-SEAM.md` §7.
 
 ## Where we left off
 
+**2026-09-16 (c) — arch's last two open frame questions are answered, one of them by correcting a
+row of their own published table, and §5.5a's MUST turns out to live in no pseudocode in the
+document.** No model was written this session and none was needed; the instrument was reading the
+call path and censusing three implementations, and the packet says so in its own evidence-class
+header rather than letting its confidence imply otherwise.
+
+- ⭐⭐ **`S-8` — the only row arch's board carries for this seat — is ANSWERED in full.**
+  `ROUTING-2026-09-16-d-…`. Items 2/3/4 landed 2026-09-14; **items 1 (the multi-granter root) and 5
+  (identity rotation) — the two they flagged as the weakest links in their own analysis — are
+  answered today.**
+- **Item 5 is decided by `EXTENSION-IDENTITY`'s own text, in their favour and more strongly than
+  their reading.** §9.5 says outstanding third-party caps **die** on retirement and *"consuming
+  extensions stay rotation-agnostic"*; §3.2/§10.1 make namespaces per-agent by construction.
+  **Residue:** §9.5's three death causes are all *retirements*, and §4.3's graceful handoff — the
+  path §13.3 recommends as routine hygiene — is in none of them. The same silence our own `N1`
+  found, one consumer downstream.
+- ⛔ **Item 1's GAP was already theirs and the CLOSURE is wrong.**
+  `PROPOSAL-THE-FRAME-IS-A-CONSTANT…` §2.2 found the gap first (we say so first in the packet, and
+  reading their prior art is what stopped us filing a duplicate). Its foreclosing premise — *"the
+  assembler … is the only peer that will ever evaluate it"* — **is prose enforced by nothing.**
+  §5.5's multi-sig root-trust branch accepts if *some* signer is the local peer and signed, which
+  is true at **every co-signer**, and go implements it literally. So the same K-of-N cap frames at
+  `/B/*` under match-time and `/A/*` under mint-time: **a cell where the two readings differ**,
+  which their §8 states is grounds for withdrawal. **We argue it is not** — mint-time gives the
+  group one answer where match-time gives K — so what it withdraws is *"seven of seven identical"*
+  and *"nothing waits on this."*
+- ⭐⭐ **And the finding neither item asked for, routed as `P-6`: §5.5a's granter-frame rule —
+  a MUST with three surfaces, five named conformance vectors and two separately-named defective
+  architectures — appears in NO pseudocode in the document.** All eight authorization functions
+  (`matches_scope`, `check_permission`, `check_resource_scope`, `is_attenuated`, `grant_subset`,
+  `scope_subset`, `pattern_covers`, `check_path_permission`) take `local_peer_id` and nothing else,
+  at our pin and at live **0.8.2.27**. `pattern_covers` canonicalizes **both** operands against the
+  verifier, which is §5.5a's own footnote's *canon-against-wrong-frame* by name; `is_attenuated`
+  receives no `included` map, so the required input is not reachable from inside the algorithm that
+  must satisfy it. **All three peers thread three frames and none implements the spec's form** —
+  `D28`, and it is `D24`'s twin: same call path, *which frame* rather than *which comparison*,
+  ratified there and open here.
+- **The strongest evidence it is unfolded rather than deliberate: the held proposal's own change
+  list proposes REMOVING "the per-link frame parameter" and "the granter-frame parameter" from five
+  functions that do not have one.** The document enumerating the change sites believes the
+  threading landed.
+- **`P-8` / `D27` — the fallback nobody ruled.** When a granter resolves but its `peer_id` does not
+  (unknown `key_type`, wrong key length), **go denies; rust and py substitute the VERIFIER's
+  frame** — the escalation direction. Rust's `None` arm is `PeerData::canonical_peer_id`, which is
+  `D25`, the same hand-rolled table whose own caller records a shipped Ed448 regression.
+  ⚠ **Reachability is unmeasured and the row says so** rather than rounding up.
+- ⛔ **DELIVERY WAS MEASURED FOR THE FIRST TIME, WITH THE RECEIVER'S OWN INSTRUMENT, AND OUR
+  DEFAULT WAS WRONG IN BOTH DIRECTIONS.** `spec inbound` over the cohort: arch's ledger **cites all
+  six extension packets by name** and rules them deliberately unread (*received and parked*, a
+  state our trackers did not have) — and our single `owed` row was **a false obligation we
+  manufactured**, `PREHELLO-AUTHENTICATE`'s prose `**To:** architecture review, then …` matching
+  arch's alias, so a packet `entity-core-protocol` adopted and ruled sat on arch's books. Four
+  unaddressed packets retrofitted; **zero owed** now. **A delivery-state default is a claim, and
+  ours had never been checked against the tool that decides it.**
+- **Their pin moved twice inside the session** (0.8.2.26 → `.27`), shifting §5.6 by eleven lines
+  under a draft that cited line numbers. All claims re-verified and held; **packet citations are by
+  symbol now**, which is `AGENTS-STANDARD.md`'s own rule earning itself in one afternoon. *A line
+  number into `spec-data/` is a pin; a line number into a sibling's live tree is a claim with a
+  half-life of hours.*
+- **Gate status:** all eight claim gates green. `make matrix` not re-run — nothing this session
+  touches a TLA+, Spin or prover model. Coverage unchanged at **27 of 91**; obligations unchanged
+  at **122 of 365**.
+
+**2026-09-16 — the abstraction nobody noticed making is modeled, the forgery is exhibited, and
+two of our own claim gates were reporting green over stale numbers they could no longer see.**
+
+- ⭐ **`docs/LEAN-SEAM.md` O23 has its first models: `tamarin/Resolution.{pv,spthy}` and
+  `tamarin/ResolutionDiscard.{pv,spthy}` with two controls, both provers, 8 new runs
+  (633 → 641).** These are the first theories in this repo that give the adversary **the ADDRESS
+  as well as the term.** Every other prover theory here takes capabilities and chain links as
+  terms off `In(...)`, so *"resolve entity by address"* had no representation and there was
+  nothing to forge — which is how a green active-attacker result coexisted with the live
+  capability forgery `0.8.2.23` closed, on text that was in our pin.
+- **The forgery is EXHIBITED, not argued.** `ResolutionBug` removes ONE of five key bindings, at
+  `included[leaf.data.granter]`. ProVerif's trace builds a leaf whose `granter` is A's honest
+  address and a signature entity whose `signer` is A's honest address, then answers the
+  verifier's `included[addr_A]` lookup with the adversary's own `system/peer` entity. **Every
+  address-level check in §5.5 passes because every address is honest**; §3.5's normative signer
+  check passes; `skA` is never used. Both of §1.8 item 1's conformant mechanisms close it.
+- ⭐ **And the new finding is about the mechanism CHOICE, which no wire probe can decide.**
+  §1.8 attaches a ⚠ to mechanism (b) — *"depends on this item running at EVERY ingress"* —
+  and `ResolutionDiscardBug` executes that sentence: item 1 skipped at **one of five** ingresses,
+  the other four still validating, and the same forgery returns one level down with the peer
+  **wire-indistinguishable** from its green twin. So the two blessed mechanisms are **not equally
+  robust to partial adoption**: (a) is one check at one site and cannot be half-adopted; (b) is a
+  check at N ingresses and N-1 looks exactly like N.
+- ⛔ **The cohort census corrected a live ask rather than duplicating it.** `entity-core-go`
+  routed `ROUTING-2026-09-15-c` asking arch to rule §1.8 as **receive-boundary** (go/rust) or
+  **resolve-time** (py), off a probe using an *unreferenced mis-keyed entry*. Reading the three
+  sources says py's `200` is **not a later enforcement of the same mechanism — py implements the
+  OTHER one**: `included` is a **LIST** in `protocol/envelope.py`, `find_included` scans by the
+  entity's own `content_hash`, and there is no wire key anywhere in the structure. A ruling
+  framed as boundary-vs-resolve-time has no place to put a mechanism-(b) peer, and a check set
+  asserting refusal of an unreferenced mis-keyed entry is asserting mechanism (a) while §1.8
+  says (b) is conformant. Routed:
+  `docs/status/ROUTING-2026-09-16-a-entity-system-architecture-the-1-8-enforcement-point-question-has-a-third-answer-and-it-is-mechanism-b.md`.
+- ⛔ **O23 STAYS OPEN and the verdict did not move.** One of thirteen prover subjects carries the
+  indirection; twelve still abstract it, and §5.5's multi-sig arms — whose per-constituent
+  `included[candidate]` lookups are in the same class — are modeled nowhere. The row is RESTATED,
+  the O11 way: measured, proposition survived, **scope** was wrong (*"nowhere, in any engine, on
+  any track"* is now false of one subject and true of the rest).
+- ⛔ **`make enginecount` WAS GREEN OVER FOUR SITES READING `33 of 35`, INCLUDING ITS OWN
+  LEDGER AND `AGENTS.md`.** Its site check validated every `N of M` *whose M is one of OUR
+  denominators*; adding a subject took the total to 36, so `33 of 35` had a denominator that was
+  no longer ours and was skipped — and `seen` came out True anyway off the correct `9 of 9`
+  pair in the same sentence. **Neither the wrong-pair branch nor the no-pair branch fired.**
+  `make runcount` failed the same afternoon in the opposite direction, reporting *"the site no
+  longer states the per-track split"* — a true message naming the wrong defect — because its
+  README pattern was anchored on the literal `95 model files`, four words below its own comment
+  forbidding exactly that.
+- ⭐ **Both are now `AGENTS.md` D20, ratified on a third bite in a third shape** (the first was
+  `ledgercount`'s `**40 rows**`, 2026-09-14): *a gate recognises a claim through a MATCHER, and
+  the matcher must not depend on the claim's own value.* Matchers classify by an invariant noun
+  now, with the value-keyed arm underneath as a fallback that states its own blind spot.
+  **And the teeth-test checklist grew a third input: a wrong DENOMINATOR.** Every gate here had
+  been broken on its numerator and none on its denominator.
+- ⛔ **`make obligations` was crediting off-pin citations against the PIN's denominator.**
+  `coverage-check.py` holds a `model_pins` file's citations out of the pin's claim;
+  `obligations.py`, written two days earlier for the express purpose of not dividing by an
+  artifact of ours, walked `models` entire. So §4.7's **pin** obligations counted as examined for
+  a day after `make coverage` had removed §4.7 from Matrix A and said out loud that nothing
+  verifies it as the pin states it. They share the partition now, the split is printed beside the
+  headline, and a section cited only by a pin-overridden model must carry a note.
+  **The published hole went 120 → 122 of 365**, which is the fix working.
+- **Gate status:** all eight claim gates green; `make -C tamarin matrix` green (17 ProVerif and
+  16 Tamarin greens, 17 + 17 controls, every verdict exactly as declared). Core coverage is
+  unchanged at **27 of 91** — the five new sections are cited only off-pin, so they enter the
+  §3f grid and not Matrix A.
+
 **2026-09-10 — the answer we sent a counterpart is now a theorem, and the program behind the
 numbers we sent is now in the tree, which it was not when we sent them.** Both counterparts
 signed off on the design the same day; nothing in this repo blocks anyone.
@@ -163,7 +292,7 @@ one to read.
   `docs/CORROBORATION.md` is the per-subject ledger — subject → files → engines — and the gate
   derives the engine set from the **GREEN** gate tables, not from which files exist, then fails
   on a stale exemption, an undeclared subject, or a prose site whose pair has drifted. It is
-  **33 of 35** subjects overall and **9 of 9** on the extension tracks. The figure it replaces
+  **34 of 36** subjects overall and **9 of 9** on the extension tracks. The figure it replaces
   ("five of the nine") was written by hand on 2026-09-08 and was stale the next morning, which
   is the fourth artifact in this repo to fail that way. *(This line said 30 and 6 when it was
   written this morning and moved by lunchtime, when `identityrecovery` gained its second engine
@@ -370,7 +499,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 633 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 641 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -391,11 +520,13 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   Worse, the claim is wrong as written: **a `sorry` is a warning in Lean, so `lake build` exits 0 and prints "Build
   completed successfully"**, and so does a hand-written `axiom` standing in for a proof —
   each built and observed, not reasoned about. Exit status catches one failure mode in
-  three. `make leanproof` therefore grades the **axiom sets**: 40 declared `#print axioms`
-  gates, exact set per declaration in both directions, tied to the ledger's own pin block,
+  three. `make leanproof` therefore grades the **axiom sets**: EVERY declared `#print axioms`
+  gate, exact set per declaration in both directions, tied to the ledger's own pin block,
   with five controls (`neg-sorry`, `neg-axiom`, `neg-ungate`, `neg-dropfile`, `neg-broken`)
   each required to fail for its own reason on the declarations it names. **6 runs, separate
-  from the 277** — they need the sibling
+  from `make matrix`'s total** *(this read "separate from the 277" until 2026-09-16 —
+  a paraphrase `make runcount` cannot match, stale through every increment to 641)* — they
+  need the sibling
   checkout, and every published number here is reproducible from a bare clone.
   `docs/LEAN-SEAM.md` §7.
 - **The tier was then audited before it was committed, and the audit found five things.**
@@ -424,11 +555,11 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 | Apalache finding rows, transition systems (must be violated; bounded from `Init`) | 16 |
 | Spin green (7 × safety+LTL, 4 safety-only, 3 × safety+LTL variant rows) | 24 |
 | Spin negative controls | 43 |
-| ProVerif (15 green + 15 controls) | 30 |
-| Tamarin (14 green + 15 controls) | 29 |
-| **total** | **633** |
+| ProVerif (17 green + 17 controls) | 34 |
+| Tamarin (16 green + 17 controls) | 33 |
+| **total** | **641** |
 
-Split by proof track, derived by `make runcount` rather than stated by hand: **326 runs** on
+Split by proof track, derived by `make runcount` rather than stated by hand: **334 runs** on
 `core`, **68** on `attestation`, **100** on `quorum` and **139** on `identity`. Attestation:
 `AttestIndex` — 1 green, 3 controls, 3 witnesses; `AttestLive` — 1 green, 2 controls,
 3 witnesses, 2 findings; `AttestRevoke` — 1 green, 2 controls, 3 witnesses, 2 findings; plus
@@ -701,6 +832,79 @@ item 4.
 
 ## Next
 
+0**********. ⭐ **THE NEXT REAL MODELLING TASK IS §6.8's AUTHORITY-SELECTION MUST, AND THE REASON
+   TO PUT IT FIRST IS NOW A MEASURED SEQUENCING FACT RATHER THAN A PREFERENCE. NEW 2026-09-16 (c).**
+
+   **Read this item before picking anything off the list below.** Three inputs landed today that
+   change the ordering, and none of them is about the work's intrinsic value:
+
+   - ⛔ **Arch is the cohort's declared bottleneck.** Their own board (`COHORT-OPEN-ITEMS.md`
+     §0.0b, 2026-09-16) lists **8 items arch owes**, `A-1` alone being *"~21 questions from the
+     conformance seat, rowed but never answered."* Two seats are blocked on them. **So an item of
+     ours that needs an arch ruling first is an item that does not start.** `A-35`/`A-36` (§4.11
+     arm (f)) were filed into that inbox this morning — correct to file, **wrong to sequence
+     behind**.
+   - ⛔ **The extension set is off the release path**, explicitly, on the same board. Our 26
+     extension findings are *received, enumerated and deliberately parked* (§0p.4). **Nothing we
+     write moves them**, and re-routing them would be adding to a blocked seat.
+   - ✅ **`S-8`, the only row arch carries for this seat, is answered.** Nothing is owed outward.
+
+   **What that leaves is the work that needs nobody**, in order:
+
+   1. ⭐⭐ **Model §6.8's authority-selection MUST in `tla/Authority.tla`.**
+
+      ⛔ **FIRST, A CORRECTION TO ITEM `0******` BELOW, FOUND WHILE WRITING THIS ONE.** That item
+      states the rule as *"selected by **who named the path**, never by who initiated the chain."*
+      **That is the 0.8.2.21 wording and it was superseded at 0.8.2.22.** The rule in
+      `spec-data/v0.8.2.25` reads:
+
+      > *"WHICH authority the handler-level check runs against is selected by **WHETHER THE ACCESS
+      > SERVES A LIVE CALLER'S REQUEST**, never by who initiated the chain **and never by who
+      > derived the path** `[MUST]` (0.8.2.21; the discriminator corrected 0.8.2.22)."*
+
+      **The discriminator we wrote down is now explicitly named as one of the things it is NOT.**
+      A model transcribed from item `0******` would have encoded the refuted reading and gone
+      green on it — `AGENTS.md` **D12**, *a model that encodes a paraphrase proves a theorem about
+      the paraphrase*, one step earlier than usual because the paraphrase is **ours** and it went
+      stale in someone else's tree (D15's fifteenth shape). Item `0******` is left standing and
+      marked. **Transcribe from `spec-data/`, never from this worklist.**
+
+      ⭐ **And the corrected rule is a BETTER modelling subject than the one we recorded**, which
+      is the argument for re-reading rather than re-using: *"serves a live caller's request"* is a
+      property of the **execution context**, not of the capability, and §6.3's parameter — named
+      only `capability` — cannot tell the two apart. The spec's own measurement is a
+      **four-hop** continuation standing leg where the value arriving at `system/tree:put` was the
+      inbox deliver token, because `caller_capability` propagates unchanged *for attribution*.
+      **That is a multi-step state question about which value reaches a check — TLA+'s subject
+      exactly, and a wire suite's blind spot**, and the spec says the defect is wire-invisible
+      (*"both readings produce a well-formed response and differ only in which authority was
+      consulted"*), so no conformance vector can grade it. `tla/Authority.tla` already declares its
+      subject as *"WHICH authority is consulted and WHETHER it is consulted"* and makes SELF and
+      GRANT coverage deliberately disjoint **so that consulting the wrong authority is
+      observable**. ⭐ **The falsifier is built; only the rule is new, and the blocker named in
+      item `0******` — "blocked only on a re-vendor: this text is 0.8.2.21 and the pin is 0.8.2" —
+      is GONE**: `[track.core.model_pins]` shipped 2026-09-15 and `spec-data/v0.8.2.25/` is
+      vendored, so this is a `model_pins` retarget exactly like `conncodes` and `resolution`.
+      **Retarget the whole `authority` SUBJECT, not one file** (`docs/CORROBORATION.md`), and
+      **expect core coverage to move** — that is the mechanism working, not a regression.
+   2. **Read down the 122.** `make obligations` publishes **122 of 365 core obligations
+      UNEXAMINED**. Highest-MUST-count uncited sections first: **§3.5 (10)** — which is the
+      `system/peer` type this session's `P-3` found three normative sites misreading, so the census
+      is already in hand — then §1.4 (11), §6.9a (10), §4.5 (8), §6.13 (8).
+   3. **`§5.5's multi-sig root-trust branch is modelable and nobody has modeled it.** Today's `P-7`
+      argument — that the branch admits **every co-signer** where the design assumes one — is a
+      **reading**, and this repo's own evidence classes say a reading is the weakest thing it
+      publishes. It is a five-state question (`signers`, `signed`, `local`, one cap, two holders)
+      and would move the claim from `reading` to `machine-checked` for about an afternoon's work.
+      **Do this only if arch pushes back on `P-7`**; filing a model nobody disputed is the
+      productive-track-reads-as-covered anti-pattern (`D19`).
+
+   ⛔ **What NOT to do first: §4.11 arm (f).** Its warrant is still the strongest on the board and
+   it is still `tla/Reentry.tla`'s job — but **the decisive distinction is not wire-decidable as
+   the text stands**, which is exactly why `A-35`/`A-36` had to be asked, and those sit with the
+   bottleneck seat. Item `0*********` below carries the full scoping and is ready to execute **the
+   day a ruling lands**.
+
 0*********. ✅ **DONE 2026-09-15 — THE KEYSTONE LEAN SEAM IS RE-READ AND RE-PINNED. `make lean`
    IS GREEN ON ALL 12 RUNS.** *(Kept in place rather than archived, because both of its written-down
    hypotheses were answered and one of its premises was wrong — see the outcome block below.)*
@@ -758,9 +962,27 @@ item 4.
      `A-3` "no" to mathlib **with the new information in hand** rather than by default, which is
      the part that matters, because they were right that our answer became load-bearing after we
      gave it. `L5` stays CLOSED-MODULO-H until one of the three routes lands.
-   - ⭐ **Keystone's `A-4` re-derivation is NOT done and is still owed** — it is the one bullet of
-     this item that the session did not reach. It needs the new `.id` dispatch, not the old
-     function.
+   - ~~⭐ **Keystone's `A-4` re-derivation is NOT done and is still owed**~~ ✅ **DONE 2026-09-16,
+     and it DISSOLVED rather than resolving either way.** `lean/lemmas/IdScope.lean` (5 gated
+     rows, positive control, must-agree control), routed as
+     `ROUTING-2026-09-16-b-…-a4-dissolves-…`. R11's witness **constructed** at keystone
+     `97bf1a05` — the artifact our 2026-09-10 answer was about — and is dead **twice over** at
+     `c3356b43`, killed independently by `0c4a537b`'s `canonSegs` `*/`→`neverMatch` arm and by
+     `fee2e422`'s `.id` dispatch. ⛔ **Neither is the argument A-4 made**: §5.4 `canonicalize`'s
+     rejection was not in their Lean when they argued it, arriving five days later. The
+     A-upper-end grade does not move, because it never rested on the witness.
+     ⛔ **The measurement produced the half nobody had — `narrowed=2 widened=1`.** `K-7` moved
+     one row of three in the **permissive** direction (`/abs/op ≤ *`), conformantly, so
+     *"it stops the over-granting"* is false of that row. Routed back as a courtesy correction.
+     **`K-6` and `K-7` are RETIRED** in `FINDINGS-INDEX.md` §6a under §7's rule — *a finding
+     retires when the MEASUREMENT is re-run, not when the amendment lands*, and the measurement
+     is precisely what found `widened=1`.
+   - ⛔ **A second defect fell out of it: the ledger's pin block carried the 2026-09-15 digests
+     under a re-pin note dated 2026-09-14, two of whose sentences had become false.** The 09-15
+     session re-read and re-pinned and left no note beside the block. `make leanseam` enforces
+     "no re-declare without re-reading the theorems" and **structurally cannot check that the
+     PROSE licensing the pin was rewritten.** Second note added; the first left standing and
+     marked. *A re-pin is two edits and only one of them is mechanical.*
 
 0*********. ⭐ **§4.11 ARM (f) — THE MULTIPLEXED PRE-ADMISSION REFUSAL. NEW 2026-09-15 with
    0.8.2.25, and it is the largest tractable modelable surface on the board.**
@@ -773,6 +995,30 @@ item 4.
    - **It quantifies over interleavings and its failure is a LOST response**, so a wire suite
      cannot separate it from slowness. `entity-system-architecture` records (`KC-2`) that it
      **cannot be inferred from the other five and has never been driven anywhere.**
+
+     ⛔ **CORRECTED 2026-09-16 — "never been driven anywhere" IS STALE, and the case for modelling
+     it got STRONGER rather than weaker.** `entity-core-go` drove arm (f) on **2026-09-15**:
+     `preadmission_multiplex_inflight_survives` (`cmd/internal/validate/preadmission_refusal.go:287`),
+     whose own declaration quotes arch's *"the one arm nothing else implies and it has never been
+     driven anywhere"* and then drives it, 3-way. **`KC-2` still carries the sentence; it is a claim
+     about someone else's tree and it went stale in a day** — the `driftclaim` class, and this repo
+     repeated it at five sites. What their probe found is the argument:
+
+     - **Their own comment names the hole first**: *"A bare close still drains already-dispatched work
+       via `serve()`'s deferred `wg.Wait`, so the in-flight 200 above passes even under a bare close —
+       it does NOT tell continue from drain-then-close."* So the obvious form of arm (f) is satisfied
+       by the behaviour it exists to forbid.
+     - **Their discriminator is a SECOND request on the same connection after the refusal** — and
+       §4.11 says in as many words *"Whether the peer closes the connection afterwards is its own
+       choice."* So the discriminator tests a property the section does not state, and **go has
+       already routed an ask to arch to split arm (a) into (a1) whole-but-undecodable [survives] and
+       (a2) truncated [forced close]** so that it would. **That ask is OPEN.**
+     - ⭐ **Which makes arm (f) the `ECP-R24` shape**: a binding obligation whose decisive distinction
+       — *the admitted request kept its response* vs *the peer drained and closed* — is **not
+       wire-decidable under the text as it stands**. `entity-system-conformance`'s `GUIDE-CONFORMANCE`
+       §5.2a gives such a rule two dispositions, a pinned-input vector or `declared`, and **the third
+       is a machine-checked model.** That is a far more specific warrant than *"no other instrument can
+       reach it"*, and it is the one to quote.
    - **`tla/Reentry.tla` is the instrument** — multiplexed connection, pooled dispatch, in-flight
      correlation, frame-write lock, §6.11(a)/(a′) already proved jointly satisfiable. What it
      lacks is a refusal path at all (`Gate(p) == TRUE`, disclosed in `docs/PROPERTIES.md`), so
@@ -791,8 +1037,12 @@ item 4.
      unknown-operation row, the half-open rule and 0.8.2.6's address-before-authentication
      ordering. 3 engines, **24 new runs** (609 → 633), the contested-cell constant gone and
      `ConnCodesSeqReadingBug` demoted to an ordinary injected defect.
-     **`make specdrift` now reports 0 of 11 cited sections moved for those three files, so the
-     repo's ONE live pin-vs-spec contradiction is closed.**
+     **`make specdrift` reported 0 of 11 cited sections moved for those three files on the day
+     this was written, so the repo's ONE live pin-vs-spec contradiction is closed.** *(That
+     figure is the whole `.25` group, not those three files, and it is 0 of 21 since the
+     `resolution` subject retargeted on 2026-09-16. Left at 11 because this paragraph is that
+     session's record; it is not a declared `driftclaim` site, so derive it rather than quoting
+     either number.)*
    - ⛔ **And the mechanism it needed is the durable part: `[track.core.model_pins]`.** A model
      on a different snapshot than its track pin is declared in `TRACKS.toml`, marked in the file
      with `MODELING-PIN-OVERRIDE:`, and gated **both directions** by `make trackcheck` §E.
@@ -809,7 +1059,24 @@ item 4.
      the grid so nobody infers the rest from a citation. **Arm (f) is still the flagship and
      still `tla/Reentry.tla`'s job.**
 
-0********. ⛔ **MODEL THE `included`-MAP INDIRECTION. It is the top of this list because a
+0********. ⭐ **~~MODEL THE `included`-MAP INDIRECTION.~~ FIRST SUBJECT DONE 2026-09-16, O23
+   RESTATED AND STILL OPEN, AND THE SECOND FINDING IS THE ONE TO CARRY.** Eight files, two
+   engines, one theory per conformant mechanism of §1.8 item 1, at `spec-data/v0.8.2.25`
+   (the receiver's obligation does not exist at the core pin). The forgery is exhibited; both
+   mechanisms close it; and `ResolutionDiscardBug` measures §1.8's own ⚠ — mechanism (b) with
+   item 1 skipped at ONE of five ingresses is falsified by the same attack and is
+   **wire-indistinguishable** from a conformant peer. Routed with a source census that
+   **corrects a live ask**: `entity-core-go` asked arch to rule boundary-vs-resolve-time, and
+   `entity-core-py` is not enforcing later — it implements mechanism **(b)** and has no map keys
+   at all (`included` is a LIST). `ROUTING-2026-09-16-a-*`.
+   ⛔ **What is left on this item, named rather than implied:** twelve of thirteen prover
+   subjects still take their terms off `In(...)`, so O23's sentence *"every active-attacker
+   result is conditional on this row"* is still true of them; §5.5's **multi-sig** arms resolve
+   `included[candidate]` per constituent and are modeled nowhere; and the cheapest real
+   reduction is **`chaintopology`**, whose four distinct roles are exactly the addresses an
+   attacker substitutes between and whose §5.8 non-issuing verifier resolves every identity in
+   the chain from the envelope. *Original item below.*
+   ⛔ **MODEL THE `included`-MAP INDIRECTION. It is the top of this list because a
    capability forgery was closed upstream in text that was in our pin, and no model here could
    see it. NEW 2026-09-14.**
    `0.8.2.23` closed a **capability and identity forgery**: every authority lookup resolved an
@@ -827,7 +1094,9 @@ item 4.
    - **Until that runs, the honest statement is "outside our domain", NOT "we would have found
      it."** Whether a theory carrying the indirection actually falsifies `no_escalation` is
      **unmeasured**, and that gap is stated in the audit rather than papered over.
-   - **Then read down the 120.** `make obligations` publishes **120 of 365 core obligations are
+   - **Then read down the 122.** *(It was 120 until 2026-09-16, when `obligations.py` stopped
+     crediting off-pin citations against the pin's denominator — see §"Where we left off".)*
+     `make obligations` publishes **122 of 365 core obligations are
      UNEXAMINED**. Highest-MUST-count uncited sections first: §1.4 (11), §3.5 (10), §6.9a (10),
      §4.5 (8), §6.13 (8). This is standing work the gate now makes impossible to forget.
    - Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
@@ -860,9 +1129,13 @@ item 4.
    model; `docs/SPEC-DRIFT-ASSESSMENT.md` **§1b** is the classification and is the thing to read.
    Three pieces of work fall out, in descending value:
 
-   - **Model §6.8's authority selection.** 0.8.2.21 adds: *which authority the handler-level check
-     runs against is selected by **who named the path**, never by who initiated the chain*
-     `[MUST]`, with three cases — caller-named → the caller's verified capability; handler-**derived**
+   - **Model §6.8's authority selection.** ⛔ **THE RULE AS STATED IN THIS BULLET IS STALE AND IS
+     LEFT STANDING DELIBERATELY — see item `0**********` for the correction.** 0.8.2.22 changed
+     the discriminator to *"whether the access serves a live caller's request"* and explicitly
+     names *"who derived the path"* as something it is **not**. Transcribe from
+     `spec-data/v0.8.2.25`, not from here. *Original text:* 0.8.2.21 adds: *which authority the
+     handler-level check runs against is selected by **who named the path**, never by who initiated
+     the chain* `[MUST]`, with three cases — caller-named → the caller's verified capability; handler-**derived**
      → the executing handler's own grant; peer-root → **no check**. The spec states the defect is
      **wire-invisible** (*"both readings produce a well-formed response and differ only in which
      authority was consulted"*), so no conformance vector can grade it — D13/D17's shape, and the
@@ -1073,7 +1346,7 @@ item 4.
      prints `Build completed successfully` and exits **0**. So does a hand-written `axiom`
      replacing a proof, with no warning at all. Only a proof that fails to type-check exits
      non-zero. Demonstrated by building all three, per the D15 corollary.
-   - **So the gate grades axiom sets, not exit status.** 40 declared `#print axioms` gates in
+   - **So the gate grades axiom sets, not exit status.** EVERY declared `#print axioms` gate in
      `lean/proof-gate.expect`, exact axiom set per declaration in both directions, every
      ledger-pinned theorem required to be among them, warnings failing unless declared with an
      owner, and the image's Lean version required to equal keystone's own `lean-toolchain`

@@ -133,3 +133,44 @@ eval|Q1x witnesses: none
 eval|Q2 witnesses: none
 eval|Q2x witnesses: none
 eval|Q3 refused-at-mint set: pA|*/apply pA|../x pA|./x pA|*/secret pB|*/apply pB|../x pB|./x pB|*/secret
+
+# ── A-4: what K-7 actually closed, and whether R11's witness still constructs ────────────
+# `lean/lemmas/IdScope.lean`. `entity-core-keystone` ask A-4 says R11's withdrawn bound
+# should be restored because its witness cannot be built. It COULD be built on the artifact
+# our ledger pins when R11 was measured, and it cannot be built now -- and the two commits
+# that closed it both landed AFTER the disagreement, neither of them being the argument A-4
+# made. This gate holds that as four verdicts and three sweeps rather than as a paragraph.
+#
+#   r11Pre    THE POSITIVE CONTROL, and every other row on this line is a `false`. It is the
+#             over-grant on `canonSegs`/`scopeSubset` @ keystone 97bf1a05, transcribed from
+#             `git show` rather than reconstructed. If this ever reads `false` the file has
+#             stopped measuring the thing it is named after and the three falses below mean
+#             nothing -- exactly `neg-eval`'s demonstration, one file over.
+#   r11Id     closed by the `ScopeKind` dispatch alone (their `fee2e422`).
+#   r11Path   closed by `canonSegs`'s `*/` sentinel arm alone (their `0c4a537b`).
+#             Two INDEPENDENT repairs: either one kills the witness, which is why the answer
+#             to A-4 is neither a concession nor a defence.
+#   r11Grant  the same pair through `grantSubset`, i.e. the path a real chain takes. A direct
+#             `scopeSubset` call is a function chosen to make a point; this is the call site.
+eval|A4 r11Pre=true r11Id=false r11Path=false r11Grant=false
+#
+#   incl      THE SWEEP. 3 of 144 pairs change verdict across K-7, partitioned exhaustively
+#             by §3.6's own grammar: `starpos` (a `*` outside the two grammatical positions),
+#             `slash` (a pattern carrying §5.4 path syntax -- §3.6:1035 names this class in
+#             as many words), `other` (unexplained; MUST stay 0 or it is a result).
+#   ⛔        `narrowed=2 widened=1`. The widening is real and is toward the grammar (`*`
+#             matches any value, so the pre-fix refusal of `/abs/op <= *` was the defect) --
+#             but "K-7 narrows the check" is FALSE of one of the three rows and the headline
+#             is where that gets lost. Read both fields.
+#   excl      THE EXACT TRANSPOSE of `incl`, by construction, not a second measurement. The
+#             exclude arm evaluates the same matcher with operands swapped, so on a
+#             single-pattern alphabet swept over all ordered pairs the tally CANNOT differ.
+#             Declared and labelled because two identical lines read as corroboration.
+#   plain     THE MUST-AGREE CONTROL -- 25 pairs of ordinary operation names, no star, no
+#             slash, `disagree=0`. This is the alphabet every hand-tried example lived in,
+#             and it is why F50 survived three spec revisions and a four-language cohort.
+eval|A4 incl  pairs=144 disagree=3 narrowed=2 widened=1 starpos=2 slash=1 other=0
+eval|A4 excl  pairs=144 disagree=3 narrowed=2 widened=1 starpos=2 slash=1 other=0
+eval|A4 plain pairs=25 disagree=0 narrowed=0 widened=0 starpos=0 slash=0 other=0
+# The three rows themselves, so the finding reproduces and not only its summary.
+eval|A4 incl witnesses: tree/get<=*/get(pre=true,id=false,starpos) compute/apply<=*/apply(pre=true,id=false,starpos) /abs/op<=*(pre=false,id=true,slash)

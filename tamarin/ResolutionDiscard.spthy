@@ -1,0 +1,142 @@
+theory ResolutionDiscard
+/*
+ * RESOLUTION INTEGRITY, MECHANISM (b) — DISCARD THE KEY. Tamarin, the lockstep cross-check
+ * of ResolutionDiscard.pv.
+ *
+ * MODELING-PIN-OVERRIDE: v0.8.2.25
+ *
+ * Read `ResolutionDiscard.pv`'s header: it carries the two mechanisms §1.8 item 1 offers, why
+ * (b) is a separate theory rather than a re-skin of (a), and the ⚠ this pair exists to make
+ * measurable. `Resolution.pv`'s header carries the shared subject and the D11 boundary.
+ *
+ * The one encoding addition over `Resolution.spthy` is the materialized entity form
+ * `<'ent', {type,data}, content_hash>` (§1.1, §3.1) — the shape a (b) peer ingests, carrying
+ * the hash it CLAIMS. §1.2: content_hash itself is not hashed, which is why `h` here is
+ * always applied to the body and never to the `'ent'` tuple.
+ */
+begin
+
+builtins: signing, hashing
+
+/* ---- entity shapes (§3.5, §3.6) ----
+ * TAGGED TUPLES, not free function symbols, and the reason is a wellformedness failure worth
+ * recording rather than quietly fixing. Written first as `functions: peerE/1, capE/3, sigE/3`,
+ * this theory proved BOTH lemmas and printed "1 wellformedness check failed ... The analysis
+ * results might be wrong" — Tamarin's Message Derivation check, naming nine undeliverable
+ * variables in the verifier rule and a tenth in `Adeleg`. A free symbol has no projections, so an adversary that
+ * *receives* `capE(a,b,c)` cannot take it apart, and the rule was matching on structure the
+ * adversary could not have built that way. ProVerif's `[data]` constructors ARE projectable,
+ * so the twin was not making the same assumption: the encodings had diverged in a direction
+ * that makes the Tamarin side look STRONGER than it is. A tagged tuple is projectable, is the
+ * idiom the rest of this directory already uses (`<'awild', pk(~skA)>` in ChainTopology), and
+ * is the closer model of a CBOR entity — a map with a `type` field (§3.1).
+ *
+ *   <'peer', public_key>                      system/peer            (§3.5, v7.65)
+ *   <'cap', granter, grantee, parent>         system/capability/token (§3.6)
+ *   <'sig', target, signer, bytes>            system/signature       (§3.5)
+ *   'noparent'                                data.parent is null — the root link
+ *
+ * D13's own question, asked of a tool warning: what else satisfies a green here? A theory
+ * whose analysis Tamarin has told us might be wrong. That is why the warning is a build
+ * failure in `tamarin/Makefile` and why it was not silenced.
+ */
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+
+/* P is the verifier's OWN peer — the local peer, sole root authority for its own
+ * capabilities (§5.5 "Root trust"). A is an honest grantee and the leaf's granter. The
+ * adversary is Tamarin's and mints its own key. */
+rule Setup_P:
+    [ Fr(~skP) ]
+  --[ OnlyP() ]->
+    [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)), Out(<'peer', pk(~skP)>),
+      Out(<'ent', <'peer', pk(~skP)>, h(<'peer', pk(~skP)>)>) ]
+
+rule Setup_A:
+    [ Fr(~skA) ]
+  --[ OnlyA() ]->
+    [ !LtkA(~skA), !PkA(pk(~skA)), Out(pk(~skA)), Out(<'peer', pk(~skA)>),
+      Out(<'ent', <'peer', pk(~skA)>, h(<'peer', pk(~skA)>)>) ]
+
+/* The root link P -> A, and the detached signature over it (§3.5: signatures point TO the
+ * content they sign). */
+rule Proot:
+    let addrP   = h(<'peer', pk(~skP)>)
+        addrA   = h(<'peer', gA>)
+        rootcap = <'cap', addrP, addrA, 'noparent'>
+    in
+    [ !LtkP(~skP), !PkA(gA) ]
+  -->
+    [ Out(<rootcap, <'sig', h(rootcap), addrP, sign(h(rootcap), ~skP)>>) ]
+
+/* A delegates a leaf to whatever grantee address it is asked for, under a cap granted to A.
+ * Delegating freely is deliberate — see the ProVerif header: it makes the lemma a statement
+ * about ISSUANCE rather than about who the adversary can talk into a grant. */
+rule Adeleg:
+    let addrA   = h(<'peer', pk(~skA)>)
+        rootcap = <'cap', gaR, addrA, 'noparent'>
+        leaf    = <'cap', addrA, gb, h(rootcap)>
+    in
+    [ !LtkA(~skA), In(<rootcap, gb>) ]
+  --[ IssuedLeaf(addrA, gb) ]->
+    [ Out(<leaf, <'sig', h(leaf), addrA, sign(h(leaf), ~skA)>>) ]
+
+/* ---- THE VERIFIER (§5.2 step 3 -> §5.5), MECHANISM (b) ---- */
+rule VerifyDiscardKey:
+    let leaf      = <'cap', gaL, gbL, pL>
+        bParent   = <'cap', gaR, gbR, 'noparent'>
+        bGranterL = <'peer', kL>
+        bGranterR = <'peer', kR>
+    in
+    [ !PkP(pkP),
+      In(< leaf,
+           <'sig', h(leaf),    gaL, sbL>,
+           <'sig', h(bParent), gaR, sbR>,
+           <'ent', bParent,   cParent>,      // ingested entities, NOT map entries: there is
+           <'ent', bGranterL, cGranterL>,    // no wire key in this theory at all. Dropping
+           <'ent', bGranteeL, cGranteeL>,    // it is modeled by its absence.
+           <'ent', bGranterR, cGranterR>,
+           <'ent', bGranteeR, cGranteeR> >) ]
+  --[ // ===== THE DECODE BOUNDARY — §1.8 item 1, "validate on receipt" =====
+      // Every ingested entity checked against its own declared hash, once, here.
+      Eq(cParent,   h(bParent)),
+      Eq(cGranterL, h(bGranterL)),
+      Eq(cGranteeL, h(bGranteeL)),
+      Eq(cGranterR, h(bGranterR)),
+      Eq(cGranteeR, h(bGranteeR)),
+      // ===== RESOLUTION — address exclusively by the VALIDATED content_hash =====
+      // §5.2a calls this the arm where a mis-addressed entry is never detected as such:
+      // "the lookup simply MISSES, and a miss inherits the row of the step that missed."
+      // A miss is a rule that cannot fire, which models the DENY and not its row.
+      Eq(pL,  cParent),
+      Eq(gaL, cGranterL),
+      Eq(gbL, cGranteeL),
+      Eq(gaR, cGranterR),
+      Eq(gbR, cGranteeR),
+      // Root trust (§5.5) — against the RESOLVED BODY, as in the (a) twin.
+      Eq(bGranterR, <'peer', pkP>),
+      // Per-level signature verification against the RESOLVED identity (§5.5).
+      Eq(verify(sbR, h(bParent), kR), true),
+      Eq(verify(sbL, h(leaf),    kL), true),
+      // Delegation linkage (§5.5): parent.data.grantee == current.data.granter.
+      Eq(gbR, gaL),
+      AcceptedLeaf(gaL, gbL) ]->
+    [ ]
+
+/* ---- the lemmas ---- */
+
+/* (1) NO LEAF WITHOUT ITS GRANTER'S KEY — the SAME lemma Resolution.spthy states, so that
+ * "(b) is as good as (a)" is two verdicts on one lemma rather than two claims. */
+lemma no_unissued_leaf:
+  "All ga gb #i.
+     AcceptedLeaf(ga, gb) @ i ==> (Ex #j. IssuedLeaf(ga, gb) @ j & #j < #i)"
+
+/* (2) NON-VACUITY — and it carries more weight here than in the (a) twin: FIFTEEN equalities
+ * stand in front of the event, and a theory that decodes nothing accepts nothing. */
+lemma accepted_reachable:
+  exists-trace
+  "Ex ga gb #i. AcceptedLeaf(ga, gb) @ i"
+
+end

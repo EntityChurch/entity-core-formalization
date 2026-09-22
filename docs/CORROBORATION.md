@@ -76,7 +76,7 @@ A subject may sit at one engine for a while; that is a scheduling decision, not 
 describe it as verified. The rule the gate enforces is that **the exemption is written down**.
 
 <!-- enginecount-site: docs/CORROBORATION.md :: Derived, not recalled -->
-**Derived, not recalled: 33 of 35 subjects carry a green on two or more engines.** On the three
+**Derived, not recalled: 34 of 36 subjects carry a green on two or more engines.** On the three
 extension tracks it is **9 of 9**. Both numbers are re-derived by `make enginecount` from the
 green tables on every run of `make check` and `make matrix`; every prose site that states them
 is checked against the derivation, because the "five of the nine" in `AGENTS.md` was written by
@@ -110,6 +110,7 @@ hand on 2026-09-08, was true that day, and was stale the next morning.
 | `persistentrecheck` | core | `tamarin/PersistentRecheck.pv` `tamarin/PersistentRecheck.spthy` `tamarin/PersistentRecheckBug.pv` `tamarin/PersistentRecheckBug.spthy` | ProVerif · Tamarin | 2 |
 | `reentry` | core | `spin/reentry.pml` `tla/Reentry.tla` `tla/ReentryApalache.tla` | TLC · Apalache · Spin | 3 |
 | `register` | core | `spin/register.pml` `tla/Register.tla` `tla/RegisterApalache.tla` | TLC · Apalache · Spin | 3 |
+| `resolution` | core | `tamarin/Resolution.pv` `tamarin/Resolution.spthy` `tamarin/ResolutionBug.pv` `tamarin/ResolutionBug.spthy` `tamarin/ResolutionDiscard.pv` `tamarin/ResolutionDiscard.spthy` `tamarin/ResolutionDiscardBug.pv` `tamarin/ResolutionDiscardBug.spthy` | ProVerif · Tamarin | 2 |
 | `revoke` | core | `spin/revoke.pml` `tamarin/Revoke.pv` `tamarin/Revoke.spthy` `tamarin/RevokeBug.pv` `tamarin/RevokeBug.spthy` `tla/Revoke.tla` `tla/RevokeApalache.tla` | TLC · Apalache · Spin · ProVerif · Tamarin | 5 |
 | `revokemech` | core | `tamarin/RevokeMech.spthy` |  | 0 |
 | `store` | core | `spin/store.pml` `tla/Store.tla` `tla/StoreApalache.tla` | TLC · Apalache · Spin | 3 |
@@ -176,6 +177,8 @@ set was a claim, and nobody checked it.
 <!-- enginecount-site: docs/STATUS.md :: subjects overall and -->
 <!-- enginecount-site: docs/PROPERTIES.md :: extension subjects have a second engine -->
 <!-- enginecount-site: docs/status/FINDINGS-INDEX.md :: Extension MODULES with a second engine -->
+<!-- enginecount-site: AGENTS.md :: subjects overall and -->
+<!-- enginecount-site: docs/PROPERTIES.md :: subjects carry two or more -->
 <!-- enginecount-site: CHANGELOG.md :: subjects on two or more -->
 
 | Site | What it says there |
@@ -189,6 +192,7 @@ set was a claim, and nobody checked it.
 | `docs/PROPERTIES.md` | the scorecard's scope note — **added 2026-09-09, and it had been stale since the day before.** It stated the count in WORDS ("five have a second engine … four are TLC-only"), so neither the gate nor a grep for the number reached it. Rewritten into the canonical `N of M` form specifically so a gate can read it |
 | `docs/status/FINDINGS-INDEX.md` | the open-work table — **added 2026-09-09, and it had been stale for a day**, saying `5 of 9` while listing two modules that had gained a second engine the previous afternoon. Its own header says *"do not quote these from here"*, which is a disclaimer and not a gate; the site list had gone stale a second time, one day after the paragraph above recorded it going stale the first time |
 | `docs/STATUS.md` | the rolling log's D16 entry — **added 2026-09-09, the day after the site list was written, because that entry stated both pairs and no gate read it.** The list is itself an input set (D15); it went stale within a day of being declared complete |
+| `AGENTS.md` (second anchor) · `docs/PROPERTIES.md` (second anchor) | the OVERALL pair, **added 2026-09-16 after both had sat at `33 of 35` through a subject being added, with `make enginecount` green.** Both files were already on this list — anchored on the sentence stating the EXTENSION pair, which is a different sentence in a different section. **A site is an anchor, not a file: declaring a document does not declare its other statement of the same fact.** Two entries now point into each document, and the tool's `window_states_the_pair` learned to read a pair whose DENOMINATOR has moved, which is how all five stale sites went unseen |
 | `CHANGELOG.md` | the `[Unreleased]` entry announcing this very standard — **added 2026-09-10, and it had been wrong in BOTH figures since 2026-09-09**, saying `31 of 35` and `7 of 9` while the gate derived `33 of 35` and `9 of 9`. **The fourth site missed by a list whose own three rows above record it going stale three times in one day** |
 
 **Read those last four rows together, because they are one finding told four times.** This list

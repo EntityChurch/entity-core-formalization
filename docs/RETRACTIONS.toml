@@ -126,6 +126,27 @@ allow   = ["AGENTS.md", "docs/status/FINDINGS-INDEX.md"]
 # covers that shape, and where neither reaches, the discipline is all there is. Asking D13's
 # question of this tool is how the hole was found: *what does this assert, and what else
 # satisfies it?*
+#
+# ── A SECOND ONE, 2026-09-16, AND IT IS THE SAME HOLE FROM THE OTHER SIDE ─────────────────
+#
+# This repo published, in three trackers and an index, that every routed packet is *"committed
+# … and NEVER ANNOUNCED"* to the receiving seat. Measured 2026-09-16 with arch's own
+# `spec inbound`: their ledger cites all six extension packets by name and rules none of them
+# deliberately, and one row that read as outstanding against them was a packet
+# `entity-core-protocol` had ADOPTED AND RULED, misfiled onto their books by a prose `To:`
+# value of ours that matched their alias.
+#
+# There is NO ROW HERE for it, and the reason is worth more than a row would be: **the words
+# are still true.** We never announced anything. What was wrong is what the sentence IMPLIED —
+# that nothing had been received — and the state it was missing, *received and parked*, is a
+# third value none of our trackers had. A tripwire on "never announced" would fire on a true
+# sentence.
+#
+# So this is the §QUORUM:4.2.1 shape inverted: that one is a retracted SCOPE whose words
+# survive, this one is a surviving CLAIM whose implication was withdrawn. Neither is reachable
+# by phrasing. **Both are reachable by running the other seat's instrument**, which is the
+# enforcement point and is a procedure rather than a gate — `docs/status/INBOUND.md`'s sweep
+# carries the step now, and `AGENTS.md` D15's sixteenth shape carries the rule.
 
 [[retraction]]
 id      = "R7"

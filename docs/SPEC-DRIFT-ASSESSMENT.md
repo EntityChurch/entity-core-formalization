@@ -12,7 +12,10 @@
 > and unlike every other row here the movement is an *invitation*: 0.8.2.25's new **§4.11**
 > states the pre-admission refusal as one invariant, and its multiplexed arm is a concurrency
 > claim that `entity-system-architecture` records as never having been driven by any
-> instrument. This is the first drift row in this document that is **more modelable surface
+> instrument. ⛔ **That clause is STALE as of 2026-09-15 — `entity-core-go` drove it, 3-way,
+> and their probe's own limits are now the better argument; see `docs/STATUS.md` §Next and
+> `docs/LEAN-SEAM.md` O24. The conclusion (this is modelable surface we should take) survives;
+> its stated reason does not.** This is the first drift row in this document that is **more modelable surface
 > rather than more unmodeled surface**, and the distinction matters for sequencing.
 >
 > ⚠ **READ §1c FIRST.** The fifteenth section is **§5.5**, the most-cited section in this

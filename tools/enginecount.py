@@ -245,18 +245,53 @@ def main() -> int:
     # and at least one must be present. The first draft asked only whether SOME pair matched,
     # which a site stating both pairs satisfies with one of them broken — found by breaking the
     # ledger's own line and watching it pass, because the next line carried the other pair.
+    #
+    # ⛔ AND THAT FIX CAUGHT A WRONG NUMERATOR AND NOT A WRONG DENOMINATOR, 2026-09-16.
+    # `expected` was keyed BY THE DERIVED DENOMINATOR, so the moment a subject was added the
+    # total went 35 -> 36 and every site still saying `33 of 35` had a denominator that was no
+    # longer "one of ours" — skipped by the `continue` below, invisible. `seen` then came out
+    # True anyway off the `9 of 9` extension pair sitting in the same sentence, so neither the
+    # wrong-pair branch nor the no-pair branch fired. FOUR live sites, including this gate's own
+    # ledger and `AGENTS.md`, read `33 of 35` with `make enginecount` GREEN.
+    #
+    # Same root cause as `tools/runcount.py`'s README anchor, found the same afternoon: A GATE
+    # THAT RECOGNISES A CLAIM BY A VALUE THAT MOVES STOPS RECOGNISING THE CLAIM EXACTLY WHEN
+    # THE CLAIM GOES STALE. The fix is to classify a pair by the NOUN beside it — `subjects`,
+    # `extension` — which does not move when the number does. The denominator-keyed arm is kept
+    # underneath it for pairs written without either noun.
     ANY_PAIR = re.compile(r"\b(\d+)\s+of\s+(?:the\s+)?(\d+)\b")
     expected = {total: corroborated, len(ext): ext_corr}
+    # What the noun after a pair says the pair IS. Checked before the denominator arm, because
+    # a pair that names its subject is checkable even when BOTH of its numbers are wrong.
+    NOUN_WINDOW = 48
+    BY_NOUN = [
+        (re.compile(r"\bextension\b", re.I), lambda: (ext_corr, len(ext)), "on the extensions"),
+        (re.compile(r"\bsubjects?\b", re.I),  lambda: (corroborated, total), "overall"),
+    ]
 
     def window_states_the_pair(win):
         seen, bad = False, []
-        for num, den in ANY_PAIR.findall(win):
-            den = int(den)
-            if den not in expected:
+        for m in ANY_PAIR.finditer(win):
+            num, den = int(m.group(1)), int(m.group(2))
+            # DENOMINATOR ARM FIRST. A pair whose M is one of ours is unambiguous, and the noun
+            # is not: `9 of 9 SUBJECTS carry a green on two engines` is the EXTENSION pair in
+            # two canonical documents. Reading the noun first mis-files both of them.
+            if den in expected:
+                seen = True
+                if num != expected[den]:
+                    bad.append(f"{num} of {den} (derived {expected[den]} of {den})")
                 continue
-            seen = True
-            if int(num) != expected[den]:
-                bad.append(f"{num} of {den} (derived {expected[den]} of {den})")
+            # NOUN ARM — only for a pair whose denominator matches nothing, which is precisely
+            # the state a stale pair enters when the total moves. This is the hole.
+            tail = win[m.end():m.end() + NOUN_WINDOW]
+            for rx, want, label in BY_NOUN:
+                if rx.search(tail):
+                    wn, wd = want()
+                    seen = True
+                    bad.append(f"{num} of {den} {label} (derived {wn} of {wd})")
+                    break
+            # A pair with neither our denominator nor a recognised noun is still invisible, and
+            # that is stated rather than papered over: this gate reads the pairs it can name.
         return seen, bad
     for path, anchor in sites:
         p = ROOT / path
