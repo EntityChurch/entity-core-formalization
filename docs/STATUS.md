@@ -34,6 +34,11 @@ A bare host with **only `make` + `podman`** runs everything — all five toolcha
 containerized, each under a hard memory cap so a runaway check is OOM-killed cleanly
 instead of thrashing the host. `make build` → `make smoke` → `make matrix` → `make clean`.
 
+A sixth image, `entity-lean`, serves the **Lean seam tier** (`make lean`) and is built
+separately by `make lean-image`: that tier checks the sibling keystone peer's proofs, which
+a bare clone does not have, so it is excluded from `make matrix` rather than skipped inside
+it. See §Next item 4 and `docs/LEAN-SEAM.md` §7.
+
 ## Where we left off
 
 The 0.8.2 re-target is **complete**: the models were re-read against the new snapshot, the
@@ -65,8 +70,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   independently by TLC, Apalache and Spin — and **already divergent in the wild**: four
   distinct behaviours across the 46-peer keystone cohort and the three ground-up impls, with
   no `validate-peer` probe for the input. Routed to `entity-core-protocol`; full statement in
-  `docs/PROPERTIES.md` §D.1, routing packet in
-  `docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`.
+  `docs/PROPERTIES.md` §D.1.
 - **The full matrix is 258 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
@@ -76,6 +80,35 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   "consciously deferred" since Phase 1 — was proved in the 0.8.2 audit, the four modules
   that had single-tool coverage now have all three, and the last two single-engine *section*
   rows turned out to be phantoms and are now real modules on all three engines.
+
+- **The Lean seam now has a second gate, and finding out why it needed one is the result.**
+  `make leanseam` checks that the Lean *text* our assumption ledger cites has not moved. It
+  cannot check that the text still *proves* what the ledger says — and nothing did.
+  `lake build EntityCoreProofs` is called "the proof check" in five places in the keystone
+  peer — the lakefile, the proof-library root, the peer's `profile.toml` testing contract and
+  two status docs — and **is invoked by no Makefile, script or workflow in that tree** (which
+  has no CI directory at all); ten ledger rows rest on named Lean theorems and every one of
+  them rested on a build nobody ran.
+  Worse, the claim is wrong as written: **a `sorry` is a warning in Lean, so `lake build` exits 0 and prints "Build
+  completed successfully"**, and so does a hand-written `axiom` standing in for a proof —
+  each built and observed, not reasoned about. Exit status catches one failure mode in
+  three. `make leanproof` therefore grades the **axiom sets**: 37 declared `#print axioms`
+  gates, exact set per declaration in both directions, tied to the ledger's own pin block,
+  with five controls (`neg-sorry`, `neg-axiom`, `neg-ungate`, `neg-dropfile`, `neg-broken`)
+  each required to fail for its own reason on the declarations it names. **6 runs, separate
+  from the 258** — they need the sibling
+  checkout, and every published number here is reproducible from a bare clone.
+  `docs/LEAN-SEAM.md` §7.
+- **The tier was then audited before it was committed, and the audit found five things.**
+  Framing: *we just built a gate whose whole
+  subject is gates that assert less than they claim; does this one?* Five hypotheses, five
+  confirmed. The sharpest: **the green gate met D13 and its own controls did not** — each
+  declared a reason-code *count*, which any three contaminated declarations satisfy, in a
+  table written the same day it cited the three Tamarin controls that made exactly that
+  mistake. All controls now declare **which** declarations must carry each code. Also: a
+  fifth control for the file-level case, a misdiagnosed missing-image error, the "eleven
+  CLOSED rows" miscount above, and `runcount`'s own first draft failing D13. **No new
+  discipline** — every finding is an instance of D13/D14/D15, which is the useful part.
 
 | slice | runs |
 |---|---|
@@ -89,6 +122,10 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
 | **total** | **258** |
+
+Plus **6 runs in the Lean seam tier** (`make lean`: 1 green + 5 negative controls), counted
+separately and deliberately: they require an `entity-core-keystone` checkout, so they are not
+reproducible from a bare clone and must not inflate a number that is.
 
 **Section-by-section coverage, per-engine, with every limit stated:
 `docs/COVERAGE-MATRIX.md`** — the document to send a new reader to. Headline: **28 of 85
@@ -214,8 +251,8 @@ Never spec edits here — proposals in the sibling repo.
    MUST-emit rows, roughly one gated. No keystone conformance number moves (nothing tests it),
    but the fix touches ~8 trees and is far cheaper **before** the v0.8.2 cohort regeneration
    than after. Suggested resolution in `docs/PROPERTIES.md` §D.1 (narrow row 10's parenthetical
-   alone — four words). Full packet, per-peer census and hand-off checklist:
-   `docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`.
+   alone — four words). The per-peer census and hand-off checklist are internal working
+   notes; the finding and its evidence are stated in full in `docs/PROPERTIES.md` §D.1.
 2. **§5.9's recommended 8× TTL/`chain_depth` ratio has zero margin at worst-case fan-out.**
    The property needs `ceiling × worst_case_fanout` **strictly less than** the TTL seed; at
    exact equality the last causal level spends the last of the TTL and the backstop fires on
@@ -310,9 +347,52 @@ item 4.
      absolute named form (`/{q}/…` reaches exactly `q`) has no Lean theorem. CLOSED-MODULO-H,
      with H now named precisely.
 
+     **And the correction itself reached two sites out of five** — found 2026-08-30 while
+     wiring the Lean tier. `LEAN-SEAM.md` and this file were fixed; `ASSURANCE-MAP.md`,
+     `FINAL-ASSURANCE-SUMMARY.md` and the `CHANGELOG` entry were still telling a reader that
+     two engines rest on **one shared undischarged assumption** and that ProVerif asserts
+     `hframed` by rewrite — a claim about a sibling repo's proofs, on the published surface,
+     that we had already established was wrong in both halves. All three corrected. This is
+     **D14 applied to a retraction rather than to a defect**: a finding is not closed until
+     it reaches every instance of its shape, and a *withdrawn* claim has a shape too. What
+     found them was grepping the superseded **phrasing**, not the row name.
+
+   **~~The ledger checks the text and nothing checks the proofs.~~ Closed 2026-08-30 —
+   `make leanproof`, and the reason it was needed is the finding.** `lake build
+   EntityCoreProofs` is called "the proof check" in five places in keystone — the lakefile, the
+   proof-library root, `profile.toml`'s `[testing]` contract and two status docs — and
+   **nothing in that repo invokes it** (exhaustive search over
+   every Makefile, `*.mk`, `*.sh`, `*.yml`, `*.py` and Containerfile; the only `lake build`
+   anywhere is `run-s4.sh`'s `lake build host`). Ten rows above cite Lean theorems by name —
+   nine of the eleven Class-L rows are CLOSED, two CLOSED-MODULO-H, and L2 is closed by
+   construction with no theorem — and all ten rested on it.
+   - **The claim it makes is also false.** A `sorry` is a **warning** in Lean: `lake build`
+     prints `Build completed successfully` and exits **0**. So does a hand-written `axiom`
+     replacing a proof, with no warning at all. Only a proof that fails to type-check exits
+     non-zero. Demonstrated by building all three, per the D15 corollary.
+   - **So the gate grades axiom sets, not exit status.** 37 declared `#print axioms` gates in
+     `lean/proof-gate.expect`, exact axiom set per declaration in both directions, every
+     ledger-pinned theorem required to be among them, warnings failing unless declared with an
+     owner, and the image's Lean version required to equal keystone's own `lean-toolchain`
+     pin. Four controls, each failing for its own declared reason — including `neg-ungate`,
+     which deletes a `#print axioms` line and would score green against any grader built on
+     grepping the build log for `sorryAx`.
+   - **One thing to route, found by running it:** the shipping peer's
+     `src/EntityCore/Capability.lean` — text this ledger pins by digest — calls the
+     deprecated `String.dropRight`, whose replacement returns a different type. Declared in
+     `proof-gate.expect` with an owner rather than ignored, and routed to
+     `entity-core-keystone`.
+   - **The arrangement is unchanged and was re-examined, not assumed:** keystone owns the Lean
+     artifact, this repo owns the claims about it. No fork, no vendored copy — a fork would
+     make the ledger a statement about our copy, which nothing gates. What moved is only that
+     the *checking* of the peer's own honesty gates now happens somewhere.
+
    **Still open, in order:**
-   - **~~Route `hframed` upstream.~~ Drafted — and the ask changed.**
-     `docs/status/PROPOSAL-DRAFT-2026-08-30-KEYSTONE-HFRAMED.md`. Not "discharge `hframed`"
+   - **Keystone should run this too, and the packet says so.** Our gate covers our ledger's
+     rows; it does not put a check in the repo where a `sorry` would be *written*. A red run
+     here is a defect that already landed there. The ask is one `make` target in keystone,
+     not a transfer of ownership.
+   - **~~Route `hframed` upstream.~~ Drafted — and the ask changed.** Not "discharge `hframed`"
      (which would be asking keystone to prove something untrue) but three separable asks:
      prove the relative half from a syntactic side-condition, add the companion theorem for
      the absolute form, and correct the source comment calling `hframed` "mechanical stdlib
@@ -333,7 +413,7 @@ item 4.
      would make them statements about our copy, which nothing gates. Cite, pin, and check.
 5. **The bound nobody has attacked: `Peers = {A,B}`. Scoped 2026-08-30 — it is three different
    problems, and the first version of this item pointed at the wrong one.**
-   `docs/status/SCOPING-2026-08-30-PEERS-BOUND.md`. Apalache's results are unbounded in *steps*,
+   Apalache's results are unbounded in *steps*,
    never in *peers*, and this is still the first question a reviewer asks of a multi-peer
    protocol. What reading the models changed:
    - **`Revoke` / `RevokeApalache` are already N-generic** — `\A p \in Peers` throughout, no
@@ -419,15 +499,38 @@ item 4.
    what would make Class-G a liveness bug rather than a crash.
 8. **Widen the TLA+ bounds** — 3-peer / churned-store, and sequenced-write `Register` to
    retire the last near-tautological positive.
-9. **~~Nothing checks a number in prose.~~ Partly closed.** `make coverage` now derives the
-   section set and count from the models and fails on any disagreement with
-   `COVERAGE-MATRIX.md`, including the denominator against the pinned spec. What it still does
-   **not** check: the **engine columns** of Matrix A (a citation says a model is *about* a
-   section, not which engine verifies what), and the **run counts** quoted in prose — the 242
-   in this file, `README.md`, `AGENTS.md` and the capstone is still hand-derived from the gate
-   tables. Deriving the run total the same way is the remaining half. *(It moved 238 → 242 → 258
+9. **~~Nothing checks a number in prose.~~ CLOSED 2026-08-30 — `make coverage` **and**
+   `make runcount`.** The remaining half named below is now gated: `tools/runcount.py` derives
+   the per-target run counts from `TLC_*`/`APALACHE_*`/`SPIN_*`/`PV_*`/`TM_*` in the three
+   engine Makefiles, checks the total against every declared prose site **and** against the
+   per-slice table above row by row, and fails if a site stops making the claim at all. The
+   derivation was cross-checked against a live `make matrix`: 258 both ways, and the
+   per-engine breakdown (Apalache 73, TLC 66, Spin 60, ProVerif 30, Tamarin 29) matches
+   run-for-run. Teeth-tested four ways by breaking it. **Its own first draft failed D13** —
+   it matched any three-digit number near "runs", so it flagged three files whose 203/204/238
+   are *true statements about the past*; a gate that makes you delete accurate history to go
+   green is worse than none. The live claim is now declared per site by anchor. What it still
+   does not assert: that a run exists at all if it is in no gate table — the hole that hid
+   `BindingReplayBug` for a release, stated in the tool rather than left to be assumed away.
+
+   **The history, kept because it is the argument for the gate.** `make coverage` closed the
+   first half: it derives the section set and count from the models and fails on any
+   disagreement with `COVERAGE-MATRIX.md`, including the denominator against the pinned spec.
+   It still does **not** check the **engine columns** of Matrix A — a citation says a model is
+   *about* a section, not which engine verifies what — **and that half remains open.** The run
+   counts were the other half, hand-derived from the gate tables into six files. *(It moved 238 → 242 → 258
    across two commits on 2026-08-30 as the N=3 rows landed, and all four sites had to be
    hand-edited each time — which is the argument, restated as a chore, twice.)*
+
+   **And the third time it bit, in the same session the rule was written.** Two sites were
+   *missed* by those hand-edits and were found while wiring the Lean tier: `PROPERTIES.md`
+   §C's grader inventory still read **"Ten targets decide the 238 runs"** with 238-era
+   per-target counts, and `CANONICAL-DOCS.toml`'s blurb for the capstone still advertised a
+   **203-run** matrix — a stale number on the one file that decides what a public reader
+   sees. Both corrected, and the per-target counts re-derived mechanically from the gate
+   tables in `tla/`, `spin/` and `tamarin/Makefile` rather than copied forward:
+   14 + 39 + 13 + 50 + 23 + 22 + 38 + 15 + 15 + 14 + 15 = **258**. That the derivation is
+   easy to run by hand and was not run is the whole of item 9.
 10. **Model the §5.10 skew tolerance `δ`.** Found while writing the seam ledger (row **O4**):
     §5.10's cross-clock temporal model makes `δ` a declared Layer-1 input *alongside* `t`, and
     states the determinism argument in terms of both. `Revoke.tla` models `t` and not `δ`. The

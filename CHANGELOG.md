@@ -17,6 +17,94 @@ moves only as the last step of re-validating the models, never on a file copy.
 
 ## [Unreleased]
 
+### Added — a second gate on the Lean seam, and the reason it was needed
+
+`docs/LEAN-SEAM.md` records which Lean theorem in the keystone peer discharges each
+assumption our models make; `make leanseam` checks that the cited **text** has not moved.
+Nothing checked that the text still **proves** what the ledger says it proves — and it turns
+out nothing checked it anywhere. `lake build EntityCoreProofs` is called "the proof check"
+in five places in that peer — the lakefile, the proof-library root, the peer profile's
+testing contract and two status documents — and is invoked by no Makefile, script or
+workflow in that tree, which has no CI directory at all. Ten rows of the ledger rest on named Lean
+theorems — nine of the eleven Class-L rows are CLOSED, two are CLOSED-MODULO-H — and every
+one of them rested on a build nobody ran.
+
+The claim is also wrong as written, which is the more useful half. Each case was **built**,
+not reasoned about:
+
+- a `sorry` in a cited theorem → `lake` prints `Build completed successfully` and **exits 0**
+  (a `sorry` is a *warning* in Lean);
+- a hand-written `axiom` standing in for the proof → **exits 0**, and no warning at all;
+- a proof that does not type-check → exits 1.
+
+So an exit-status gate would have caught one failure mode in three, missing exactly the two
+a proof check exists for. **`make leanproof`** therefore grades the axiom sets: all 37
+`#print axioms` declarations in the peer's proof track, exact set per declaration in both
+directions against `lean/proof-gate.expect`, every ledger-pinned theorem required to be among
+them, any undeclared warning a failure, and the toolchain required to be the Lean version the
+peer itself pins. Five negative controls (`sorry`, substituted `axiom`, deleted gate line,
+dropped proof file, broken proof), each required to fail for its own declared reason **and on
+the declarations it names**, not merely by producing the right number of failures.
+
+No Lean source is vendored here: the peer's tree is mounted read-only and built from a
+scratch copy, because a fork would make the ledger a claim about our copy rather than about
+the code that ships. **6 runs, counted separately from the matrix's 258** — they need a
+sibling checkout, and every published number here is reproducible from a bare clone.
+
+### Added — `make runcount`: the published run total is now derived, not transcribed
+
+The matrix run total appeared in six places and was copied there by hand. It moved
+238 → 242 → 258 in one week and two sites were missed — one of them the blurb that decides
+what a public reader sees, which sat at **203**. D15 says a derived number is a claim and a
+claim needs a gate; this is it. `tools/runcount.py` derives the per-target counts from the
+gate tables in `tla/`, `spin/` and `tamarin/Makefile`, checks the total against every
+declared prose site *and* against `docs/STATUS.md`'s per-slice table row by row, and fails if
+a site stops making the claim at all. In `check` and `matrix`. The derivation was
+cross-checked against a live matrix run — 258 both ways, and the per-engine breakdown matches
+run-for-run.
+
+Its own first draft failed the discipline it enforces: matching any three-digit number near
+the word "runs", it flagged three files whose 203/204/238 are **true statements about the
+past**. A gate that makes you delete accurate history to go green is worse than no gate in a
+repo whose practice is keeping superseded claims visible. The live claim is now declared per
+site by anchor, and what the gate does not assert is stated in it.
+
+### Fixed — the Lean tier's negative controls graded on counts, not on what broke
+
+Found by auditing the tier the same session it was built. Each control declared a
+reason-code *count* —
+`SORRY_AX: 3` — which any three contaminated declarations satisfy. That is the same defect as
+the three Tamarin controls that once falsified their own reachability lemma alongside their
+target, reproduced in a table written the same day it cited them. **A count is a symptom of
+the outcome; the identities are the outcome.** All controls now declare which declarations
+must carry each code, matched one-to-one with extras rejected, and `neg-broken` pins the file
+*and* the error kind. Verified by re-running the mutation that count-grading accepted: now
+rejected by name.
+
+Two more from the same audit: a fifth control, `neg-dropfile`, covers a whole proof file
+dropped from the library root — it builds clean, gates nothing, and produces **no**
+`LEDGER_UNCOVERED`, so its signature differs from the deleted-gate case and it needed its own
+row. And a missing `entity-lean` image used to be reported as a *toolchain mismatch*, telling
+you to re-pin a version when the real fix is `make lean-image`.
+
+### Fixed — "eleven CLOSED rows" was the wrong number, in five files
+
+The Lean tier was argued for by *"eleven CLOSED rows of the ledger rested on a build nobody
+ran."* Class L is eleven rows: **nine CLOSED, two CLOSED-MODULO-H**, and ten cite a Lean
+theorem by name (L2 is closed by Lean's termination checker and names none). The conclusion
+stands — ten rows did rest on that build — but the figure was recalled rather than derived,
+and it was published five times before anyone counted the verdicts. D15 applies to the number
+that makes the case for the work, not only to the numbers in the results table.
+
+### Fixed — two run-count claims that were stale by two matrix growths
+
+`docs/PROPERTIES.md` §C's grader inventory still read "Ten targets decide the 238 runs" with
+238-era per-target counts, and `CANONICAL-DOCS.toml`'s blurb for the capstone still
+advertised a **203**-run matrix. Both now say 258, with the per-target counts re-derived from
+the gate tables rather than carried forward. This was the third time the chore had been
+missed, which is what earned the `make runcount` gate above — the derivation is no longer a
+chore anyone can skip.
+
 ### Fixed — two sections the coverage grid said were verified, and nothing modeled
 
 `docs/COVERAGE-MATRIX.md` listed **§4.7** and **§6.9** as real single-tool results. Neither
@@ -73,8 +161,8 @@ the three ground-up implementations found **four** distinct behaviours for that 
 in the spec. Nothing caught it: the conformance oracle has no probe that sends `authenticate`
 before `hello`, and of §4.7's ten self-declared MUST-emit rows roughly one is gated. Routed to
 `entity-core-protocol` as a proposal, with a suggested resolution; full statement in
-`docs/PROPERTIES.md` §D.1, census and hand-off checklist in
-`docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`.
+`docs/PROPERTIES.md` §D.1; the per-peer census and hand-off checklist are internal working
+notes rather than part of this publication.
 
 ### Added — the assumption ledger, and a gate on it
 
@@ -94,12 +182,18 @@ Writing it produced two results a spot-check had not:
   argument and §5.5a's granter frame threads it through the walk, so `Revoke.tla` holding its
   structural verdict equal at both peers is sound only where the two peers' frames agree — a
   restriction the model does not state.
-- **Two engines, one shared undischarged assumption.** §5.5a namespace isolation is "covered"
-  by ProVerif/Tamarin *and* by Lean, and **both** rest on the same unproved proposition: that
-  canonicalization roots a relative pattern at the granter's namespace. Lean takes it as the
-  hypothesis `hframed` and says in the source that it declines to prove it; ProVerif asserts
-  it as a rewrite rule. Redundancy counted by *engine* cannot see this — the audit that
-  "closed every single-tool coverage gap" was right about engines and blind to it.
+- **Two engines "covering" §5.5a, and covering different parts of it.** Namespace isolation is
+  claimed by ProVerif/Tamarin *and* by Lean. §5.5a admits three pattern forms; our symbolic
+  models carry all three (three `canon` equations), and Lean's isolation theorem is scoped by
+  its hypothesis `hframed` to the **peer-relative** one — `hframed` is not an unproved lemma,
+  it is *false* for the absolute form, which is why it scopes rather than weakens. So the
+  **absolute named form**, the one §5.5a requires for cross-peer authority, has no Lean
+  theorem. Redundancy counted by *engine* cannot see this — the audit that "closed every
+  single-tool coverage gap" was right about engines and blind to it.
+  *(This entry first read "two engines, one shared undischarged assumption", on the strength
+  of one `canon` equation out of three that matched a hypothesis already formed. Both halves
+  were wrong; corrected here, with the error kept on the record in `docs/LEAN-SEAM.md` §4.1.
+  There is no ask on the ProVerif/Tamarin side and never was.)*
 
 A local Lean tree in this repo was considered and rejected: the value of the seam is that
 Lean's theorems are about the same executable code the conformance suite runs, and a fork

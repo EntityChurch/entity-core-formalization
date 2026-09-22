@@ -131,7 +131,9 @@ make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (258
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
 make coverage  # does the coverage claim match what the models actually cite?
-make leanseam  # has Lean moved under the assumption ledger? (needs the keystone sibling)
+make lean      # the Lean seam tier: the cited Lean text has not moved (leanseam) AND
+               # the cited proofs still hold (leanproof, + 5 controls). Needs the
+               # entity-core-keystone sibling, so it is NOT part of `make matrix`.
 make clean    # remove generated model-checker artifacts
 make caps     # print the active per-container resource ceilings
 ```
@@ -160,7 +162,7 @@ docs/
   SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls
   LEAN-SEAM.md            ← the assumption ledger: what each model takes on faith, and
-                            who discharges it (`make leanseam`)
+                            who discharges it (`make leanseam` + `make leanproof`)
   CROSSCHECK-RESULTS.md   ← Spin + Apalache independent corroboration
   SCOPING-AND-SPIKE-PLAN.md ← scope calls + Phase 0 gates + Phase 1 trigger
   PRIOR-ART.md            ← TLA+ & Tamarin learning resources + comparable models
@@ -169,8 +171,11 @@ spec-data/MODELING-PIN     ← which snapshot the models transcribe (the answer 
 tla/                      ← TLA+/PlusCal + TLC (concurrency + liveness) + Apalache (unbounded)
 spin/                     ← Spin/Promela independent re-encoding (cross-check)
 tamarin/                  ← Tamarin/ProVerif (active-attacker, Dolev-Yao)
+lean/                     ← the Lean seam tier: NO Lean source, only the gate that builds
+                            the keystone peer's proof track and grades its axiom sets
 tools/spec-drift.py       ← the pin-vs-live-spec detector behind `make specdrift`
 tools/lean-seam.py        ← the assumption-ledger drift check behind `make leanseam`
+tools/lean-proof.py       ← the proof-still-holds gate behind `make leanproof`
 tools/coverage-check.py   ← the coverage-claim check behind `make coverage`
 ```
 
