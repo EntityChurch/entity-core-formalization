@@ -53,9 +53,9 @@ in §5 (Findings and residual risk).
 
 > **Which spec version this capstone certifies.** Everything here certifies models written
 > against the SHA-pinned `spec-data/v0.8.2/` — the protocol at spec version **0.8.2**. The
-> live spec is **0.8.2.21** and `make specdrift` reports **14 of 31 cited sections moved**, so
+> live spec is **0.8.2.25** and `make specdrift` reports **16 of 31 cited sections moved**, so
 > this capstone certifies 0.8.2 and nothing later. No result below is falsified by the
-> movement — thirteen of the fourteen moved sections contradict nothing modeled, and §4.7's `connection_sequence_error`
+> movement — fifteen of the sixteen moved sections contradict nothing modeled, and §4.7's `connection_sequence_error`
 > status change (400 → 409) contradicts `tla/ConnCodes.tla` only against text this capstone
 > does not claim. `docs/SPEC-DRIFT-ASSESSMENT.md` has the section-by-section measurement.
 >
@@ -271,6 +271,21 @@ resource leak, registration partial-residue, emit mis-fire, Layer-1 verdict leak
 bootstrap-ordering hazard, or — under an active attacker — forgery, escalation, replay, deep
 cross-peer frame confusion, threshold bypass, or "trusted-forever" fail-open, at the modeled
 bound.
+
+> ⛔ **CORRECTION, 2026-09-14 — the qualifier at the end of that sentence is load-bearing and
+> a reader cannot evaluate it.** `0.8.2.23` closed a **capability and identity forgery** in
+> the pinned design: authority lookups resolved entities through an unverified, wire-supplied
+> `envelope.included` key, so an observer of a capability chain could mint a leaf off it up to
+> the parent's scope without the grantee's key. **No model in this repository represents that
+> indirection** — the active-attacker theories take capabilities as terms, not as things
+> fetched by address — so "the modeled bound" excluded the mechanism, and that exclusion was
+> not disclosed anywhere until this date.
+>
+> The claim as written is true. It is kept, unedited, with this box beside it, because the
+> failure is not a wrong sentence — it is a **true sentence whose scope nobody could check**.
+> `docs/LEAN-SEAM.md` **O23** names the abstraction; `make obligations` measures the class
+> (**120 of 365 core obligations are UNEXAMINED**);
+> `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md` is the audit.
 
 **Residual risk, ranked (carried verbatim from the reports — not papered over):**
 

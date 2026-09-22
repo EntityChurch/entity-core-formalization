@@ -1,12 +1,29 @@
 # entity-core-formalization — status
 
-_Updated: 2026-09-06 · this line: 0.8.2_
+_Updated: 2026-09-14 · this line: 0.8.2_
 
-> **The models are pinned at 0.8.2; the live spec is 0.8.2.21.** Every model in this repo is
+> **The models are pinned at 0.8.2; the live spec is 0.8.2.25.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
-> Protocol at spec version **0.8.2**. `make specdrift` reports **14 of 31 cited sections
+> Protocol at spec version **0.8.2**. `make specdrift` reports **16 of 31 cited sections
 > moved**, so the results below are a statement about **0.8.2** and not about the protocol as
-> it stands today.
+> it stands today. **0.8.2.24 and 0.8.2.25 are both vendored** (`spec-data/v0.8.2.24/`,
+> `spec-data/v0.8.2.25/`) for the re-check work; vendoring does not move the pin and no result
+> below is a statement about either. `.25` landed 2026-09-15, one day after `.24`, and is
+> classified in `docs/SPEC-DRIFT-ASSESSMENT.md` §1d. ⛔ **Read one number off those snapshots
+> before anything else: the pin carries 365 MUST/MUST NOT and `.25` carries 531.** The
+> normative obligation surface has grown **45%** under text every result here is a statement
+> about — with **one** section added and none removed, so every structural gate stayed green
+> throughout. *Structural stability and normative stability are different properties.*
+>
+> ⚠ **AND READ THIS BEFORE ANY RESULT BELOW.** On 2026-09-14, 0.8.2.23 closed a **capability
+> and identity forgery** whose enabling text was in our own pin, and **no model here could
+> see it** — the address→entity indirection it exploits is in no model's domain and was
+> declared nowhere. Two canonical documents published that the pinned design admits no
+> *"forgery … under an active attacker, at the modeled bound."* That sentence was saved only
+> by four words nobody reads. The audit is
+> `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`; the measurement it
+> produced: **120 of 365 core obligations are UNEXAMINED**. The wider figure is that
+> **128 of 365 core obligations sit in sections no model cites**. Gated by `make obligations`.
 >
 > This paragraph said *"the models track the live spec … byte-for-byte across all three
 > normative files"* until 2026-09-06, in this file and seven others, while all three files
@@ -673,6 +690,103 @@ item 4.
 
 ## Next
 
+0*********. ⛔ **RE-READ THE KEYSTONE LEAN SEAM — `make leanseam` IS RED BECAUSE OUR OWN PACKET
+   WAS ADOPTED, WITHIN ONE DAY. NEW 2026-09-15, and it is first because it is the only item on
+   this list that a gate is currently failing on.**
+   `entity-core-keystone` `fee2e422` landed **both** defects we routed on 2026-09-14:
+   `scopeSubset` now calls `matchesSegNM` rather than raw `matchesSeg` (**K-6**) and takes a
+   `ScopeKind` parameter dispatching `.id` for `operations` and `.path` for
+   `handlers`/`resources` (**K-7**, which is **§3.6's typed grammar and therefore `K1`**). Both
+   pinned digests moved.
+
+   - **The gate's own instruction is the procedure:** *re-read the changed Lean text against
+     every row citing this file, update the verdicts, THEN re-pin. Re-pinning alone defeats the
+     ledger.* `L5` and `L6` both cite `scopeSubset`.
+   - **Two hypotheses to MEASURE, not to assert.** `K1` is **likely closed** — the finding was
+     that the function takes no scope type, and it now does. `K2` **likely survives** — its
+     over-grant is interior-`*` on `resources`, which stays `.path`, and a never-match guard
+     does not touch interior-`*` semantics. Neither is a result until `lean/lemmas/` is re-run
+     against the new definitions, which is cheap precisely because `make leanlemma` already
+     carries every published figure one-to-one.
+   - **Re-derive keystone's `A-4` against the NEW function, not the old one.** Their refutation
+     of `R11`'s witness turned on the *canonicalizing* reading of an id-scope dimension, and
+     `.id` dispatch is exactly what removes that reading. Answering it against the superseded
+     definition would be arguing about a text neither seat is on.
+   - **This is the 2026-09-06 §5.5a shape repeating**, and the second payout of D13's
+     both-directions half: a proof *arriving* is a diff exactly as a proof *breaking* is.
+
+0*********. ⭐ **§4.11 ARM (f) — THE MULTIPLEXED PRE-ADMISSION REFUSAL. NEW 2026-09-15 with
+   0.8.2.25, and it is the largest tractable modelable surface on the board.**
+   New §4.11 states the pre-admission refusal as one invariant (*a peer refusing a frame before
+   admission MUST put a coded EXECUTE_RESPONSE on the wire; the close is optional; a silent drop
+   and a bare close are two distinct non-conformances*). Five of its six arms are ordinary wire
+   checks. **Arm (f) is not:** *a pre-admission refusal arriving while an admitted request is in
+   flight on the same connection MUST NOT cost that request its response.*
+
+   - **It quantifies over interleavings and its failure is a LOST response**, so a wire suite
+     cannot separate it from slowness. `entity-system-architecture` records (`KC-2`) that it
+     **cannot be inferred from the other five and has never been driven anywhere.**
+   - **`tla/Reentry.tla` is the instrument** — multiplexed connection, pooled dispatch, in-flight
+     correlation, frame-write lock, §6.11(a)/(a′) already proved jointly satisfiable. What it
+     lacks is a refusal path at all (`Gate(p) == TRUE`, disclosed in `docs/PROPERTIES.md`), so
+     **this is a D18 question before it is a model**: *what legal state can this model not
+     represent?*
+   - ✅ **Both prerequisites are done as of 2026-09-15.** `docs/LEAN-SEAM.md` **O24** is booked,
+     written *before* the modelling rather than after it — the gap is the model's **shape**, not
+     a constant: every frame in `Reentry.tla` is an admitted request, so a refused frame is
+     **inexpressible**, not merely unmodeled. And `spec-data/v0.8.2.25/` is vendored and
+     digest-verified. **Blocked on nothing but the work.**
+   - **Second target in the same revision, cheaper and it pays a debt:** §4.11's cause → code
+     table is `tla/ConnCodes.tla`'s exact subject, and retargeting that module to `.25` also
+     collapses **the one live contradiction** between the pin and live text (§4.7's
+     `connection_sequence_error`, 400 → 409). The model gets *simpler* and a control demotes
+     from *"a conformant reading of the spec"* to an ordinary injected defect.
+     `docs/SPEC-DRIFT-ASSESSMENT.md` §1d; `spec-data/v0.8.2.25/MANIFEST.md`
+     §"What needs modeling work".
+
+0********. ⛔ **MODEL THE `included`-MAP INDIRECTION. It is the top of this list because a
+   capability forgery was closed upstream in text that was in our pin, and no model here could
+   see it. NEW 2026-09-14.**
+   `0.8.2.23` closed a **capability and identity forgery**: every authority lookup resolved an
+   entity by a wire-supplied `envelope.included` key that nothing verified, so an observer of
+   any capability chain could mint a leaf off it **up to the parent's scope, without the
+   grantee's key**. The enabling obligation is in `spec-data/v0.8.2` §3.1 — a `MUST` with no
+   enforcing operation and no vector — and the pin's own §9.1 *MUST Implement* index names it.
+   **Our prover theories take capabilities and chain links as TERMS off `In(...)`**, so there is
+   no address and nothing to forge: `content_hash` occurs **0** times across the 60 files in
+   `tamarin/`. Booked as `docs/LEAN-SEAM.md` **O23**.
+
+   - **The work: give the adversary the ADDRESS as well as the term.** `tamarin/Binding.{pv,spthy}`
+     and `tamarin/ChainTopology.{pv,spthy}`, plus a `*Bug` control that omits the binding check
+     and MUST be caught. The terms are already there; what is missing is one indirection.
+   - **Until that runs, the honest statement is "outside our domain", NOT "we would have found
+     it."** Whether a theory carrying the indirection actually falsifies `no_escalation` is
+     **unmeasured**, and that gap is stated in the audit rather than papered over.
+   - **Then read down the 120.** `make obligations` publishes **120 of 365 core obligations are
+     UNEXAMINED**. Highest-MUST-count uncited sections first: §1.4 (11), §3.5 (10), §6.9a (10),
+     §4.5 (8), §6.13 (8). This is standing work the gate now makes impossible to forget.
+   - Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
+     Inbound register: `docs/status/INBOUND.md`.
+
+0*******. **~~KS-9c — the frame-canonicalization equivalence.~~ ANSWERED 2026-09-14, and the
+   change it gates is scheduled.** `lean/lemmas/Frame.lean`, gated by `make leanlemma`.
+   **Claim E holds: 2370 differential pairs, zero disagreements**, plus 90 round-trip and 120
+   id-scope pairs. Arch's items 2 (per-link chain framing), 3 (the sentinel) and 4 (the exclude
+   side) are all clean. **`Q0` is why**: minting produces an ABSOLUTE pattern and `canonSegs`
+   passes absolutes through, so the evaluation-time frame has nothing to bind — which is why
+   `Q1`/`Q2` agree even when evaluated under an unrelated third peer, a stronger statement than
+   the one asked for. **`Q3` is the interesting row**: the sentinel *survives minting*, so both
+   readings refuse exactly the same set and the difference is WHERE, not WHETHER.
+   **Read `Q6` before believing any of it** — every substantive row reports 0, so the sweep
+   carries a positive control that injects §5.5a's own `canon-against-wrong-frame` architecture
+   and must report non-zero; it finds **62 at L3/L4 and 14 at L1/L2**. `Q5`, the
+   alphabet-narrowing control, reports 0 **and so does everything above it, so unlike A-31's
+   `neg-eval` it demonstrates nothing here** and is labelled as such rather than counted as a
+   passing control. **Items 1 (multi-granter root) and 5 (identity rotation) are NOT decided**
+   — neither is a matcher question — and the packet says so rather than letting them compress
+   into "formalization confirmed the frame change".
+   Routed: `ROUTING-2026-09-14-ARCH-FRAME-EQUIVALENCE-MEASURED.md`.
+
 0******. **§6.8's new authority-selection MUST is the largest piece of modelable surface on the
    board, and `tla/Authority.tla` already has the machinery. NEW 2026-09-12.**
    `make driftclaim` fired on 0.8.2.20 and 0.8.2.21, taking core from 12 to **14 of 31**, and the
@@ -1013,11 +1127,11 @@ item 4.
      *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
      §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
      attribution. Derived now, **by `make ledgercount` rather than by hand**: the ledger is
-     **40 rows** — 13 Class L, 5 Class T, 22 Class O — of which **15 CLOSED**, 3 CLOSED —
+     **42 rows** — 13 Class L, 5 Class T, 24 Class O — of which **15 CLOSED**, 3 CLOSED —
      ASSUMPTION FALSE (T4; O21 and O22, 2026-09-09), 2 CLOSED — ASSUMPTION ISOLATED (O6; O20,
      2026-09-09), 1 CLOSED — ASSUMPTION ISOLATED AND CORRECTED (O10, 2026-09-08),
      1 CLOSED-MODULO-H (L1),
-     2 N/A-device, 3 BY-DESIGN, and **13 OPEN** (O5, O7–O9 from the attestation track,
+     2 N/A-device, 3 BY-DESIGN, and **15 OPEN** (O5, O7–O9 from the attestation track,
      O11–O15 from quorum, O16–O19 from identity — all added 2026-09-07 with
      those tracks' first nine modules). **O20 was added 2026-09-08 by a rule rather than by a
      model** (`AGENTS.md` D15 tenth shape) and closed the next day by the experiment it asked

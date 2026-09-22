@@ -72,3 +72,43 @@ eval|K2CHAIN[general] pats=84 tgts=84 ksSoundKS=0 specSoundSpec=0 ksSoundSpec=14
 eval|K2CHAIN[peerlike] pats=26 tgts=13 ksSoundKS=0 specSoundSpec=0 ksSoundSpec=30 escReal=30 escParentInterior=30 escChildInterior=0 chainNewKS=0 chainNew54=0 chainEsc=0 admitKS=144/118 admit54=114/88 reach2KS=144 reach2_54=114
 eval|[general] /a/a/a<=/a/*/a@/a/a/a(parent54=1) /a/a/a<=/a/*/*@/a/a/a(parent54=4) /a/a/a<=/*/*/a@/a/a/a(parent54=4)
 eval|[peerlike] /p/a/a<=/p/*/a@/p/a/a(parent54=1) /p/a/a<=/p/*/*@/p/a/a(parent54=3) /p/a/a<=/*/*/a@/p/a/a(parent54=1)
+
+# ── KS-9c: the frame-canonicalization equivalence (lean/lemmas/Frame.lean) ──────────────
+# `entity-system-architecture` ROUTING-2026-09-12-e asked us to prove or refute that
+# canonicalizing `resources` patterns at MINT is extensionally equivalent to canonicalizing
+# at MATCH. The change is scheduled, so these numbers gate a decision rather than describing
+# one. Read Q6 FIRST.
+#
+#   Q0   the kernel: a minted pattern re-canonicalizes to itself under ANY frame, including
+#        an unrelated one. If this fails the two readings are different functions.
+#   Q1/Q1x   L1/L2 `matches_scope`, include and exclude arms.
+#   Q2/Q2x   L3/L4 `scope_subset` with per-link granter frames -- arch's item 2, the one they
+#        said to take if we only took one, and item 4's exclude side.
+#   Q3   the sentinel. `set-differs=0` is the real result: the patterns refused at mint are
+#        EXACTLY the patterns unmatchable at match, so arch's item 3 ("same verdict by
+#        different routes") holds at the matcher and the difference is only WHERE.
+#   Q4   id-scope is frame-independent, measured rather than assumed (0.8.2.24 N2).
+#   Q5   the alphabet-narrowing control. It reports 0 -- and so does every row above it, so
+#        UNLIKE A-31's `neg-eval` it demonstrates nothing here. Kept, and labelled, because
+#        a control that happens to be uninformative must not be read as one that passed.
+#   Q6   THE POSITIVE CONTROL, and the row that makes every zero above mean something. Mint
+#        against the WRONG frame -- §5.5a's own named `canon-against-wrong-frame` defective
+#        architecture -- and the sweep MUST report non-zero. If Q6 ever reads 0/0 this file
+#        is comparing nothing and Q0-Q5 are worthless.
+eval|Q0 round-trip      pairs=90 fail=0
+eval|Q1 L1/L2 include   pairs=240 disagree=0
+eval|Q1x L1/L2 exclude  pairs=240 disagree=0
+eval|Q2 L3/L4 include   pairs=900 disagree=0
+eval|Q2x L3/L4 exclude  pairs=900 disagree=0
+eval|Q3 sentinel        refused-at-mint=8 set-differs=0
+eval|Q4 id-scope frame-independent  pairs=120 frame-sensitive=0
+eval|Q5 control (plain alphabet)    pairs=64 disagree=0
+eval|Q6 POSITIVE CONTROL wrong-frame mint  L3/L4=62 (MUST be > 0)  L1/L2=14 (MUST be > 0)
+# The witness lines. Q0-Q2x are EMPTY because nothing disagrees; declaring them empty is the
+# point -- if a disagreement ever appears the gate names it rather than moving a count by one.
+eval|Q0 witnesses: none
+eval|Q1 witnesses: none
+eval|Q1x witnesses: none
+eval|Q2 witnesses: none
+eval|Q2x witnesses: none
+eval|Q3 refused-at-mint set: pA|*/apply pA|../x pA|./x pA|*/secret pB|*/apply pB|../x pB|./x pB|*/secret

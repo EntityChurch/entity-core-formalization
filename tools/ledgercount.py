@@ -99,11 +99,16 @@ PROSE_SITES = [
     (LEDGER, "the Class-T closing note", "class_O",
      r"the ledger is \*\*\d+ rows\*\* \(\d+ Class L, \d+ Class T, (\d+) Class O"),
     ("docs/STATUS.md", "the ledger-shape note in §Next", "class_L",
-     r"\*\*40 rows\*\* — (\d+) Class L"),
+     r"\*\*\d+ rows\*\* — (\d+) Class L"),
+    # `\d+ rows`, NOT the literal `40` this pattern carried until 2026-09-14. Anchoring a
+    # matcher on the CURRENT value of the number it watches means the pattern stops matching
+    # exactly when that number moves, and the tool then reports "the site went silent" instead
+    # of "the site is stale" -- a true message pointing at the wrong defect. Found when O23
+    # took the ledger to 41. The sibling LEDGER patterns above were already written this way.
     ("docs/STATUS.md", "the ledger-shape note in §Next", "class_T",
-     r"\*\*40 rows\*\* — \d+ Class L, (\d+) Class T"),
+     r"\*\*\d+ rows\*\* — \d+ Class L, (\d+) Class T"),
     ("docs/STATUS.md", "the ledger-shape note in §Next", "class_O",
-     r"\*\*40 rows\*\* — \d+ Class L, \d+ Class T, (\d+) Class O"),
+     r"\*\*\d+ rows\*\* — \d+ Class L, \d+ Class T, (\d+) Class O"),
     ("AGENTS.md", "the LEAN-SEAM paragraph", "class_L",
      r"it is \d+ rows / (\d+) Class L"),
     # Added 2026-09-09, and the figure it now checks was WRONG when the row was added.

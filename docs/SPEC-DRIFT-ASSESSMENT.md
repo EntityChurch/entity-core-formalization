@@ -1,12 +1,27 @@
 # Spec-drift assessment — the pin vs the live spec
 
 > **LIVE — the pin is behind again, and this document is the measurement.** The models are
-> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.21**, and `make specdrift`
-> reports **14 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
-> and re-derived **four times since** — twice on 2026-09-09, again on 2026-09-10, and again on
-> 2026-09-12, because the upstream repo committed **0.8.2.15 through 0.8.2.21** across that
-> window — **six separate
-> commits, two of them while this document was being edited.** §1a classifies the two sections
+> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.25**, and `make specdrift`
+> reports **16 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
+> and re-derived **six times since** — twice on 2026-09-09, again on 2026-09-10, on
+> 2026-09-12, on **2026-09-14**, and again on **2026-09-15**, because the upstream repo
+> committed **0.8.2.15 through 0.8.2.25** across that window — **ten separate
+> commits, two of them while this document was being edited.**
+>
+> ⚠ **§1d is the one to read if you are picking up work.** The sixteenth section is **§4.10**,
+> and unlike every other row here the movement is an *invitation*: 0.8.2.25's new **§4.11**
+> states the pre-admission refusal as one invariant, and its multiplexed arm is a concurrency
+> claim that `entity-system-architecture` records as never having been driven by any
+> instrument. This is the first drift row in this document that is **more modelable surface
+> rather than more unmodeled surface**, and the distinction matters for sequencing.
+>
+> ⚠ **READ §1c FIRST.** The fifteenth section is **§5.5**, the most-cited section in this
+> repo (39 model files), and it moved because 0.8.2.23 closed a **capability and identity
+> forgery**. Unlike every other row in this document, that one is not *"new surface we have
+> not modeled"* — the obligation it enforces was **in our pin all along**, in §3.1, and no
+> model here represents the mechanism it protects. `spec-data/v0.8.2.24/` is vendored for
+> the re-check; the pin has **not** moved. The audit is
+> `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`. §1a classifies the two sections
 > 0.8.2.16 added; **§1b classifies the two that 0.8.2.20/21 added — §5.4 and §6.8 — and it is
 > the section to read, because both had been recorded in this document as `unchanged` inside
 > arguments that leaned on their being unchanged.** 0.8.2.19 added a twelfth, **§5.8**, whose entire delta is **one backtick**: it is
@@ -34,7 +49,7 @@ does not read.
 
 | Track | Pin | Live tree | Files | Cited § moved |
 |---|---|---|---|---|
-| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **14 of 31 cited sections moved** |
+| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **16 of 31 cited sections moved** |
 | `attestation` | `spec-data/ext-attestation-v1.3` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`attestation` no drift** |
 | `quorum` | `spec-data/ext-quorum-v1.2` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`quorum` no drift** |
 | `identity` | `spec-data/ext-identity-v3.10` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`identity` no drift** |
@@ -54,20 +69,23 @@ before believing a zero (D15, ninth shape).
 
 ---
 
-# 1. Live measurement — 0.8.2 pin vs 0.8.2.21 live
+# 1. Live measurement — 0.8.2 pin vs 0.8.2.25 live
 
-**Measured 2026-09-06; re-derived twice on 2026-09-09, again on 2026-09-10, and again on
-2026-09-12.** Reproduce with `make specdrift`; the
+**Measured 2026-09-06; re-derived twice on 2026-09-09, again on 2026-09-10, on 2026-09-12,
+on 2026-09-14, and again on 2026-09-15.** Reproduce with `make specdrift`; the
 prose sites that state the status are gated by `make driftclaim`.
 
 | | |
 |---|---|
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
-| Live (`entity-core-protocol/specs`) | **0.8.2.21** · CBOR encoding 1.5 → 1.6 · type system also differs |
-| **Sections the models cite that moved** | **14 of 31** |
+| Live (`entity-core-protocol/specs`) | **0.8.2.25** · CBOR encoding 1.5 → 1.7 · type system also differs |
+| Frozen copy of live, for the re-check | `spec-data/v0.8.2.25/` — **vendored 2026-09-15, digest-verified; the pin did NOT move.** `v0.8.2.24/` stays in place as a point-in-time pin. ⭐ **The first snapshot in this repo's history where a section was ADDED** (§4.11); 92 → 93 numbered sections, none removed, none renumbered, 31 of 31 model citations still resolve |
+| **Sections the models cite that moved** | **16 of 31** |
 | Sections whose movement contradicts a model | **1** (§4.7) |
 | Sections whose movement lands on the **Lean seam** rather than on a model | **2** (§5.2, §5.6 — §1a) |
 | Sections that moved where **every citation of them is an abstraction disclaimer** | **1** (§5.4 — §1b) |
+| Sections that moved because a defect was closed in a mechanism **no model represents** | **1** (§5.5 — **§1c**) |
+| Sections that moved by **adding surface this repo's engines are the right instrument for** | **1** (§4.10/§4.11 — **§1d**) |
 | Green matrix against the pin | unaffected — every result is quoted against `v0.8.2` |
 
 *The `Sections the models cite that moved` row read **11 of 31** until 2026-09-12, while the
@@ -127,7 +145,8 @@ below records an earlier draft of this document making.
 | §5.8 | 4 | **0.8.2.19** — **one backtick**, removed from a cross-reference table row (`` `EXTENSION-CONTINUATION.md` `` → `EXTENSION-CONTINUATION.md`) | **none, and it is the cleanest illustration this table has of its own limit.** One character, zero semantic content; the four `ChainTopology.*` theories cite §5.8 for chain-inclusion topology, not for that row |
 | **§5.4** | **9** | **0.8.2.20** — `canonicalize` is now **total**: the two `error(...)` returns become a `NEVER_MATCH = "/never-match"` sentinel, `matches_pattern` gains a first arm refusing it in either operand, and every `validate_absolute_path` call site is ruled MUST-consume | **none — and for a reason no other row here has.** All **nine** citations are **abstraction disclaimers** (*"the §5.4 path matcher stays abstract"*, *"is Lean's / abstracted here"*). See §1b |
 | **§6.8** | **10** | **0.8.2.20/21** — **+3.8KB**: the caller-specified-path check goes **act-neutral** (reads as well as writes) and MUST rather than voluntary; a new "the subject is the effective set" rule; and a new MUST selecting **which authority** the handler-level check runs against — *by who named the path, never by who initiated the chain* | **none.** The clause all ten citing models use — *"a revoked capability never passes a check"* — is **byte-identical**. The rest is new surface, and it lands inside `tla/Authority.tla`'s own abstraction. See §1b |
-| **§4.7** | **3** | **+7.0KB** | **the one contradiction — see below** |
+| **§4.10** | **8** | **0.8.2.25** — (a)'s *emission shape* goes **SHOULD/MAY → MUST** and is handed to the new **§4.11**; **(b) and (c) are byte-identical** | **none, and the row is an invitation rather than a cost.** All eight citations are to **(b)** (the capability-chain depth limit and its Ruling-3 reason-code distinctness) or to §4.10 generically as the admission bound. See **§1d** |
+| **§4.7** | **3** | **+7.0KB**, and **again at 0.8.2.25** — `invalid_request`'s scope widened to cover frames that never become an Envelope | **the one contradiction — see below.** The 0.8.2.25 widening does not add one: `ConnCodes.tla` transcribes the §4.7 *status table*, and what moved is the code's defining prose |
 
 ### §4.7 — the one section where the live text contradicts a model
 
@@ -335,7 +354,166 @@ this text is 0.8.2.21, so modeling it requires a re-vendor, which is a separate 
   §4.6's step-ordering rule and §6.5's step-3 gate are both new *obligations* a peer must
   meet, and neither has a model. They are backlog, not absolution.
 - **Not that the 31 cited sections are the right 31.** Coverage is bounded by what the
-  models chose to cite — the standing limit of this method, §3 below.
+  models chose to cite — the standing limit of this method, §3 below. **And on 2026-09-14
+  that limit stopped being standing and became the finding — §1c.**
+
+---
+
+## 1c. §5.5 — the fifteenth section, and the first movement this document cannot classify as "new surface"
+
+**Measured 2026-09-14, against live 0.8.2.24.** Ten of the fifteen moved sections moved again
+between `0.8.2.21` and `0.8.2.24`: §3.3, §3.6, §5.2, §5.2a, §5.4, **§5.5**, §5.6, §6.8, plus
+**§1.8** and **§3.1**, which no model cites and therefore appear in no count above. Nine of the
+ten are the same species §1a and §1b classified — authorization surface being tightened, none
+of it contradicting a transcription. **§5.5 is different in kind, and so is the reason it
+moved.**
+
+### What moved
+
+§5.5's delta is **+738 bytes**, all of it one idea: a **resolution-integrity precondition** on
+`verify_capability_chain`, plus a note that the two arms of the entity lookup *differ in trust*
+— the content store is content-addressed locally so its address is verified by construction,
+while `included`'s address arrives on the wire and is not. It is stated on this function and
+not only on `verify_request` because §7a.2a's presented-authority arm calls it **directly**.
+
+### Why it moved: `0.8.2.23` closed a capability and identity forgery
+
+> An attacker who knows a victim's identity hash — the **public `grantee` field of any
+> capability the victim presents** — could file their own `system/peer` entity under that key.
+> Their signature then verified against their own key while the peer attributed it to the
+> victim. **An observer of any capability chain could mint a leaf off it, up to the parent's
+> scope, without the grantee's key.**
+
+### The classification, and it is the one row in this document that indicts the method
+
+Every other row here says some version of *"the spec added surface we have not modeled yet."*
+This one cannot, for three separate reasons, each verified rather than argued:
+
+1. **The obligation was in our pin.** `spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md` §3.1:
+   *"Entities in the `included` map carry `content_hash` per §1.1. **The content_hash MUST
+   match the map key.**"* Vendored here 2026-08-27.
+2. **It had no enforcing operation and no vector, in the pin.** Every `hash_mismatch`
+   occurrence in the pinned text is `system/tree:put` CAS semantics. That absence is precisely
+   what `AGENTS.md` **D17** was ratified to report *as a finding of the same weight as a
+   contradiction* — and D17 had only ever been run on the three extension tracks.
+3. **The pin's own conformance index names it.** §9.1 *MUST Implement* lists *"Content hash
+   validation on receipt (§1.8, §7.2)"* and *"Envelope structure with per-entity hash
+   validation (§3.1)"*. Three sections, **zero** core models citing any of them.
+
+### What it costs a model here: nothing, and that is the problem
+
+No model contradicts the new text, because **no model represents the mechanism**. The prover
+theories take capabilities and chain links as *terms* off `In(...)`; there is no address, so
+there is nothing to forge. `content_hash` appears **0 times** in all 60 files under `tamarin/`,
+and in `tla/` only as an attestation tie-break key. A reader could conclude from the count
+above that §5.5 moving is cheap. It is cheap **because the subject was never in scope**, and
+that abstraction was declared nowhere — not in `docs/LEAN-SEAM.md`'s Class-O rows, not in
+`docs/PROPERTIES.md`'s bounds, not in the prover report. It is booked now as **O23**.
+
+### The transferable piece
+
+§1b's lesson was *"when the drift gate fires, re-read the ARGUMENT, not just the number."*
+This is the next one out: **when the drift gate fires, ask why the section moved, not only
+whether it contradicts you.** A section that moves because somebody closed a *defect* is
+telling you where a defect lives; a section that moves because somebody added *surface* is
+telling you about backlog. This document had no column for that distinction and now has one.
+The instrument that follows from it is `make obligations`, whose denominator is the pin's
+normative surface instead of our citations —
+`docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
+
+### What §1c does NOT claim
+
+- **Not that a model would have caught it.** Whether a Tamarin theory carrying the indirection
+  actually falsifies `no_escalation` is **unmeasured**, and it is the top item of
+  `docs/STATUS.md` §Next. Until that is run, the honest statement is *"outside our domain"*,
+  not *"we would have found it."*
+- **Not that the other nine .22–.24 movements are harmless.** §6.8's authority table became an
+  **intersection** and §5.2's typed dispatch became `[MUST]` at both matchers; both are new
+  obligations with no model, exactly as §1b said of their earlier halves.
+
+---
+
+## 1d. §4.10 — the sixteenth section, and the first movement that hands this repo work rather than debt
+
+**Measured 2026-09-15, against live 0.8.2.25**, one day after `spec-data/v0.8.2.24/` was
+vendored. 0.8.2.25 touched §3.3, §4.7, §5.2, §6.3 and §6.4 — all already in the moved set —
+and added **§4.11**, a new section no model cites. The section that newly entered the count is
+**§4.10**, cited by **8** model files.
+
+### What moved, and what it costs: nothing
+
+§4.10(a)'s *emission shape* clause changed from
+
+> "the peer **SHOULD** emit a `413` EXECUTE_RESPONSE correlated by `request_id` when the id is
+> available, and otherwise **MAY** close the connection after a best-effort coded frame"
+
+to a `[MUST]` that defers to §4.11. **§4.10(b) and (c) are byte-identical.** Every one of the
+eight citing models cites **(b)** — the capability-chain depth limit, and specifically Ruling
+3's *"two mechanisms, two reason codes"* which `tla/Bounds.tla` and `tla/BoundsApalache.tla`
+check as `ReasonCodesDistinct` — or cites §4.10 generically for the admission bound
+(`tla/Store.tla`'s `MaxPending`). **This is §1b's §6.8 shape exactly: movement around a clause
+we consume, with the consumed clause untouched.** Verified by reading all eight citations, not
+by the byte count.
+
+### Why it is nonetheless the row to read
+
+**§4.11 states as ONE invariant what four sections had each stated locally, at four different
+strengths** — and the spec says so in its own voice: *"three of them gave the same reason in
+nearly the same words while reaching three different strengths … A fifth member — the framing
+arm — was specified nowhere, and three independent implementations produced three different
+caller-observable answers to one input."*
+
+That is **D17's own subject arriving upstream**, written by the specification about itself:
+an obligation stated in several places with no single home, and a cohort diverging in exactly
+the gap. It is also the shape this repo has twice argued from the other side (§QUORUM:4.2.1's
+triggers; §IDENT:6.3's handler table).
+
+The rule:
+
+> **A peer that refuses a frame pre-admission MUST put a coded EXECUTE_RESPONSE on the wire**
+> — correlated by `request_id` where available, otherwise a best-effort coded frame.
+> **Whether it closes afterwards is its own choice.** Dropping the frame and closing with no
+> coded frame are **two distinct non-conformances**, not one.
+
+### ⭐ Arm (f) is a concurrency claim, and no instrument in the ecosystem drives it
+
+§4.11 closes with a conformance note naming the one arm that **cannot be inferred from the
+others**:
+
+> "a pre-admission refusal arriving while an admitted request is in flight on the same
+> connection MUST NOT cost that request its response."
+
+`entity-system-architecture` carries this as **`KC-2`** and records that it *"has never been
+driven anywhere"*. Read what kind of claim it is: it quantifies over **interleavings** of a
+refusal path and an in-flight request on a **shared connection**, and its failure is a *lost
+response* rather than a wrong one. A wire suite observes one exchange at a time and cannot
+distinguish "the response was lost to the refusal" from "the response was slow"; that is not a
+gap in anyone's suite, it is the shape of the property.
+
+**It is `tla/Reentry.tla`'s exact subject.** That module already carries a multiplexed
+connection, two peers, pooled connections, in-flight correlation and a frame-write lock, and
+already proves the §6.11(a)/(a′) pair jointly satisfiable. What it does **not** have is a
+refusal path at all — `Gate(p) == TRUE`, disclosed in `docs/PROPERTIES.md` — so **arm (f) is a
+D18 domain question before it is a modelling task**: *what legal state can this model not
+represent?* A pre-admission refusal is one, and the ledger row naming that is the honest first
+step, not the model.
+
+**Nothing here is claimed as done, and the first step is taken rather than described.**
+`docs/LEAN-SEAM.md` **O24** is booked — *the model cannot represent a frame that is REFUSED,
+which is the precondition of the entire claim* — and it was written **before** any modelling,
+because D18's question is *what legal state can this model not represent* and answering it
+afterwards is how O22 came to be mis-priced. `spec-data/v0.8.2.25/` is vendored and
+digest-verified, so the work is blocked on nothing but the work. **The pin still has not
+moved**, and does not until the models are re-validated — step 5, and not a formality.
+
+### The classification column this row adds
+
+§1c asked *did this section move because surface was added, or because a defect was closed?*
+This row needs a third answer, and it is the useful one for planning: **the surface added is
+inside an engine's reach.** Fifteen rows of this document say *"new obligations, no model"* in
+a tone of disclosure. This one says *"new obligation, and we are the instrument"* — and the
+difference between those two sentences is whether a drift row is a liability or a work-list.
+**Ask it of every future row**, because the answer changes what the drift measurement is *for*.
 
 ---
 

@@ -1,0 +1,415 @@
+# docs/OBLIGATIONS.toml -- the normative surface OUTSIDE the models, declared.
+#
+# Gated by `make obligations` (tools/obligations.py). The counts below are DERIVED from each
+# track's pinned primary spec and fail the build when they disagree with it. Every section that
+# carries at least one MUST/MUST NOT and is cited by no model of its track has a row here.
+#
+# WHY THIS FILE EXISTS. Every other gate in this repo divides by an artifact of ours: `coverage`
+# by the sections our models cite, `runcount` by our gate tables, `enginecount` by our green
+# tables, `ledgercount` by our ledger. On 2026-09-14 a capability forgery was closed upstream
+# whose enabling text -- `spec-data/v0.8.2` §3.1, *"The content_hash MUST match the map key"* --
+# sat in our pin with no enforcing operation and no vector, which is precisely the shape D17 was
+# ratified to report. Nothing here was red, because nothing here was looking.
+# See `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
+#
+# THE DISPOSITION VOCABULARY IS CLOSED, and `UNEXAMINED` is the honest default:
+#   modeled-elsewhere  another track's models cover it. Name which, in `note`.
+#   out-of-scope       named reason, in `note`. A shrug is not a reason.
+#   UNEXAMINED         nobody has read this section against the models. Not safe -- honest.
+#
+# DO NOT change an `UNEXAMINED` to anything else without doing the reading. The headline the
+# gate prints is the UNEXAMINED obligation count, deliberately: the number a reader sees is the
+# size of the hole, not the fact that somebody wrote it down.
+
+claim_sites = [
+  "docs/COVERAGE-MATRIX.md",
+  "docs/STATUS.md",
+]
+
+[track.attestation]
+spec                 = "spec-data/ext-attestation-v1.3/EXTENSION-ATTESTATION.md"
+total                = 37
+cited_obligations    = 16
+uncited_obligations  = 21
+
+[[track.attestation.uncited]]
+section     = "9.1"
+obligations = 16
+disposition = "out-of-scope"
+note        = """
+An INDEX: each bullet restates an obligation stated normatively in the section it cites (§3,
+§4, §5, §5.1). Counting them separately double-counts.
+"""
+
+[[track.attestation.uncited]]
+section     = "2.1"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.attestation.uncited]]
+section     = "4.0"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.attestation.uncited]]
+section     = "5.4"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.attestation.uncited]]
+section     = "5.6a"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[track.core]
+spec                 = "spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md"
+total                = 365
+cited_obligations    = 237
+uncited_obligations  = 128
+
+[[track.core.uncited]]
+section     = "1.4"
+obligations = 11
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "3.5"
+obligations = 10
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "6.9a"
+obligations = 10
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "4.5"
+obligations = 8
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "6.13"
+obligations = 8
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "9.1"
+obligations = 8
+disposition = "out-of-scope"
+note        = """
+An INDEX, not a surface: every bullet restates an obligation stated normatively in the
+section it cites. Counting them here would double-count. It is also the index `entity-
+system-conformance` is minting `ECP-R1..R98` from -- when those ids land this file should
+consume them and this row should be re-derived, not kept. NOTE, and it is the audit's
+sharpest line: this list's own bullets read `Content hash validation on receipt (§1.8,
+§7.2)` and `Envelope structure with per-entity hash validation (§3.1)` -- the forgery
+obligation, in the MUST-Implement index of our own pin, naming three sections no model
+cites.
+"""
+
+[[track.core.uncited]]
+section     = "3.2"
+obligations = 7
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "6.3"
+obligations = 7
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "1.8"
+obligations = 6
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "9.0"
+obligations = 5
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "1.5"
+obligations = 4
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "1.6"
+obligations = 4
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "4.5a"
+obligations = 4
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "3.13"
+obligations = 3
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "3.7"
+obligations = 3
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "6.12"
+obligations = 3
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "9.5"
+obligations = 3
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "1.2"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "1.3"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "2.10"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "3.1"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "3.9"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "6.7"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "7.4"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "1.1"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "1.11"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "2.2"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "2.9"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "3.11"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "3.12"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "4.4"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "7.5"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "8.3"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.core.uncited]]
+section     = "9.5a"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[track.identity]
+spec                 = "spec-data/ext-identity-v3.10/EXTENSION-IDENTITY.md"
+total                = 86
+cited_obligations    = 59
+uncited_obligations  = 27
+
+[[track.identity.uncited]]
+section     = "5.4"
+obligations = 6
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "3.4"
+obligations = 3
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "6.0d"
+obligations = 3
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "9.3"
+obligations = 3
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "12.1"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "6.4"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "11.5"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "11.7"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "12.2"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "12.4"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "12.5"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "3.2"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "6.0a"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.identity.uncited]]
+section     = "7.3"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[track.quorum]
+spec                 = "spec-data/ext-quorum-v1.2/EXTENSION-QUORUM.md"
+total                = 60
+cited_obligations    = 23
+uncited_obligations  = 37
+
+[[track.quorum.uncited]]
+section     = "9.1"
+obligations = 26
+disposition = "out-of-scope"
+note        = """
+An INDEX: each bullet restates an obligation stated normatively in the section it cites
+(§3.1, §3.2, §3.3, §4, §5.1, §5.2). Counting them separately double-counts.
+"""
+
+[[track.quorum.uncited]]
+section     = "5.3"
+obligations = 7
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.quorum.uncited]]
+section     = "3.4"
+obligations = 2
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.quorum.uncited]]
+section     = "3.3"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+
+[[track.quorum.uncited]]
+section     = "4.3"
+obligations = 1
+disposition = "UNEXAMINED"
+note        = ""
+

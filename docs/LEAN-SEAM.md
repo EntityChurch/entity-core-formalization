@@ -57,7 +57,7 @@ Files pinned by this ledger, at the revision the correspondences below were deri
 | File | sha256 |
 |---|---|
 | `protocol-generator/lean/proofs/EntityCoreProofs/CapabilityProofs.lean` | `3a123b2a746f11dd37e39550d8e81b2389dbce6adf9aed31c20cd6236ec12ab4` |
-| `protocol-generator/lean/src/EntityCore/Capability.lean` | `c99d1067ca08a44cd9c22c67d6517d38932c3be161443b5fc74f5e957ab4672a` |
+| `protocol-generator/lean/src/EntityCore/Capability.lean` | `fa032dcbd96257596eebf5835da42fbecc2250ba2427eee67243d0f61441eb52` |
 
 > **These two digests were WRONG from 2026-09-06 to 2026-09-09, with `make leanseam` green
 > every day, and the mechanism is this repo's own headline class.** The gate parses the
@@ -550,10 +550,18 @@ about that changed. What is *not* true, and was quietly assumed before today, is
 checking it also checks the components. It checks §4.2's dispatch gate and nothing else they
 own.
 
-**Ledger state — derived, and now gated.** As of 2026-09-09, the ledger is **40 rows**
-(13 Class L, 5 Class T, 22 Class O): **15 CLOSED**, 3 CLOSED — ASSUMPTION FALSE (L7's row, O21
+**Ledger state — derived, and now gated.** As of 2026-09-15, the ledger is **42 rows**
+(13 Class L, 5 Class T, 24 Class O): **15 CLOSED**, 3 CLOSED — ASSUMPTION FALSE (L7's row, O21
 and O22), 2 CLOSED — ASSUMPTION ISOLATED (O6, O20), 1 CLOSED — ASSUMPTION ISOLATED AND CORRECTED
-(O10), 1 CLOSED-MODULO-H (L1), 2 N/A — device, 3 BY-DESIGN, and **13 OPEN**.
+(O10), 1 CLOSED-MODULO-H (L1), 2 N/A — device, 3 BY-DESIGN, and **15 OPEN**.
+
+> **O23 is the newest row and it is a different species from every other one here.** Each of
+> O1–O22 is an abstraction somebody *chose* and wrote down — the ledger's whole purpose. O23 is
+> an abstraction nobody noticed making, found only when a counterpart shipped a fix for a
+> **live capability forgery** that exploits it. *"A declared abstraction is a to-do list, not an
+> absolution"* (O9's lesson) has a prior: **an undeclared one is not even a to-do list.** The
+> instrument that now looks for this class is `make obligations`, whose denominator is the
+> pin's normative surface rather than our citations.
 **O20 is the row a new rule went looking for**, not one a model produced: `AGENTS.md` D15's
 tenth shape says a model's unconditional `Init` restriction is a claim and must be a constant
 with a control or an OPEN row here. Enumerating that class across all nine extension models
@@ -664,6 +672,9 @@ No tool in this repo, and no Lean theorem, reaches these. Each names who would.
 
 | O21 | **`IDENT §9.4`'s two cache keys are the same handle** — that the `published_handle` §5.1 writes the anchor under is the `old_handle` §9.4 reads it under | `tla/IdentityRecovery.tla` — the cache was ONE SLOT WITH NO KEY, and the header declared the abstraction ("`properties.old_handle` hex encoding and every other path construction"). **`tla/IdentityRecoveryApalache.tla` (2026-09-09) makes the cache a function over handles and makes rotation an action**, with two finding rows on the lifted domain and two greens on the candidate repair | Nobody, and the assumption is FALSE on the pinned text. A section 13.3 routine rotation moves `old_handle` and produces no `quorum-publish`, so the anchor stays at the pre-rotation key and §9.4 fail-closes on the identity's only compromise-recovery path (**N1**); §6.3's `update_handle_cache_to`, which could carry the entry across, is named in the dispatch table and defined in no section, and its two readings each satisfy one of two properties the spec states (**N2**). **The restriction was NOT in `Init`** — it was in the shape of a variable and the absence of an action, which is why D15's tenth-shape enumeration walked right past this module and recorded it as "not in the class". That is what promoted the candidate rule to **D18** | **CLOSED — ASSUMPTION FALSE** |
 | O22 | **That `IDENT §6.3`'s dispatch is a function of ONE arrival** — that no property of the arrival path depends on what arrived before | `tla/IdentityProcess.tla` — three variables (`kind`, `src`, `hfail`) and no history; the model cannot represent a second arrival. **`tla/IdentityProcessApalache.tla` (2026-09-09) makes arrivals an unbounded sequence and gives phase 2's handlers and phase 2a's unbind state the NEXT arrival's phase 1 reads**, with 9 greens, 5 finding rows, 4 controls and 6 witnesses | Nobody, and the assumption is FALSE on the pinned text — twice, in the two directions the loop runs. §3.6 step 3 READS revocations out of the tree that phase 2a DELETED them from, so a cert the peer has been told to reject is admitted on every later arrival and section 6.4's convergence window — which that section explicitly bounds by sync latency — never closes (**N3**). And §6.3 phase 2 dispatches per `(kind, function)` consulting no state, so a re-arriving cert re-issues the local cap an `identity-retirement` removed (**N4**); §4.5 says nothing about liveness and §ATTEST:4.3's liveness is supersedes plus revocation, so phase 1 lets it back through. **N4 is violated under `ConstInitOK`, which on this track is the UNION of all three implementations' repairs** — no workaround in the cohort touches it. Both repairs for each finding are measured green rather than proposed. **The row's statement was RIGHT and its scope was too narrow**: it said "nothing accumulated across arrivals is in reach", which reads as a completeness gap; what the lift found is that the accumulation is where §3.6's own validator gets its INPUT | **CLOSED — ASSUMPTION FALSE** |
+| O23 | **ENTITY RESOLUTION — that an entity used in an authority decision is the entity its address names.** §5.2/§5.5/§5.5a resolve the author, the capability, the chain root granter, each link's signer and each grantee **by key** out of `envelope.included`; `§1.8`/`§3.1` at 0.8.2.23 make verifying that key a `[MUST]` | **Nowhere, in any engine, on any track.** Every Tamarin/ProVerif theory takes capabilities and chain links as TERMS off `In(...)`, so *"resolve entity by address"* has no representation and there is no address to forge: `content_hash` occurs **0 times** across the 60 files in `tamarin/`, and in `tla/` only as an attestation tie-break key. §1.8 is cited by **0** model files; §3.1 by **0** core models | **Nobody, and this row exists because the abstraction was UNDECLARED, not because it is unowned.** Opened 2026-09-14 after `entity-core-protocol` 0.8.2.23 closed a **capability and identity forgery** exploiting exactly this indirection — an observer of any capability chain could mint a leaf off it up to the parent's scope, without the grantee's key. **The enabling obligation was in our pin** (`spec-data/v0.8.2` §3.1, *"The content_hash MUST match the map key"*, with no enforcing operation and no vector — D17's shape, never run on core). Every active-attacker result in `docs/PROPERTIES.md` is **conditional on this row**, and said so nowhere until now. Closing it is a modelling task, not a routing one: give the adversary the ADDRESS as well as the term, in `tamarin/Binding.{pv,spthy}` and `tamarin/ChainTopology.{pv,spthy}`, with a `*Bug` control that omits the binding check. **Until that runs, the honest statement is "outside our domain", NOT "we would have found it"** | **OPEN** |
+
+| O24 | **PRE-ADMISSION REFUSAL — that a frame refused BEFORE it becomes an admitted request cannot cost an already-admitted request its response.** `0.8.2.25` §4.11's conformance arm, and it is the one arm the section says *"cannot be inferred from the others"*: *"a pre-admission refusal arriving while an admitted request is in flight on the same connection MUST NOT cost that request its response."* §4.9(c)'s deliver-or-signal rule is scoped to *"every request the peer admits"* and therefore reaches none of this class | **`tla/Reentry.tla`, `spin/reentry.pml` — and the gap is the model's SHAPE, not a constant.** There is no refusal path at all: the dispatch gate is `Gate(p) == TRUE` (disclosed in `docs/PROPERTIES.md`), every frame in the model is an admitted request, and the §6.11(a′) frame-write lock is the only contention modeled. **So the model cannot represent a frame that is refused, which is the precondition of the entire claim** — not a weakened property, an inexpressible one | **This repo, and nobody has started.** Opened 2026-09-15 on vendoring `v0.8.2.25`, **before** any modelling, because D18's question is *what legal state can this model not represent* and answering it after the fact is how O22 came to be mis-priced. ⚠ **The claim is not wire-decidable**: it quantifies over **interleavings** and its failure is a **LOST response**, which no finite probe distinguishes from a slow one — `entity-system-architecture` carries it as `KC-2` and records that it **has never been driven anywhere**, by any instrument in the ecosystem. That makes it the clearest case this repo has of a floor obligation only an engine here can reach, and it is `entity-system-conformance`'s `F-2`/`F-3` question in concrete form. **Blocked on nothing except the work**; the snapshot is vendored | **OPEN** |
 
 O4 was found while writing L1: §5.10's cross-clock temporal model makes `δ` a declared
 Layer-1 input alongside `t`, and the determinism argument is stated in terms of both.
@@ -904,9 +915,30 @@ verdicts, then re-pin the digest. Re-pinning without re-reading defeats the whol
 `tools/lean-seam.py` parses the block below. Every `theorem` line must have a prose row
 above; every prose citation must have a line here.
 
+> **RE-PINNED 2026-09-14, and this note is the re-read that licenses it.** `make leanseam`
+> went red on `src/EntityCore/Capability.lean`; keystone's commit *"sentinel: fortran lean cobol
+> unison apl"* landed the `0.8.2.20`/`.21` `NEVER_MATCH` work — `canonSegs` is now **total**
+> (reserved `./`, `../` and `*/` prefixes return `neverMatch`), a `matchesSegNM` **wrapper**
+> carries §5.4's *"never matches in either operand"* rule, `covered` calls the wrapper, and
+> `matchesScope` gains `excludeUnmatchable`. **Re-pinning alone would defeat the ledger**, so
+> every row citing this file was re-read against the new text before the digest moved:
+>
+> - **L1, L12, L13** — unaffected. The frame/absolute-pattern facts are about `canonSegs`'
+>   absolute branch, which is byte-identical.
+> - **L5, L6** — verdicts stand, **and the re-read produced a finding**. The sentinel rule was
+>   implemented as a **wrapper** rather than as a first arm of `matchesSeg`, deliberately, to
+>   preserve the T5a proof surface — and `scopeSubset` is the one call site that still calls
+>   `matchesSeg` raw. Measured, not inferred: on `("../x", "/*")` the L1/L2 route answers
+>   **false** and the L3/L4 route answers **true**. `scopeSubset` also still runs the id-scope
+>   dimensions through the path matcher, which `0.8.2.22` now forbids in the imperative at
+>   **both** matchers. Routed — `docs/status/ROUTING-2026-09-14-KEYSTONE-SCOPESUBSET-HALF-ADOPTED.md`.
+> - **The `0.8.1 F40` typed matcher we routed as K1 is now IN this file** (`ScopeKind`,
+>   `matchesIdPattern`, `coveredId`) with an attribution comment naming this repo. That half of
+>   K1 is adopted; the `scopeSubset` half is not.
+
 ```leanseam-pins
 file  proofs/EntityCoreProofs/CapabilityProofs.lean  3a123b2a746f11dd37e39550d8e81b2389dbce6adf9aed31c20cd6236ec12ab4
-file  src/EntityCore/Capability.lean                 c99d1067ca08a44cd9c22c67d6517d38932c3be161443b5fc74f5e957ab4672a
+file  src/EntityCore/Capability.lean                 fa032dcbd96257596eebf5835da42fbecc2250ba2427eee67243d0f61441eb52
 
 theorem  verifyChain_time_stable          proofs/EntityCoreProofs/CapabilityProofs.lean  L1
 theorem  verifyChain_time_independent     proofs/EntityCoreProofs/CapabilityProofs.lean  L1

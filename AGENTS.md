@@ -437,10 +437,98 @@ V1–V3; none of them is visible from any single finding.
 are three sibling repos, so they go stale with our tree untouched — the `driftclaim` class
 exactly (D15). Re-read the source before quoting a row.
 
-**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.21** and `make specdrift` reports
-**14 of 31 cited sections moved**. Thirteen of the fourteen contradict no model — one of them (§5.8) is a
+**A CAPABILITY FORGERY WAS CLOSED UPSTREAM, 2026-09-14, IN TEXT THAT WAS IN OUR PIN, AND NO
+GATE HERE WAS RED.** `0.8.2.23` fixed this: every authority lookup resolved an entity by a
+wire-supplied `envelope.included` key that **nothing verified**, so an observer of any capability
+chain could mint a leaf off it up to the parent's scope **without the grantee's key**. Read three
+facts together before anything else in this file. **(1) The enabling obligation was in our pin** —
+`spec-data/v0.8.2` §3.1, *"The content_hash MUST match the map key"* — with **no enforcing
+operation and no vector**, which is **D17's trigger verbatim**, and D17 had only ever been run on
+the three extension tracks. **(2) No model here represents the indirection**: the prover theories
+take capabilities and chain links as TERMS off `In(...)`, so there is no address to forge
+(`content_hash`: **0** occurrences across the 60 files in `tamarin/`), and that abstraction was
+declared **nowhere** until it became `docs/LEAN-SEAM.md` **O23**. **(3) `docs/PROPERTIES.md` and
+`docs/FINAL-ASSURANCE-SUMMARY.md` both published that the pinned design admits no "forgery …
+under an active attacker, at the modeled bound"** — true, and load-bearing on four words pointing
+at a bound that never mentioned entity resolution. Both are corrected at the site; the form is
+retracted as **R13**. **The cause is D19's subject and it is why that candidate exists: every
+denominator in this repo was an artifact of ours.** `make obligations` supplies one from the pin
+instead — **120 of 365 core obligations are UNEXAMINED**. Audit:
+`docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`. **And the audit was
+triggered from outside**, by a counterpart shipping the fix, which is recorded in its own process
+review as the finding that outranks the rest.
+
+**The channel was one-directional and that cost measurably.** All three `TRACKER-*.md` are
+*"what we are carrying TO them"*; there was no inbound direction, so arch's `ROUTING-2026-09-12-e`
+— marked *"the priority item"* — sat unopened for two days, and keystone's **scope-algebra cell
+census** (146 live cells, 37 with a vector, 109 unmeasured — an instrument enumerating our own
+subject) was unknown here while three other seats worked from it. **`docs/status/INBOUND.md` is
+the register; read it at session start.** It is a procedure, not a gate, and says so: its inputs
+are seven sibling trees, the `driftclaim` class by construction.
+
+**RUNNING IT ONCE FOUND A FIFTH COUNTERPART, AND IT IS THE ONE WITH THE LARGEST OVERLAP.**
+**`entity-system-conformance`** — the independent conformance instrument, `requirements/`
+(neutral, `ECP-R<n>`-keyed, **98 allocated / 50 authored**, pinned at `v0.8.2.24`) × `suites/`
+(N independent implementations, built to disagree), never shipping a peer and never authoring
+the spec. **There was no channel in either direction and they had no row for this repo at all.**
+Tracker: `docs/status/TRACKER-entity-system-conformance.md`. Three things to internalize.
+
+**(1) Their blind spot and ours are complements, and they have already NAMED theirs.** Their
+format carries `surface = wire | host-seam | offline | cross-peer` plus `unreachable` as a
+declared STATE, and `GUIDE-CONFORMANCE` §5.2a gives such a rule exactly two ways out — *a
+pinned-input vector, or declared*. **There is no third, and the third is a machine-checked
+model.** Their worked case says it outright: *"THIS IS A BINDING MUST AND IT IS NOT
+WIRE-DECIDABLE."* **`ECP-R24` is the founding case**: a §9.1 FLOOR MUST whose defect §6.8
+declares *"wire-invisible, because both readings produce a well-formed response and differ only
+in which authority was consulted."* `tla/Authority.tla` is built for exactly that question and
+**does not yet model that MUST** — it arrived at 0.8.2.21, inside the module's own abstraction.
+Say those two facts in that order; the reverse is how a capability claim gets overstated.
+
+**(2) Two denominators over one byte-identical snapshot.** **365/475** MUST + MUST NOT by our
+regex, **98** ids by their positional §9 allocation. D15's own rule for that pair is *make them
+disagree out loud or make them share the definition*, so **`make floorgap`** (`tools/floorgap.py`)
+does both: it imports `obligations.py`'s regexes rather than re-typing them, and it cross-checks
+its own §9.1 reading against their `ECP-INDEX.md`. **They AGREE exactly — the same 50 floor-cited
+sections.** Result: **52 of 475 obligations, in 16 sections, have no §9.1 floor row**; 34 in 9
+sections have no §9 row at all. That is their `CQ-36` generalized from a revision diff, which is
+their own `AP-2` (*"the diff selects where to start reading; it must never select where to
+stop"*). **Not a gate** — a sibling tree is its input. ⛔ **And it bounds itself: A FLOOR ROW IS
+NOT A VECTOR.** §3.1 is FLOORED, by `ECP-R7`, with an authored requirement file — and it carries
+the MUST that enabled the 0.8.2.23 forgery. *The tool would not have found the defect that caused
+this repo to build it.*
+
+**(3) A test vector is a grader, and so is a requirement file — read theirs before quoting a row.**
+`ECP-R1.diag` carries a mandatory anti-vacuity negative control with its own `why`, a
+non-conformant witness naming the peer shape the control separates, an explicit `NOT ASSERTED`
+list, and bounded negatives. `UNEXECUTED-CEILING` is a ratchet on requirements no suite has run,
+and **it may only go down**. This is our discipline family reached independently, which is the
+argument for adjudicating disagreements rather than assuming ours wins.
+
+*First-run defect worth keeping, because it is the register's own failure mode:* the sweep read
+seven sibling trees and **did not read our own tracker**, so it reported four keystone asks as
+having *"no row here"* when all four were answered — three of them nine days earlier — in
+`TRACKER-entity-core-keystone.md`'s own `Inbound` section. **A new register has no memory, so
+absence of a row in the NEW file reads as absence of the work.** The real state was a **receipt
+gap, not a work gap**, which is cheaper to fix and invisible from inside either tree. Corrected
+in place with the wrong sentence left standing.
+
+**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.25** and `make specdrift` reports
+**16 of 31 cited sections moved**. Fifteen of the sixteen contradict no model — one of them (§5.8) is a
 single backtick removed from a cross-reference row; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
 `tla/ConnCodes.tla` transcribes 400.
+**§4.10 is the sixteenth, and 0.8.2.25 put the largest MODELABLE surface on the board in the
+one place no other instrument can reach it.** New **§4.11** makes the pre-admission refusal a
+single invariant — *a peer refusing a frame before admission MUST put a coded EXECUTE_RESPONSE
+on the wire; the close is optional; a silent drop and a bare close are two distinct
+non-conformances* — and §4.10(a)'s emission shape was strengthened SHOULD/MAY → MUST to point
+at it. **Every model citing §4.10 cites (b) or the generic admission bound, and (b) is
+byte-identical**, so this is the §6.8 shape again: movement around the clause we consume. What
+is new is arm **(f)**, the multiplexed one: *a pre-admission refusal arriving while an admitted
+request is in flight on the same connection MUST NOT cost that request its response.*
+`entity-system-architecture` records (`KC-2`) that it **cannot be inferred from the other five
+and has never been driven anywhere** — it is a concurrency claim on a shared connection, which
+is `tla/Reentry.tla`'s exact subject and a wire suite's blind spot. See
+`docs/SPEC-DRIFT-ASSESSMENT.md` §1d.
 **§5.4 and §6.8 moved on 2026-09-11/12 (spec 0.8.2.20/21) and BOTH were previously classified
 `unchanged` IN AN ARGUMENT THAT LEANED ON THEIR STABILITY** — `SPEC-DRIFT-ASSESSMENT.md` §1a
 said *"§5.4 itself is unchanged"* and §4's reading of the confused-deputy property said §6.8
@@ -488,7 +576,7 @@ the complementarity claim stops being prose. **It paid out on 2026-09-06:** the 
 residual it found was adopted by the keystone peer, §5.5a now has a theorem per pattern form,
 and both gates caught the movement — `leanseam` on the digests, `leanproof` on three new
 theorems **by name**, refusing to accept a re-declare without a re-read. **Do not trust a
-count of the ledger's rows that you did not derive:** it is 40 rows / 13 Class L, **13 OPEN**,
+count of the ledger's rows that you did not derive:** it is 42 rows / 13 Class L, **15 OPEN**,
 and a recalled figure has been published wrong here **five** times. Run **`make ledgercount`**
 — it parses the ledger and fails when a declared prose site disagrees. *Note what this line
 used to say and why it was wrong: "`leanseam` and `leanproof` print the live numbers." They do
@@ -1403,6 +1491,15 @@ consistent; it is to make independent implementations converge. **Where three gr
 implementations could answer differently and nothing rejects either answer, the specification
 has failed at its job whether or not any sentence in it is wrong.**
 
+> ⛔ **SCOPE, ADDED 2026-09-14 BECAUSE ITS ABSENCE COST US A FORGERY: THIS APPLIES TO EVERY
+> TRACK, INCLUDING `core`, AND IT NEVER HAD.** D17 was earned on the three extension tracks and
+> every application site was one. Meanwhile `spec-data/v0.8.2` §3.1 carried *"The content_hash
+> MUST match the map key"* — a MUST whose only enforcing operation in the pin is `tree:put` CAS
+> semantics, which is a different condition entirely, and whose vector set is empty. That is
+> this rule's trigger, verbatim, in the oldest and most-modeled text we hold. `0.8.2.23` closed
+> it as a **capability and identity forgery**. **D17 is reactive — it fires when you are
+> reading a MUST — so it needs an instrument that walks the MUSTs: `make obligations`.**
+
 *Earned on this repo's own results, in three different shapes.*
 
 - **The obligation with no enforcing operation.** Nine of the twenty-one routed spec findings
@@ -1466,6 +1563,77 @@ type, at live, in the section that forbids it.
 against a TEXT, and the text is whichever one the counterpart has adopted** — not the newest one,
 and not the one we happen to have open. Naming that revision in the packet is what makes the
 finding checkable by them rather than by us.
+
+### D19 (CANDIDATE, not ratified) — the denominator comes from the spec, and its unit is the obligation
+
+**A coverage claim divided by an artifact of ours measures our own activity. The denominator
+must be the specification's obligations, and the unit must be the OBLIGATION, not the section.**
+
+*Status: CANDIDATE.* It has bitten **once**. The promotion ladder says one bite is an
+anti-pattern entry plus a candidate, and this repo has been wrong before by promoting on the
+strength of how bad an instance felt rather than on a second bite in a different shape. Applied;
+not claimed to generalize. **Promotion condition:** a second instance in a genuinely different
+shape — most likely a *verified* obligation inside a *cited* section turning out unmodeled,
+which is precisely the half `make obligations` states it does not assert.
+
+*The bite, 2026-09-14.* `entity-core-protocol` `0.8.2.23` closed a capability and identity
+forgery: authority lookups resolved entities through a wire-supplied `envelope.included` key
+that nothing verified, so an observer of any capability chain could mint a leaf off it up to the
+parent's scope without the grantee's key. **The enabling obligation was in our pin** and had no
+enforcing operation and no vector. Every gate here was green, and every gate was *correct*:
+
+| gate | its denominator |
+|---|---|
+| `coverage` | the sections **our models** cite |
+| `runcount` | **our** gate tables |
+| `ledgercount` | **our** ledger |
+| `enginecount` | **our** green tables |
+| `specdrift` | the sections **our models** cite, again |
+| `trackcheck` · `specfreeze` · `retractcheck` | **our** registry, **our** snapshots, **our** retractions |
+
+`coverage` is the near miss and the instructive one: it *does* divide by the pin's section count
+and publishes **29 of 91**. But **a section is not an obligation.** §5.2 carries engine dots with
+9 MUSTs inside it; §3.1 carries the forgery's MUST and is not a row at all, which reads the same
+as a section with nothing in it. A grid that is exactly right about its numerator says nothing
+about a denominator it does not have.
+
+*Enforcement point — `make obligations` (`tools/obligations.py`, `docs/OBLIGATIONS.toml`), in
+`check` and `matrix`.* Per track, from that track's own pin: total obligations, how many sit
+inside sections a model cites, how many do not, and a **written disposition for every
+obligation-bearing section none cites** from a closed vocabulary — `modeled-elsewhere` /
+`out-of-scope`+reason / **`UNEXAMINED`**. Core is **120 of 365 core obligations UNEXAMINED**.
+
+**Read the extension rows before concluding this is a core problem.** On `quorum` **37 of 60**
+and on `attestation` **21 of 37** obligations sit outside the models — *more outside than
+inside*, on the two tracks where this repo originated its findings. **Anti-pattern: the
+productive track reads as the covered one.** Origination produces confidence and measures
+nothing about coverage.
+
+*D13 asked of the new gate.* What does it assert? That the surface **outside** the models is
+enumerated and dispositioned. What else satisfies it? **A tree where every row says
+`UNEXAMINED`** — allowed deliberately, and the tool prints that count as its **headline** so the
+number a reader sees is the size of the hole and not the fact that someone wrote it down. What
+it does **not** assert: that any obligation is verified. Closing that needs per-obligation
+citations in the models, which needs stable ids — `entity-system-conformance` is minting them
+(`ECP-R1..R98`) and this tool should consume them when they land.
+
+*Second anti-pattern, from the gate's own first draft — **two true numbers, one phrasing**.* The
+site check compared prose against the *uncited* count while the prose stated the *UNEXAMINED*
+count; both are derived, both are true, and the sentence fit either. That is the `ledgercount`
+14-vs-13 error reproduced inside the tool written to stop that class. The remedy that
+generalizes: **when a gate checks a figure in prose, make it fail an UNQUALIFIED statement of
+that figure**, not merely a wrong one. Nine teeth tests, including the restore.
+
+*And a third, found while wiring it:* `tools/ledgercount.py` anchored two of its STATUS patterns
+on the literal `**40 rows**` — **the current value of the number they watch** — so when the
+ledger moved to 41 the pattern stopped matching and the gate reported *"the site went silent"*
+instead of *"the site is stale"*: a true message naming the wrong defect. **Never anchor a
+matcher on the value it is checking.** Fixed at both sites; the sibling patterns four lines up
+were already written correctly, which is how it survived.
+
+*What this does NOT license.* Reading every MUST in every spec is not the work and would not
+have found this one any faster than asking D17's question of §3.1 would have. The rule is about
+**where the list comes from**, not about exhaustiveness.
 
 ## Boundaries — do NOT modify
 

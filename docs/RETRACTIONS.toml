@@ -271,3 +271,34 @@ Full result: `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §15."""
 pattern = "admits child patterns a parent never authorized"
 witness = "docs/RETRACTIONS.toml"
 allow   = []
+
+[[retraction]]
+id      = "R13"
+retired = "2026-09-14"
+claim   = "an unqualified 'the pinned design admits no forgery under an active attacker'"
+why     = """NOT a false claim, and that is why this row is here rather than a correction note.
+`docs/PROPERTIES.md` and `docs/FINAL-ASSURANCE-SUMMARY.md` both say the pinned design admits no
+*"forgery, escalation, replay ... under an active attacker, **at the modeled bound**"* — literally
+true, and saved entirely by four words a reader outside this ecosystem cannot evaluate, because
+the bound is stated in a different document and never mentioned entity resolution.
+
+On 2026-09-14 `entity-core-protocol` 0.8.2.23 closed a **capability and identity forgery** in that
+same pinned design: every authority lookup resolved an entity through a wire-supplied
+`envelope.included` map key nothing verified, so an observer of any capability chain could mint a
+leaf off it up to the parent's scope **without the grantee's key**. The enabling obligation is in
+our pin (`spec-data/v0.8.2` §3.1) with no enforcing operation and no vector — D17's shape, never
+run on core. No model here represents the indirection: `content_hash` occurs 0 times across the
+60 files in `tamarin/`.
+
+What is retracted is the FORM, not the sentence: an "admits no X" with the scope-limiting
+qualifier trailing behind it. The replacement names the abstraction at the site. Both original
+sentences are kept in place with a correction box beside them, per the ratchet's rule that a
+withdrawn claim is more useful visible than deleted.
+
+This row's `pattern` deliberately targets the ASSERTION SHAPE and not the word "forgery": the
+corrected sites still say forgery, and so does `docs/LEAN-SEAM.md` O23. What must not come back
+is an unqualified "admits no ... under an active attacker" with no abstraction named beside it.
+Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`."""
+pattern = "admits no [a-z, -]*under an active attacker"
+witness = "docs/RETRACTIONS.toml"
+allow   = ["docs/PROPERTIES.md", "docs/FINAL-ASSURANCE-SUMMARY.md"]

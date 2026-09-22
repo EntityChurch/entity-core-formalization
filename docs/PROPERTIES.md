@@ -655,6 +655,27 @@ Layer-1 verdict leak, grantless-sub-dispatch authorization, or — under an acti
 forgery, escalation, replay, deep frame confusion, threshold bypass, temporal fail-open, or
 trusted-forever fail-open, at the modeled bound.
 
+> ⛔ **AND "AT THE MODELED BOUND" IS DOING MORE WORK IN THAT SENTENCE THAN A READER CAN SEE —
+> corrected 2026-09-14, and the correction is kept beside the claim rather than replacing it.**
+> On 2026-09-14 `entity-core-protocol` `0.8.2.23` closed a **capability and identity forgery**
+> in the pinned design: every authority lookup resolved an entity through a wire-supplied
+> `envelope.included` map key that nothing verified, so an observer of any capability chain
+> could mint a leaf off it, up to the parent's scope, **without the grantee's key**. The
+> enabling obligation — §3.1's *"The content_hash MUST match the map key"* — is in
+> `spec-data/v0.8.2`, with no enforcing operation and no vector.
+>
+> **The sentence above is true and it is not the sentence a reader takes from it.** The bound
+> it points at never mentioned entity resolution, because **no model here represents the
+> address→entity indirection at all**: the prover theories take capabilities and chain links
+> as terms, so there is no address to forge (`content_hash` occurs **0** times across the 60
+> files in `tamarin/`). That is not a limit that was disclosed and accepted; it was undisclosed
+> until this date. It is booked as `docs/LEAN-SEAM.md` **O23**, measured as part of
+> **120 of 365 core obligations are UNEXAMINED** (`make obligations`), and audited in
+> `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
+>
+> **Read every "admits no X" in this document as "no model here exhibits X", and read the
+> model's domain before believing the second form covers the first.**
+
 *Section-by-section coverage, what each engine can and cannot do, and every bound:
 `docs/COVERAGE-MATRIX.md` — the best starting point for a new reader.
 Full narrative + the re-verification matrix: `docs/FINAL-ASSURANCE-SUMMARY.md`.

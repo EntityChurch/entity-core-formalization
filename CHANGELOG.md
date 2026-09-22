@@ -10,13 +10,107 @@ accompanies protocol `0.8.2`, so the two line up when read side by side.
 
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
-**`v0.8.2`**. The live protocol has since advanced to **0.8.2.21** and `make specdrift`
-reports **14 of 31 cited sections moved**. That gap is deliberate and visible rather than
+**`v0.8.2`**. The live protocol has since advanced to **0.8.2.25** and `make specdrift`
+reports **16 of 31 cited sections moved**. That gap is deliberate and visible rather than
 hidden: the pin moves only as the last step of re-validating the models, never on a file
 copy, so between a spec release and a re-validation this repository is *behind on purpose*.
 `docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance section by section.
 
 ## [Unreleased]
+
+### Fixed — a capability forgery was closed upstream in text that was in our pin, and no gate here was red (2026-09-14)
+
+`entity-core-protocol` `0.8.2.23` closed a **capability and identity forgery**: every authority
+lookup resolved an entity by a wire-supplied `envelope.included` map key that nothing verified,
+so an observer of any capability chain could mint a leaf off it up to the parent's scope
+**without the grantee's key**. Three things about that are this repository's to answer, and all
+three are now recorded rather than argued:
+
+**The enabling obligation was in our pin.** `spec-data/v0.8.2` §3.1 — *"The content_hash MUST
+match the map key"* — with no enforcing operation and no vector anywhere in the pinned text, and
+named in the pin's own §9.1 *MUST Implement* index. That absence is the exact trigger of this
+repository's **D17**, which had only ever been applied to the three extension tracks. D17's scope
+now says so in the discipline itself.
+
+**No model here represents the mechanism.** The active-attacker theories take capabilities and
+chain links as terms, so there is no address to forge; `content_hash` occurs **0** times across
+the 60 files in `tamarin/`. The abstraction was **undeclared** — not a disclosed limit — and is
+now `docs/LEAN-SEAM.md` **O23**, OPEN, with every active-attacker result in `docs/PROPERTIES.md`
+stated as conditional on it.
+
+**Two canonical documents published a no-forgery claim** that was true and that a reader could
+not scope: *"…admits no forgery … under an active attacker, **at the modeled bound**."* Both are
+corrected at the site, with the original kept beside the correction; the assertion form is
+retracted as **R13** so it cannot silently return.
+
+### Added — `make obligations`, the one gate here whose denominator is not ours
+
+Every existing gate divides by an artifact of this repository: `coverage` by the sections our
+models cite, `runcount` by our gate tables, `enginecount` by our green tables, `ledgercount` by
+our ledger. `coverage` is the near miss and the instructive one — it does divide by the pin's
+section count, and **a section is not an obligation**: §5.2 carries engine dots with nine MUSTs
+inside it, while §3.1, which carries the forgery's, is not a row at all.
+
+`tools/obligations.py` + `docs/OBLIGATIONS.toml` count each track's obligations from **its own
+pin** and require a written disposition — `modeled-elsewhere` / `out-of-scope` with a reason /
+`UNEXAMINED` — for every obligation-bearing section no model cites. The headline is the
+UNEXAMINED count, so what a reader sees is the size of the hole:
+
+| track | obligations | inside cited sections | outside | UNEXAMINED |
+|---|---|---|---|---|
+| `core` | 365 | 237 | 128 | **120** |
+| `attestation` | 37 | 16 | **21** | 5 |
+| `identity` | 86 | 59 | 27 | 27 |
+| `quorum` | 60 | 23 | **37** | 11 |
+
+On `quorum` and `attestation` more normative surface sits outside the models than inside — and
+those are the tracks this repository originated findings on. Catalogued as an anti-pattern: *the
+productive track reads as the covered one.*
+
+Ratified as **candidate D19** only. It has bitten once; the promotion ladder says one bite is a
+candidate, and the promotion condition is written down. Nine teeth tests including the restore.
+
+### Added — `spec-data/v0.8.2.24/`, and the pin did not move
+
+The three normative files vendored byte-for-byte and digest-verified, `0.8.2.24` / CBOR `1.7` /
+type system `4.2.1`. **No structural movement at all**: no section added, removed or renumbered,
+the coverage denominator unchanged at 91, and every model `§`-citation still resolves.
+`spec-data/MODELING-PIN` still reads `v0.8.2` and every published result remains a statement
+about it. `docs/SPEC-DRIFT-ASSESSMENT.md` **§1c** classifies the fifteenth moved section — §5.5,
+the most-cited section in this repository, moved because a defect was closed rather than because
+surface was added, which is a distinction this document previously had no column for.
+
+### Added — the frame-canonicalization equivalence is measured (arch `KS-9c`)
+
+`lean/lemmas/Frame.lean`, gated by `make leanlemma`, against keystone's own definitions.
+**Claim E holds: 2370 differential pairs, zero disagreements**, plus 90 round-trip and 120
+id-scope pairs. Arch's items 2 (per-link chain framing), 3 (the sentinel) and 4 (the exclude
+side) are clean; items 1 (multi-granter root) and 5 (identity rotation) are **not decided**,
+because neither is a matcher question. The sentinel **survives minting**, so both readings refuse
+exactly the same set and the difference is *where*, not *whether*. Every substantive row reports
+zero, so the sweep carries a **positive control** injecting §5.5a's own
+`canon-against-wrong-frame` architecture — it reports 62 and 14, which is what makes the zeros
+measurements rather than silence.
+
+### Fixed — two defects in keystone's Lean, found by re-reading it for the above
+
+`scopeSubset` reaches neither the `0.8.2.20` sentinel rule (implemented as a wrapper that one
+call site does not use) nor the `0.8.2.22` typed dispatch. Routed, split into an ask and a
+heads-up by their declared pin, per D17's fourth item.
+
+### Added — `docs/status/INBOUND.md`
+
+All three trackers were outbound-only. Arch's `ROUTING-2026-09-12-e`, marked *"the priority
+item"*, sat unopened for two days; keystone's scope-algebra cell census — an instrument
+enumerating this repository's own subject — was unknown here while three other seats worked from
+it. A work-list is an input set too.
+
+### Fixed — `tools/ledgercount.py` anchored two patterns on the value they watch
+
+Two STATUS matchers carried the literal `**40 rows**`, so when the ledger moved to 41 they
+stopped matching and the gate reported *"the site went silent"* instead of *"the site is
+stale"* — a true message naming the wrong defect. Never anchor a matcher on the value it checks.
+
 
 ### Fixed — a coverage row credited two engines for a section every model declares abstract
 

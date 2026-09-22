@@ -256,6 +256,55 @@ written it down, and violating it in the same session is the normal case.
 **A model must cite a section only where it makes a claim about it.** A section it
 deliberately does *not* model is named in prose without the `§` sigil.
 
+### 3b′. The unit of this grid is the SECTION. The unit of a defect is the OBLIGATION.
+
+**Everything in §3b hardens the numerator and leaves the unit alone**, and the unit is where
+the next failure came from. A row of Matrix A says *some model cites this section*. It cannot
+say *which of this section's obligations any model ranges over* — so §5.2 carries engine dots
+with **9** MUSTs inside it, and a section carrying a MUST that no model cites is not a row at
+all, which is not the same statement as a row with no dots.
+
+That is not a hypothetical. On 2026-09-14 `entity-core-protocol` 0.8.2.23 closed a **capability
+and identity forgery**: every authority lookup resolved an entity through a wire-supplied
+`included` map key that nothing verified. The enabling text is **in our pin** —
+`spec-data/v0.8.2` §3.1: *"The content_hash MUST match the map key"* — a MUST with **no
+enforcing operation and no vector**, which is exactly what `AGENTS.md` **D17** was ratified to
+report as a finding in its own right. §3.1 and §1.8, the two sections that carry it, are cited
+by **zero** core models; §5.5, where the precondition now lands, is cited by **39**. Every gate
+in this repo was green throughout, and `make coverage` was among them, correctly: the cited set
+did equal the grid rows, in both directions. **A grid that is exactly right about its own
+numerator says nothing about a denominator it does not have.**
+
+**`make obligations` (`tools/obligations.py`, `docs/OBLIGATIONS.toml`) supplies that
+denominator**, counted from each track's own pin rather than from our citations:
+
+| track | obligations in the pin | inside sections a model cites | inside sections none cites | of those, **UNEXAMINED** |
+|---|---|---|---|---|
+| `core` | 365 | 237 | 128 (34 sections) | **120 UNEXAMINED** |
+| `attestation` | 37 | 16 | 21 (5 sections) | 5 |
+| `identity` | 86 | 59 | 27 (14 sections) | 27 |
+| `quorum` | 60 | 23 | 37 (5 sections) | 11 |
+
+Two of those rows deserve to be read twice. **On `quorum` and `attestation` more of the
+normative surface sits outside the models than inside** — and those are the tracks this repo
+originated findings on, which is the argument against reading a productive track as a covered
+one. The gate requires a written disposition for every uncited obligation-bearing section from
+a closed vocabulary (`modeled-elsewhere` / `out-of-scope` with a reason / `UNEXAMINED`), and it
+prints the **UNEXAMINED** total as its headline so the number a reader sees is the size of the
+hole rather than the fact that someone wrote it down. On `core`, **128 of 365 core obligations
+sit in sections no model cites**. Of those, **120 of 365 core obligations are UNEXAMINED**; the
+remaining 8 are §9.1, an index that restates obligations stated normatively elsewhere.
+
+**What it still does not assert, stated here because that is the whole lesson of this
+subsection:** that any obligation is *verified*. It measures the surface **outside** the
+models and says nothing about the inside — a cited section can carry engine dots with every
+one of its MUSTs unmodeled. Closing that needs per-obligation citations in the models, which
+needs stable obligation ids; `entity-system-conformance` is minting them for the core tier
+(`ECP-R1..R98`) and this tool should consume them when they land. Until then its MUST count is
+a regex over the pin: a **lower bound** on the surface and an upper bound on nothing.
+
+Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
+
 ---
 
 ## 3c. Matrix A-ATT — attestation section × property class × engine

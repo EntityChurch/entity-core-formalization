@@ -33,7 +33,8 @@ MAKE ?= make
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
         check-provers crosscheck matrix specdrift specdrift-gate driftclaim leanseam \
         lean lean-image lean-smoke leanproof leanproof-neg leanlemma leanlemma-neg \
-        coverage runcount ledgercount enginecount retractcheck trackcheck specfreeze clean caps
+        coverage runcount ledgercount enginecount retractcheck trackcheck specfreeze \
+        obligations floorgap clean caps
 
 # Where each track's live spec lives is DERIVED, per track, from TRACKS.toml's
 # `source_repo_path` + `source_dir` -- core from `entity-core-protocol/specs`, the three
@@ -58,6 +59,10 @@ help:
 	@echo "  make driftclaim does every doc STATE the drift status specdrift derives?"
 	@echo "                  Not in check/matrix: it can go stale with no commit here,"
 	@echo "                  so run it at a release boundary and on a schedule."
+	@echo "  make floorgap   which obligations sit where NO §9.1 conformance-floor row"
+	@echo "                  reaches? entity-system-conformance's CQ-36, asked of the whole"
+	@echo "                  snapshot instead of a revision diff. Not a gate: reads a"
+	@echo "                  sibling tree, so it is the driftclaim class by construction."
 	@echo "  make lean       the LEAN SEAM TIER: leanseam + leanproof + leanlemma + controls."
 	@echo "                  Needs the keystone sibling, so it is NOT in matrix —"
 	@echo "                  see docs/LEAN-SEAM.md §5/§7 for why a skip would be worse."
@@ -72,6 +77,9 @@ help:
 	@echo "  make trackcheck which proof track does each model file belong to?"
 	@echo "                  (core / attestation / quorum / identity -- TRACKS.toml)"
 	@echo "  make coverage   does COVERAGE-MATRIX.md match what the models actually cite?"
+	@echo "  make obligations how much of each pinned spec's NORMATIVE surface is OUTSIDE"
+	@echo "                  the models? The one gate here whose denominator is the SPEC's,"
+	@echo "                  not ours -- every other one divides by an artifact of ours."
 	@echo "  make runcount   is the published run total still what the gate tables produce?"
 	@echo "  make enginecount how many ENGINES carry each subject, and which rest on one?"
 	@echo "                  (D16 -- docs/CORROBORATION.md is the declaration)"
@@ -131,7 +139,7 @@ smoke:
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: specfreeze trackcheck coverage runcount ledgercount enginecount retractcheck check-tla check-spin check-provers
+check: specfreeze trackcheck coverage obligations runcount ledgercount enginecount retractcheck check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -146,7 +154,7 @@ check: specfreeze trackcheck coverage runcount ledgercount enginecount retractch
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix: specfreeze trackcheck coverage runcount ledgercount enginecount retractcheck
+matrix: specfreeze trackcheck coverage obligations runcount ledgercount enginecount retractcheck
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
@@ -206,6 +214,26 @@ specdrift-gate:
 # boundary and on a schedule.
 driftclaim:
 	@python3 tools/spec-drift.py --check-claims
+
+# --- floorgap: which obligations sit where NO §9.1 conformance-floor row reaches? ---------
+# `entity-system-conformance`'s CQ-36 asked arch whether six new cross-peer MUSTs from
+# 0.8.2.22-.24 are floor or declared non-floor, and said plainly that it found them by diffing
+# revisions: "the diff selects where to start reading; it must never select where to stop."
+# This asks the same question of the whole snapshot.
+#
+# NOT A GATE, and deliberately not in `check` or `matrix` — same reasoning as `driftclaim` and
+# `leanseam`: one input is ../entity-system-conformance, a sibling tree, so nothing that runs on
+# our diffs can see it move. It is the `driftclaim` class by construction.
+#
+# D13 — what does it assert? That the snapshot it measures is byte-identical to the one that
+# seat pins (a mismatch is a REFUSAL, not a warning), that the §9.1 citation scan still works
+# (named control sections must come back FLOORED), and that our reading of §9.1 agrees with
+# their derived ECP-INDEX. What it does NOT assert: that an unfloored obligation BELONGS on the
+# floor (arch's ruling, and CQ-36 is the ask), or that a floored one is TESTED — §3.1 is
+# floored by ECP-R7 and carries the MUST that enabled the 0.8.2.23 forgery. A floor row is not
+# a vector. The unit is the SECTION, so every error under-reports the gap.
+floorgap:
+	@python3 tools/floorgap.py
 
 # --- leanseam: has the Lean side moved under the assumption ledger? ----------
 # docs/LEAN-SEAM.md records, per abstraction in the models, the proposition the
@@ -324,6 +352,26 @@ retractcheck:
 # only, so it is safe to keep in `check`.
 coverage:
 	@python3 tools/coverage-check.py
+
+# --- obligations: how much of the pinned spec is OUTSIDE the models? --------------------
+# THE ONE GATE HERE WHOSE DENOMINATOR IS NOT OURS. `coverage` divides by the sections our
+# models cite, `runcount` by our gate tables, `enginecount` by our green tables, `ledgercount`
+# by our ledger. All four were green on 2026-09-14 when 0.8.2.23 closed a capability forgery
+# whose enabling MUST -- `spec-data/v0.8.2` §3.1, "The content_hash MUST match the map key" --
+# sat in our own pin with no enforcing operation and no vector, in a section no model cites.
+# That is D17's shape, never pointed at the core track.
+#
+# D13 -- what does this assert? That the obligation surface OUTSIDE the models is enumerated
+# and every obligation-bearing section none of them cites carries a WRITTEN disposition from a
+# closed vocabulary. What else satisfies it? A tree where every row says UNEXAMINED -- allowed
+# deliberately, and the tool prints that count as its HEADLINE so the number a reader sees is
+# the size of the hole rather than the fact that someone wrote it down.
+#
+# It does NOT assert any obligation is verified. A cited section can carry engine dots in
+# Matrix A with every one of its MUSTs unmodeled; closing that needs per-obligation ids, which
+# `entity-system-conformance` is minting (ECP-R1..R98). Consume those when they land.
+obligations:
+	@python3 tools/obligations.py
 
 # --- runcount: is the published run TOTAL still what the gate tables produce? ------------
 # The companion to `coverage`, and the other half of STATUS §Next item 9. The matrix run

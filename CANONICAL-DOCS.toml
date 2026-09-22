@@ -29,8 +29,8 @@ proven correct." What is PROVEN unbounded vs only MODELED at a bound vs symbolic
 stated exactly in docs/PROPERTIES.md; the deepest assumption — spec↔model fidelity,
 which no tool here closes — is named, not hidden. Which spec version each result is
 about is a property of the SHA pin in spec-data/, never of prose: the models are
-pinned at spec 0.8.2 while the live spec is 0.8.2.21, and `make specdrift` reports
-**14 of 31 cited sections moved** — every result here is a statement about 0.8.2, and
+pinned at spec 0.8.2 while the live spec is 0.8.2.25, and `make specdrift` reports
+**16 of 31 cited sections moved** — every result here is a statement about 0.8.2, and
 docs/SPEC-DRIFT-ASSESSMENT.md measures what the distance costs, section by section.
 Build is make + podman only (no native model-checker
 toolchain on the host): `make build` then `make matrix` on a fresh clone runs the
