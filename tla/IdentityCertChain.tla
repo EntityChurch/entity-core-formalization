@@ -139,7 +139,7 @@
 \* LOOKUP (`find_revocations_for`), storage paths as strings -- `mode` stands in for the path
 \* §5.3 derives from it -- and the arrival path entirely (that is IdentityProcess). Those
 \* sentences carry no § sigil deliberately -- a scope disclaimer that cites a section was being
-\* counted as coverage of it (../docs/COVERAGE-MATRIX.md §3b).
+\* counted as coverage of it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals
 
 CONSTANTS SignerSetIsSound,   \* does §QUORUM:4.2 `current_signer_set` return the roster its own

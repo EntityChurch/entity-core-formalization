@@ -4,7 +4,7 @@
 \* data layer — the per-handler tree fullness (empty/partial/full, the five §6.2 writes abstracted)
 \* and the lifecycle phase — proving the §6.2 NoUserAtSystem guard invariant INDUCTIVE.
 \*
-\* Scope (honest, handoff §6): Apalache proves NoUserAtSystem — the §6.2 system-path guard —
+\* Scope (honest, handoff section 6): Apalache proves NoUserAtSystem — the §6.2 system-path guard —
 \* and, since 0.8.3-dev, RegisterAllOrNothing: nothing in the §6.6 dispatch index is missing a
 \* facet. The full relational coherence invariant (IndexMatchesTree, an EQUALITY between the
 \* index and the tree-walk) remains TLC/Spin's, corroborated by the independent Spin encoding;

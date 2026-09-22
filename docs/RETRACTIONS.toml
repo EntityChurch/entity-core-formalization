@@ -1,0 +1,183 @@
+# RETRACTIONS — claims this repo has published and withdrawn.
+#
+# Read `tools/retractcheck.py` first; `make retractcheck` is the gate.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# D14 says a finding is not closed until it is applied to every instance of its shape, and it
+# says something sharper about withdrawn claims specifically:
+#
+#     "A withdrawn claim has a shape, and the shape is its PHRASING, not its subject — grep the
+#      retracted words, because the row name appears in every site including the corrected ones
+#      and finds nothing."
+#
+# That rule was earned three times (the L7 retraction surviving in three canonical documents;
+# the `:Z` reason surviving in five places including a copy-pasteable reproduce command; the
+# "every module is covered by all three engines" quantifier surviving four) and its enforcement
+# point was the word "grep" — a discipline with no program behind it. On 2026-09-09 it failed a
+# fourth time and a fifth: `docs/STATUS.md`'s proof-tracks table and `docs/COVERAGE-MATRIX.md`
+# §3c both still stated the pre-2026-09-09 engine position with `make runcount` and
+# `make enginecount` green over both, because a derived-number gate cannot see a PARAPHRASE.
+#
+# HOW A ROW WORKS
+# ---------------
+#   pattern   regex, matched against every live document with blockquote/comment sigils
+#             stripped and whitespace collapsed — so a re-wrap or a `\*` comment prefix cannot
+#             launder the claim. MUST match ZERO times outside `witness` + `allow`.
+#   witness   a document that MUST still contain the phrasing. This is the row's own positive
+#             control: a pattern that matches nothing anywhere reports a clean pass forever,
+#             which is the D13 failure this whole repo is built around. Implicitly allowed.
+#   allow     other documents that legitimately quote the withdrawn words — normally because
+#             they RECORD the retraction. Adding one to silence a real hit is the way to make
+#             this gate worthless; the failure message says so and the diff shows it.
+#
+# WHAT THIS FILE IS NOT
+# ---------------------
+# Complete. Nothing can derive the set of claims we have withdrawn — it is a human reading, and
+# a retraction with no row here is invisible to the gate exactly as it was before the gate
+# existed. **Add the row in the session that retracts.** That is the discipline; this file is
+# only the part a machine can hold.
+
+# ── 2026-08-30 ─────────────────────────────────────────────────────────────────────────────
+
+[[retraction]]
+id      = "R1"
+retired = "2026-08-30"
+claim   = "ProVerif and Lean share one undischarged assumption (`hframed`)"
+why     = """Wrong in both halves. There are three `canon` equations four lines apart and the
+second is `hframed`'s NEGATION; `hframed` is not an unproved lemma, it is false in `canonSegs`'
+absolute branch. Assembled from a grep hit that agreed with a hypothesis already formed. It then
+survived in three canonical documents after being corrected in two, which is what earned D14's
+grep-the-phrasing rule."""
+pattern = "shared? (an? )?undischarged assumption"
+witness = "AGENTS.md"
+allow   = ["CHANGELOG.md", "docs/STATUS.md", "docs/LEAN-SEAM.md"]
+
+[[retraction]]
+id      = "R2"
+retired = "2026-08-30"
+claim   = "run the engines serially because concurrent `:Z` relabels race"
+why     = """Not a platform quirk — our own defect. Uppercase `:Z` relabels a volume PRIVATE to
+one container, so on a directory shared by two images the second relabel invalidates the first.
+The fix is `:z` on shared mounts. The retracted REASON outlived the code fix in five places,
+worst of them a copy-pasteable reproduce command in `CROSSCHECK-RESULTS.md` handing a reader
+`-v "$PWD":/work:Z` on the exact directory and image the bug involved. Serial execution remains
+the rule, for resource-cap reasons."""
+pattern = "concurrent `?:Z`? relabels? (race|cause)"
+witness = "AGENTS.md"
+allow   = ["docs/STATUS.md", "CHANGELOG.md"]
+
+# ── 2026-09-07 ─────────────────────────────────────────────────────────────────────────────
+
+[[retraction]]
+id      = "R3"
+retired = "2026-09-07"
+claim   = "every module is covered by all three engines of its family"
+why     = """True when written, when `core` was the only track, and false from the day the
+attestation track landed — it stayed false through two more promotions and nine TLC-only
+modules. Nothing was mis-derived: Matrix B is accurate line by line. The defect is entirely a
+summary sentence quantifying over a set someone else grew. A bare universal over your own
+artifacts is a claim about an input set."""
+pattern = "[Ee]very module is covered by all three engines"
+witness = "docs/COVERAGE-MATRIX.md"
+allow   = ["docs/FINAL-ASSURANCE-SUMMARY.md", "README.md", "AGENTS.md"]
+
+# ── 2026-09-08 ─────────────────────────────────────────────────────────────────────────────
+
+[[retraction]]
+id      = "R4"
+retired = "2026-09-08"
+claim   = "`VALIDATION-MATRIX-IDENTITY-FOUNDATIONS.md` has never existed"
+why     = """Published in five places on an exhaustive named search whose INPUT SET was one
+repository. The file is in the pre-split archive, 377 lines, 136 TV IDs — including the three
+vector IDs the note asserted were defined nowhere — and architecture had already found and ruled
+the problem on 2026-08-11. The corrected finding is `stranded, not absent`, and it is stronger."""
+pattern = "(matrix|file|document) (that )?has never existed"
+witness = "AGENTS.md"
+allow   = ["docs/STATUS.md"]
+
+[[retraction]]
+id      = "R5"
+retired = "2026-09-08"
+claim   = "§ATTEST:4.3 termination rests on the revocation graph being acyclic"
+why     = """F5's reading-stage conclusion, reasoned out in prose from an assumption
+`AttestRevoke.tla` hard-codes in its own `Init` — so the model that disclosed the assumption was
+the only one that could have measured it, and could not. Per-relation acyclicity is NOT the
+assumption: the recursion alternates between the supersedes and revocation relations and §4.3's
+`visited` set is scoped to one hop, so the equation has no unique solution on a configuration
+where BOTH graphs are acyclic. What it needs is a joint order over both."""
+pattern = "rests on the revocation graph being acyclic"
+witness = "tla/AttestRevoke.tla"
+allow   = ["AGENTS.md", "docs/status/FINDINGS-INDEX.md"]
+
+# ── 2026-09-09 ─────────────────────────────────────────────────────────────────────────────
+
+# ── A ROW THIS MECHANISM CANNOT CARRY, recorded because the limit is the useful part ──────
+#
+# The §QUORUM:4.2.1 sufficiency claim (withdrawn 2026-09-09) has no row here and cannot have
+# one. The withdrawn claim is *"the §4.2.1 contract is exactly sufficient"* over TWO triggers;
+# the CORRECTED claim, measured with the third trigger modeled, is *"the §4.2.1 contract is
+# exactly sufficient"* over all three. **Same words, opposite status.** What was retracted is
+# the SCOPE, and a phrasing tripwire cannot see a scope.
+#
+# So: this gate catches a withdrawn claim whose WORDS are distinctive, and is blind to one
+# whose words survive its own correction. That is a real hole and it is stated rather than
+# papered over with a brittle negative lookahead — `enginecount`-style derivation is what
+# covers that shape, and where neither reaches, the discipline is all there is. Asking D13's
+# question of this tool is how the hole was found: *what does this assert, and what else
+# satisfies it?*
+
+[[retraction]]
+id      = "R7"
+retired = "2026-09-09"
+claim   = "all six quorum and identity modules are TLC-only"
+why     = """True on 2026-09-08 and false the next afternoon, when the last six extension modules
+gained Apalache ports. `make enginecount` was green over it for a day because the sentence
+contains no `N of M` pair and no declared anchor — a PARAPHRASE of a derived claim, invisible to
+the gate that derives it. This row is why this file exists."""
+pattern = "(all six|six) quorum and identity modules are TLC-only"
+witness = "docs/COVERAGE-MATRIX.md"
+allow   = []
+
+[[retraction]]
+id      = "R8"
+retired = "2026-09-09"
+claim   = "the extension snapshots are byte-identical to live"
+why     = """Correct when checked on 2026-09-07 and false by 2026-09-09, with every gate in the
+repo green — because `make specdrift` had no `--track` and measured the core pin only. All three
+extension files now DIFFER from live (one additive front-matter block each; no cited section
+moved). The claim is replaced by a MEASUREMENT, per track, in `docs/SPEC-DRIFT-ASSESSMENT.md`
+§0."""
+pattern = "byte-identical to live when checked"
+witness = "docs/status/FINDINGS-INDEX.md"
+# docs/STATUS.md is the ROLLING LOG: its two hits are inside dated 2026-09-07 entries and were
+# true on that date, the same class `runcount` deliberately leaves ungated ("a number this repo
+# publishes about its own PAST is deliberately not checked"). The live claim lives in
+# docs/SPEC-DRIFT-ASSESSMENT.md §0 and is gated by `make driftclaim`, per track.
+allow   = ["docs/STATUS.md"]
+
+[[retraction]]
+id      = "R9"
+retired = "2026-09-06"
+claim   = "the architecture repo re-vendors the spec snapshots"
+why     = """Named `entity-core-architecture`, which no longer exists. There is no external owner
+to wait on: this repo vendors its own snapshots, and the extension specs come from
+`entity-system-architecture/specs/extensions/`, not from the core repo. Following the retracted
+sentence to vendor an extension finds nothing, and the absence reads as *the spec is not written
+yet* when it is written and landed."""
+pattern = "the architecture repo re-vendors"
+witness = "AGENTS.md"
+allow   = ["CHANGELOG.md"]
+
+[[retraction]]
+id      = "R10"
+retired = "2026-09-09"
+claim   = "`make specdrift` covers the core pin only / none of the extension pins has a drift gate"
+why     = """Accurate as a disclosure and withdrawn as a STATE: `spec-drift.py` is per-track since
+2026-09-09, derives its track list from `TRACKS.toml`, and fails on a modeled track no declared
+prose site states a status for. Kept as a row because the disclosure was written in several
+documents as though it were permanent, and a disclosure that outlives its defect misdirects the
+next reader exactly as a stale claim does."""
+pattern = "[Nn]one has a drift gate"
+witness = "docs/status/FINDINGS-INDEX.md"
+allow   = []

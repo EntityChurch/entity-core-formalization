@@ -53,7 +53,7 @@ frozen snapshots, and each names its own `MODELING-PIN-*` separately from that s
 > is how a repo ends up publishing three different answers to one question.
 >
 > Today `spec-data/MODELING-PIN` reads `v0.8.2` — spec version **0.8.2**. The live spec has
-> since advanced to **0.8.2.11**, and `make specdrift` reports **9 of 30 cited sections moved**.
+> since advanced to **0.8.2.14**, and `make specdrift` reports **9 of 31 cited sections moved**.
 > Results here are reproducible statements about **0.8.2**, not about the protocol as it
 > stands today. The pin moves only as the last step of re-validating the models against a new
 > snapshot, never on a file copy — so a repo in this state is one doing the honest thing
@@ -90,9 +90,9 @@ available for a delegated-authority protocol:
 
 Full picture: **`docs/ASSURANCE-MAP.md`**.
 
-## Status: verified against protocol 0.8.2; live spec is 0.8.2.11
+## Status: verified against protocol 0.8.2; live spec is 0.8.2.14
 
-The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **9 of 30 cited
+The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **9 of 31 cited
 sections moved** — so results here are statements about **0.8.2**, and the pin is behind the
 live spec by eleven point revisions.
 
@@ -102,7 +102,7 @@ normative clarification that no model contradicts, and in two cases text that ad
 finding from this repo. The ninth, **§4.7**, is the one place the live text contradicts a
 model: `connection_sequence_error` moved from **400** to **409**, and `tla/ConnCodes.tla`
 transcribes 400. Nothing proved here is falsified, because every result is quoted against
-the pin — but a reader wanting a statement about 0.8.2.11 does not have one yet.
+the pin — but a reader wanting a statement about 0.8.2.14 does not have one yet.
 
 ### What is verified, and by what
 

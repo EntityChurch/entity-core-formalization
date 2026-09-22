@@ -58,7 +58,7 @@
 \* §4.2.1 permits for satisfying validate-accept -- the contract is explicitly "on post-state,
 \* not implementation" and both mechanisms are modeled by the same accept action, which is what
 \* that sentence means. Those sentences carry no § sigil deliberately -- a scope disclaimer that
-\* cites a section was being counted as coverage of it (../docs/COVERAGE-MATRIX.md §3b).
+\* cites a section was being counted as coverage of it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS NA,                     \* quorum-event attestations, 1..NA

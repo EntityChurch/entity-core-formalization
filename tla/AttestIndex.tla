@@ -43,7 +43,7 @@
 \* under revocation, not about how revocation is expressed; the flag is the weakest thing that
 \* can carry that claim. Those two sentences carry no § sigil deliberately -- a scope
 \* disclaimer that cites a section was being counted as coverage of it
-\* (../docs/COVERAGE-MATRIX.md §3b).
+\* (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS AtomicIndex,   \* TRUE  = §5.7 I2: a failed handler leaves NO index entry -- the

@@ -285,10 +285,19 @@ this repo reasoning its way to an impact claim about an implementation cohort an
 **Two engines on all three modules, as of 2026-09-08 — and the arithmetic is still the point.**
 `AttestIndex`, `AttestLive` and `AttestRevoke` are each checked by TLC *and* Apalache
 (`tla/AttestIndexApalache.tla`, `tla/AttestLiveApalache.tla`, `tla/AttestRevokeApalache.tla`).
-**This is the only extension track where that is true** — all six quorum and identity modules
-are TLC-only. There is still no Spin re-encoding on any of the three and **no prover model at
-all** (`docs/LEAN-SEAM.md` O5), so the Dolev-Yao gap is untouched and §1's corroboration
-argument, which is written about a three-engine family, still does not cover these rows.
+**This was the only extension track where that was true until 2026-09-09**; all six quorum and
+identity modules have since gained an Apalache port too, so **every extension module on all
+three tracks now carries two engines** (§4, `make enginecount`). There is still no Spin
+re-encoding on any of the nine and **no prover model at all** (`docs/LEAN-SEAM.md` O5), so the
+Dolev-Yao gap is untouched and §1's corroboration argument, which is written about a
+three-engine family, still does not cover these rows.
+
+*This paragraph read "**This is the only extension track where that is true** — all six quorum
+and identity modules are TLC-only" until 2026-09-09, one day after it became false.*
+**`make enginecount` was green over it**, because it anchors on one declared site per file and
+this file's declared site is §4. A second statement of the same fact, in different words, in the
+same file, is invisible to the gate that derives it — D14's sixth instance again, on the document
+in which that instance was first recorded.
 
 What the second engine bought, stated narrowly: `IndexExactOnBound` and the rest of §5.7's
 contract are now proved **inductive** — true for runs of any length, not only within TLC's

@@ -1,30 +1,76 @@
 # Spec-drift assessment — the pin vs the live spec
 
 > **LIVE — the pin is behind again, and this document is the measurement.** The models are
-> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.11**, and `make specdrift`
-> reports **9 of 30 cited sections moved**. §1 below is that measurement, taken 2026-09-06.
-> §2 onward is the previous cycle's — 0.8.0 vs 0.8.2, since resolved — kept because the
-> method is the reusable part and because a repo that deletes its last drift record has no
-> way to show the pattern is normal rather than alarming.
+> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.14**, and `make specdrift`
+> reports **9 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
+> and re-derived 2026-09-09. §0 is the **per-track** table, new on 2026-09-09 and the reason
+> this document had been telling one quarter of the truth. §2 onward is the previous cycle's
+> — 0.8.0 vs 0.8.2, since resolved — kept because the method is the reusable part and because
+> a repo that deletes its last drift record has no way to show the pattern is normal rather
+> than alarming.
 
 ---
 
-# 1. Live measurement — 0.8.2 pin vs 0.8.2.11 live
+# 0. All four tracks — the measurement that did not exist until 2026-09-09
 
-**Measured 2026-09-06.** Reproduce with `make specdrift`; the prose sites that state the
-status are gated by `make driftclaim`.
+**`make specdrift` measured `core` and only `core` for the life of the tool.** It had no
+`--track` flag: `spec-data/MODELING-PIN` and `track_models(root, "core")` were hard-wired.
+When three extension tracks were promoted on 2026-09-07 it silently became a **one-of-four**
+gate, and by 2026-09-09 **all three extension pins had drifted from live with every gate in
+this repo green.** That is the `runcount` two-group-regex failure in a second tool — a
+per-track gate that does not name every track is a per-SOME-tracks gate — and it is the reason
+`measured_tracks()` now *derives* the list from `TRACKS.toml` and fails on a modeled track it
+does not read.
+
+| Track | Pin | Live tree | Files | Cited § moved |
+|---|---|---|---|---|
+| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **9 of 31 cited sections moved** |
+| `attestation` | `spec-data/ext-attestation-v1.3` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`attestation` no drift** |
+| `quorum` | `spec-data/ext-quorum-v1.2` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`quorum` no drift** |
+| `identity` | `spec-data/ext-identity-v3.10` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`identity` no drift** |
+
+**All three extension files DIFFER and no cited section moved, and both halves matter.** Each
+diff is a single additive front-matter "dependency contract" block — a derived summary of the
+spec's own sections, written per `GUIDE-EXTENSION-DEVELOPMENT.md` §3.3 — inserted *before*
+`## 1. Overview`. **Zero lines removed, zero numbered section bodies touched**, all three at
+the same declared version. So no model's transcription is affected and no routed finding
+changes. The file-level `DIFFERS` is the honest report and the section-level `no drift` is the
+one that answers "is any result here stale."
+
+*Worth keeping for the next person who reads a clean number: the FIRST attempt at this
+re-measurement returned "all three MISSING from live tree" on a wrong relative path, and would
+have been read as "the extension specs have been deleted."* Run a term you know is present
+before believing a zero (D15, ninth shape).
+
+---
+
+# 1. Live measurement — 0.8.2 pin vs 0.8.2.14 live
+
+**Measured 2026-09-06, re-derived 2026-09-09.** Reproduce with `make specdrift`; the prose
+sites that state the status are gated by `make driftclaim`.
 
 | | |
 |---|---|
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
-| Live (`entity-core-protocol/specs`) | **0.8.2.11** · CBOR encoding 1.5 → 1.6 · type system also differs |
+| Live (`entity-core-protocol/specs`) | **0.8.2.14** · CBOR encoding 1.5 → 1.6 · type system also differs |
 | Core spec delta | +152 lines added, −33 removed |
-| **Sections the models cite that moved** | **9 of 30** |
+| **Sections the models cite that moved** | **9 of 31** |
 | Sections whose movement contradicts a model | **1** (§4.7) |
 | Green matrix against the pin | unaffected — every result is quoted against `v0.8.2` |
 
+*The denominator was **30** until 2026-09-09 and the row above said so in words the drift gate
+does not read — the fourth time in this repo a stale figure has hidden in a paraphrase of a
+gated claim.* It moved for a real reason: `section_block` required whitespace directly after a
+section number, and every top-level heading in every spec here is written `## 4. Connections`,
+so a model citing **`§4`** — which `tla/Conn.tla` and `tla/Core.tla` both do, about the §4
+dispatch rules — resolved to nothing and was dropped from the denominator **silently**. The
+same bug hid `EXTENSION-QUORUM` §1, §2, §7 and §8, and §8 is the `tree:put` clause Q5's whole
+amendment turns on. Unresolvable citations are now a **build failure** rather than a silent
+subtraction, which is also how eight `COVERAGE-MATRIX` document references were found sitting
+inside the citation set wearing a `§` sigil they had no right to.
+
 **The pin is not being moved yet, and that is a decision rather than a backlog item.** The
-sibling `entity-core-keystone` has not upgraded to 0.8.2.11; re-vendoring and re-targeting
+sibling `entity-core-keystone` has not upgraded to 0.8.2.14; re-vendoring and re-targeting
 the models before the peer that ships has moved would put this repo's assumption ledger and
 the peer's Lean proofs on two different spec texts, which is the one configuration that makes
 `docs/LEAN-SEAM.md` unreadable. Re-vendor is sequenced *after* the sign-off, per
@@ -53,7 +99,7 @@ below records an earlier draft of this document making.
 moved under them:
 
 1. **`connection_sequence_error` moved 400 → 409.** `ConnCodes.tla`'s `NormativeStatus`
-   maps it to 400 (via the `OTHER` arm, line 128). Against 0.8.2.11 that constant is wrong,
+   maps it to 400 (via the `OTHER` arm, line 128). Against 0.8.2.14 that constant is wrong,
    and `StatusMatchesCode` would be transcribing a status the spec no longer fixes.
 2. **`incompatible_key_type` is retired** — MUST NOT be emitted. Not modeled (the module
    declares the negotiation codes out of scope), so no impact beyond the transcription note.
@@ -64,7 +110,7 @@ moved under them:
 
 **The contested cell is resolved, in our favour.** `ConnCodes.tla`'s header documents
 `ConnCodesSeqReadingBug.cfg` as *"not a bug we injected — it is a conformant reading of the
-spec, and that is the point."* At 0.8.2.11 that reading is **no longer conformant**: row 10's
+spec, and that is the point."* At 0.8.2.14 that reading is **no longer conformant**: row 10's
 parenthetical was narrowed exactly as this repo argued (`docs/PROPERTIES.md` §D.1). So when
 the pin does move, the model gets **simpler** — the contested-cell constant collapses and the
 control demotes from "a conformant reading" to an ordinary injected defect. That is the whole
@@ -73,7 +119,7 @@ argument coming back to it as spec text.**
 
 ## What this measurement does not assert
 
-- **Not that the models would pass at 0.8.2.11.** Nothing has been re-run against the new
+- **Not that the models would pass at 0.8.2.14.** Nothing has been re-run against the new
   text and nothing can be, because the models transcribe 0.8.2. Only a re-vendor and
   re-validation can speak to the current spec, and that is the point of keeping the two
   statements apart.

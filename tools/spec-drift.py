@@ -50,10 +50,33 @@ with our tree untouched and every existing gate green. A gate that only runs on 
 diffs cannot reach it in principle. So this one has to be run on a schedule or at a release
 boundary, not merely on change, and `make driftclaim` says so in its own output.
 
+--track — the widening, 2026-09-09, and the reason it was needed
+----------------------------------------------------------------
+Everything above was written about ONE track, because when it was written there was one.
+`core` was hard-wired: `spec-data/MODELING-PIN` for the pin, `track_models(root, "core")`
+for the models, one `--live` for the tree. Three extension tracks were promoted on
+2026-09-07 and this tool did not notice — it kept deriving a correct, gated, entirely
+core-shaped number while **three pins it had never heard of drifted from live**. Found by
+hand on 2026-09-09, two days later, with every gate in the repo green.
+
+That is D15's mechanism — *what is the input set of this number?* — in the tool whose whole
+job is to answer that question about somebody else's tree. The fix is the `runcount` fix:
+the track list is DERIVED from `TRACKS.toml` (`measured_tracks`), each track's pin comes from
+its own `pin_file`, each track's live tree from its own `source_repo_path`/`source_dir`, and
+a modeled track that no declared prose site states a status for is a **build failure**. A
+fifth track cannot repeat this.
+
+Two smaller fixes came with it, both of which had been silently subtracting from the
+denominator: `section_block` could not match `## 4. Connections` (the trailing dot), so a
+model citing `§4` resolved to nothing; and a citation that resolved to nothing was DROPPED
+rather than reported, which is how eight `COVERAGE-MATRIX` document references lived inside
+the citation set. Unresolvable citations now fail the run and are named.
+
 Usage:
-  tools/spec-drift.py --live ../entity-core-protocol/specs
-  tools/spec-drift.py --live /tmp/pub-specs --format md
-  tools/spec-drift.py --live ../entity-core-protocol/specs --check-claims
+  tools/spec-drift.py                        # every modeled protocol track
+  tools/spec-drift.py --check-claims         # ...and the prose that states each status
+  tools/spec-drift.py --track quorum
+  tools/spec-drift.py --track core --live /tmp/pub-specs --format md
 """
 
 from __future__ import annotations
@@ -126,7 +149,28 @@ CLAIM_SITES = [
 # once respectively; the check counts occurrences per file rather than per row, so this
 # maps file -> how many times the anchor must appear. A file that grows a new unanchored
 # claim is NOT detected -- same acknowledged hole as runcount's, stated rather than hidden.
-CLAIM_COUNTS = {"README.md": 2}
+CLAIM_COUNTS = {"README.md": 2, "docs/SPEC-DRIFT-ASSESSMENT.md": 2}
+
+# ── THE SAME CLAIM, PER TRACK ───────────────────────────────────────────────────────────
+# The nine sites above state CORE's status in the unqualified form, which is right: core is
+# the headline a public reader wants and rewriting nine sites to say `core` buys nothing. The
+# three extension tracks get a QUALIFIED form, and the two patterns are disjoint by
+# construction -- the track form opens with a backtick, so `CLAIM_RE`'s `\*\*(no drift|\d...`
+# cannot match it and it cannot match `CLAIM_RE`'s sites.
+#
+#     `make specdrift` reports **`quorum` no drift**
+#     `make specdrift` reports **`identity` 2 of 24 cited sections moved**
+#
+# WHY THE EXTENSION TRACKS NEEDED THIS AT ALL: they had no drift claim anywhere, because they
+# had no drift MEASUREMENT anywhere. `docs/status/FINDINGS-INDEX.md` carried the nearest thing
+# -- "byte-identical to live when checked (2026-09-07)" beside its own note that none has a
+# drift gate -- and by 2026-09-09 all three had drifted with every gate in the repo green.
+TRACK_CLAIM_RE = r"`make specdrift` reports \*\*`([a-z]+)` (no drift|\d+ of \d+ cited sections moved)\*\*"
+
+TRACK_CLAIM_SITES = [
+    ("docs/SPEC-DRIFT-ASSESSMENT.md", "the per-track measurement table"),
+    ("docs/status/FINDINGS-INDEX.md", "the extension-pin status note"),
+]
 
 
 def read(path: str) -> str:
@@ -135,12 +179,50 @@ def read(path: str) -> str:
 
 
 def section_block(text: str, sec: str) -> str | None:
-    """Pinned text of `sec`: its heading through to the next heading of any level."""
-    m = re.search(rf"^(#{{1,6}})\s+{re.escape(sec)}\s+.*$", text, re.M)
+    """Pinned text of `sec`: its heading through to the next heading of any level.
+
+    THE TRAILING DOT IS NOT COSMETIC -- it silently narrowed this tool's input set for as
+    long as the tool has existed. Top-level headings in every spec here are written
+    `## 4. Connections`, and the old pattern required whitespace directly after the number,
+    so a model citing `§4` -- which `tla/Conn.tla` and `tla/Core.tla` both do, about the §4
+    dispatch rules -- resolved to nothing and was DROPPED from the denominator without a word.
+    Same for `EXTENSION-QUORUM` §1, §2, §7 and §8; §8 is the `tree:put` permission clause that
+    Q5's whole amendment turns on. D15's mechanism (what is the input set of this number?)
+    inside the tool that measures drift.
+    """
+    m = re.search(rf"^(#{{1,6}})\s+{re.escape(sec)}\.?\s+.*$", text, re.M)
     if not m:
         return None
     rest = [h.start() for h in HEADING.finditer(text) if h.start() > m.start()]
     return text[m.start(): rest[0] if rest else len(text)]
+
+
+def resolve_section(text: str, sec: str) -> tuple[str, str] | None:
+    """(section actually compared, its pinned text) -- or None if the citation resolves to
+    nothing in this spec.
+
+    Two shapes resolve, and the second one is why this is a function rather than a call:
+
+      * an exact heading -- the ordinary case, including lettered SIBLING sections that this
+        spec really has (`1.2a`, `4.5a`, `5.2a` in core are `###` headings in their own right);
+      * a lettered SUB-CLAUSE with no heading of its own -- `§4.9a`..`§4.9d`, `§4.10a`,
+        `§4.10b` are lettered bullets INSIDE §4.9 and §4.10. They are precise, correct
+        citations of normative text and they are not headings, so an exact match drops them.
+        Their exposure is their parent's, so they are credited to the parent and the report
+        says so.
+
+    Order matters: exact first. `§1.2a` is a heading AND would strip to `§1.2`, and crediting
+    it to the parent would be the §4.7-range-endpoint miscredit in a new place.
+    """
+    blk = section_block(text, sec)
+    if blk is not None:
+        return sec, blk
+    if sec and sec[-1].isalpha():
+        parent = sec[:-1]
+        blk = section_block(text, parent)
+        if blk is not None:
+            return parent, blk
+    return None
 
 
 def spec_version(text: str) -> str:
@@ -202,23 +284,93 @@ def model_citations(root: str, paths: list[str], *, bare: bool, prefix: str = ""
     return cites
 
 
-def core_citations(root: str) -> dict[str, set[str]]:
-    """Every section of the CORE spec any model in this repo depends on.
+def registry(root: str) -> dict:
+    with open(os.path.join(root, "TRACKS.toml"), "rb") as fh:
+        return tomllib.load(fh).get("track", {})
 
-    Bare `§N.M` from core's own models, plus `§CORE:N.M` written by a model on another proof
-    track. Those cross-track references are excluded from coverage (a reference is not a
-    claim) but they ARE drift exposure: a model that reads core §6.2 is exposed when core
+
+def measured_tracks(root: str) -> list[str]:
+    """The tracks this tool MUST measure: every modeled protocol track, from the registry.
+
+    Derived, never listed. Until 2026-09-09 this tool was hard-wired to `core` -- no `--track`
+    flag existed -- so when three extension tracks were promoted it silently became a
+    one-of-four gate, and all three extension pins drifted from live with `make specdrift`
+    reporting a clean, accurate, and entirely core-shaped number. That is the SAME failure
+    `runcount`'s two-group regex had (a per-track gate that does not name every track is a
+    per-SOME-tracks gate) and the same failure the non-recursive globs had before it. Reading
+    the registry is what makes a fifth track a build failure instead of a silent omission.
+    """
+    return sorted(
+        n for n, t in registry(root).items()
+        if t.get("kind") == "protocol" and t.get("status") == "modeled"
+    )
+
+
+def track_pin(root: str, track: str) -> tuple[str, str, list[str]]:
+    """(snapshot name, snapshot dir, newer-vendored-but-unmodeled) for one track.
+
+    Reads the track's OWN `pin_file`. Each track pins independently -- core is held at v0.8.2
+    pending keystone, which has no bearing on the three extension pins -- so there is no
+    single MODELING-PIN to fall back to and no default that is right for more than one track.
+    """
+    t = registry(root)[track]
+    pin_file = t.get("pin_file", "")
+    if not pin_file:
+        raise SystemExit(f"track {track!r} declares no pin_file")
+    named = None
+    for line in read(os.path.join(root, pin_file)).splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            named = line
+            break
+    if not named:
+        raise SystemExit(f"{pin_file} names no snapshot")
+    pin_dir = os.path.join(root, "spec-data", named)
+    if not os.path.isdir(pin_dir):
+        raise SystemExit(f"{pin_file} names {named!r} but spec-data/{named}/ does not exist")
+    # "Newer" means newer IN THIS TRACK'S OWN FAMILY. The first draft split on "-" and so
+    # matched every `ext-*` snapshot against every other, telling the attestation track that
+    # `ext-identity-v3.10` was a newer unmodeled snapshot OF ATTESTATION. A cross-track pin
+    # reported as this track's own is the document-blind citation bug wearing a directory
+    # name; caught by running it, as usual, not by reading it.
+    family = re.sub(r"-?v[\d.]+$", "", named)
+    newer = sorted(
+        b for b in (os.path.basename(p.rstrip("/"))
+                    for p in glob.glob(os.path.join(root, "spec-data", "*/")))
+        if re.sub(r"-?v[\d.]+$", "", b) == family and b > named
+    )
+    return named, pin_dir, newer
+
+
+def track_live(root: str, track: str) -> str:
+    """Where this track's spec lives NOW, derived from the registry rather than passed in.
+
+    `source_repo_path` + `source_dir` were already in TRACKS.toml for every track and nothing
+    read them. Deriving the live tree per track is what makes `--live` an override rather than
+    the only way to say it -- and it is why the extension specs are found in
+    `entity-system-architecture/specs/extensions/` without anyone having to remember that the
+    core repo does not own them.
+    """
+    t = registry(root)[track]
+    return os.path.normpath(os.path.join(root, t.get("source_repo_path", ""),
+                                         t.get("source_dir", "")))
+
+
+def track_citations(root: str, track: str) -> dict[str, set[str]]:
+    """Every section of THIS track's spec that any model in this repo depends on.
+
+    Bare `§N.M` from the track's own models, plus `§<PREFIX>:N.M` written by a model on any
+    other track. Those cross-track references are excluded from coverage (a reference is not
+    a claim) but they ARE drift exposure: a model that reads core §6.2 is exposed when core
     §6.2 moves, whichever track it belongs to.
     """
-    with open(os.path.join(root, "TRACKS.toml"), "rb") as fh:
-        cfg = tomllib.load(fh)
-    tracks = cfg.get("track", {})
-    core = tracks.get("core", {})
-    cites = model_citations(root, list(core.get("models", [])), bare=True)
-    prefix = core.get("cite_prefix", "")
+    tracks = registry(root)
+    t = tracks.get(track, {})
+    cites = model_citations(root, list(t.get("models", [])), bare=True)
+    prefix = t.get("cite_prefix", "")
     others = [
-        f for n, t in tracks.items() if n != "core" and t.get("kind") == "protocol"
-        for f in t.get("models", [])
+        f for n, o in tracks.items() if n != track and o.get("kind") == "protocol"
+        for f in o.get("models", [])
     ]
     if others and prefix:
         for sec, files in model_citations(root, others, bare=False, prefix=prefix).items():
@@ -227,7 +379,13 @@ def core_citations(root: str) -> dict[str, set[str]]:
 
 
 def secsort(sec: str):
-    return [int(p) for p in re.findall(r"\d+", sec)] + [sec]
+    """Sort key for a section id. HOMOGENEOUS BY CONSTRUCTION, which the previous version
+    was not: it returned `[ints…] + [sec]`, so sorting `§4` against `§4.9` compared the
+    string `'4'` against the int `9` and raised. It never fired because bare `§4` had never
+    resolved — the dot bug in `section_block` kept it out of the sorted set. Two defects
+    holding each other up, and fixing one exposed the other immediately.
+    """
+    return tuple(int(p) for p in re.findall(r"\d+", sec)), (sec[-1] if sec[-1].isalpha() else "")
 
 
 def check_claims(root: str, moved: int, total: int) -> list[str]:
@@ -269,6 +427,75 @@ def check_claims(root: str, moved: int, total: int) -> list[str]:
     return problems
 
 
+def check_live_version(root: str, version: str) -> list[str]:
+    """Every declared site must mention the live spec version the measurement just read.
+
+    WHY THIS EXISTS: the nine sites said "the live spec is **0.8.2.11**" while it was
+    **0.8.2.14**, and `make driftclaim` was green over all nine the whole time -- because the
+    gate anchored the SECTION COUNT and nothing anchored the VERSION beside it. The count
+    happened to still be 9, so the one gated number never moved while the ungated one next to
+    it went stale. Two facts in one sentence, one of them checked.
+
+    What this asserts: the derived live version string occurs at least once in the file.
+    What else satisfies it, stated rather than hidden: a file that mentions the current
+    version somewhere and ALSO keeps a stale live claim elsewhere passes. That is the same
+    "different words, same file" hole `runcount` and `enginecount` have, and it is why
+    `CHANGELOG.md` and `docs/STATUS.md` -- which legitimately carry past versions in dated
+    sentences -- can be gated this way at all without an exemption list.
+    """
+    problems = []
+    for site in sorted({s for s, _ in CLAIM_SITES}):
+        try:
+            text = normalize(read(os.path.join(root, site)))
+        except OSError as exc:
+            problems.append(f"{site}: cannot read ({exc})")
+            continue
+        if version not in text:
+            problems.append(
+                f"{site}: never mentions the live spec version {version!r}. The live spec "
+                f"moved under this document -- update the claim, or drop the row from "
+                f"CLAIM_SITES deliberately.")
+    return problems
+
+
+def check_track_claims(root: str, derived: dict[str, tuple[int, int]]) -> list[str]:
+    """Every declared site must state the derived status for EVERY extension track.
+
+    Three failures, graded the same:
+
+      * a site whose number disagrees with the measurement -- the live bug;
+      * a site that names a track the registry does not have, or omits one it does -- the
+        `runcount` failure, where a per-track gate captured exactly two groups and went green
+        while asserting nothing whatever about a third track's runs;
+      * a site that states nothing at all -- deleting the sentence is the cheapest way to go
+        green, and a repo whose drift status is unstated is exactly where this started.
+    """
+    want = {t: ("no drift" if m == 0 else f"{m} of {n} cited sections moved")
+            for t, (m, n) in derived.items()}
+    problems = []
+    for site, what in TRACK_CLAIM_SITES:
+        try:
+            found = dict(re.findall(TRACK_CLAIM_RE, normalize(read(os.path.join(root, site)))))
+        except OSError as exc:
+            problems.append(f"{site}: cannot read ({exc})")
+            continue
+        missing = sorted(set(want) - set(found))
+        extra = sorted(set(found) - set(want))
+        if missing:
+            problems.append(
+                f"{site} ({what}): states no drift status for track(s) {', '.join(missing)}. "
+                f"A per-track claim that does not name every measured track is a "
+                f"per-SOME-tracks claim -- add the row or drop the site deliberately.")
+        if extra:
+            problems.append(
+                f"{site} ({what}): claims a status for {', '.join(extra)}, which is not a "
+                f"measured track in TRACKS.toml")
+        for t in sorted(set(found) & set(want)):
+            if found[t] != want[t]:
+                problems.append(f"{site} ({what}): `{t}` claims {found[t]!r}, derived {want[t]!r}")
+    return problems
+
+
 def report_claims(problems: list[str], moved: int, total: int) -> str:
     want = "no drift" if moved == 0 else f"{moved} of {total} cited sections moved"
     n = len(CLAIM_SITES)
@@ -288,171 +515,196 @@ def report_claims(problems: list[str], moved: int, total: int) -> str:
             "it at a release boundary and on a schedule.")
 
 
+def measure(root: str, track: str, live: str, fmt: str, emit) -> tuple[int, int, list[str], str]:
+    """Measure one track. Returns (moved, resolvable-total, unresolvable citations, live version).
+
+    UNRESOLVABLE CITATIONS ARE RETURNED, NOT DISCARDED. The old code did
+    `if blk is not None: resolved[sec] = ...` and said nothing about the rest, so a citation
+    that stopped matching a heading left the denominator silently -- which is how `§4` sat
+    outside the core measurement for the life of the tool, and how eight `COVERAGE-MATRIX`
+    document references sat inside the citation set without ever being noticed. The caller
+    treats a non-empty list as a build failure.
+    """
+    t = registry(root)[track]
+    named, pin_dir, newer = track_pin(root, track)
+    primary = t.get("primary_spec", "")
+    bullet = "- " if fmt == "md" else "  "
+
+    emit(f"\n## track `{track}`\n" if fmt == "md" else f"\n== track `{track}` ==")
+    emit(f"{bullet}pin:  spec-data/{named}   ({primary})")
+    emit(f"{bullet}live: {os.path.relpath(live, root)}")
+    if newer:
+        emit(f"{bullet}NOTE: newer snapshot(s) vendored but not yet modeled: {', '.join(newer)}")
+
+    files = sorted(f for f in os.listdir(pin_dir)
+                   if f.endswith(".md") and f not in ("MANIFEST.md", "README.md"))
+    if not files:
+        raise SystemExit(f"no spec files in {pin_dir}")
+
+    pin_text = live_text = None
+    identical = True
+    for f in files:
+        lp = os.path.join(live, f)
+        if not os.path.exists(lp):
+            emit(f"{bullet}{f}: MISSING from live tree")
+            identical = False
+            continue
+        a, b = read(os.path.join(pin_dir, f)), read(lp)
+        identical &= a == b
+        va, vb = spec_version(a), spec_version(b)
+        ver = f"  version {va}" + ("" if va == vb else f" -> {vb}")
+        emit(f"{bullet}{f}: {'identical' if a == b else 'DIFFERS'}{ver}")
+        if f == primary:
+            pin_text, live_text = a, b
+
+    if pin_text is None:
+        raise SystemExit(f"track {track!r}: primary_spec {primary!r} not in {pin_dir}")
+
+    cites = track_citations(root, track)
+    resolved: dict[str, bool] = {}
+    credited: dict[str, str] = {}
+    unresolvable: list[str] = []
+    for sec in cites:
+        hit = resolve_section(pin_text, sec)
+        if hit is None:
+            unresolvable.append(sec)
+            continue
+        actual, blk = hit
+        credited[sec] = actual
+        resolved[actual] = resolved.get(actual, False) or (blk not in live_text)
+
+    moved = sorted([s for s in resolved if resolved[s]], key=secsort)
+    unchanged = sorted([s for s in resolved if not resolved[s]], key=secsort)
+    ncite = {s: len({f for c, a in credited.items() if a == s for f in cites[c]})
+             for s in resolved}
+
+    if identical:
+        emit(f"{bullet}pin matches live exactly — no drift.")
+    emit(f"{bullet}{len(moved)} of {len(resolved)} cited sections moved")
+    for sec in moved:
+        emit(f"    §{sec:<8} MOVED      cited by {ncite[sec]} model file(s)")
+    if fmt == "md":
+        for sec in unchanged:
+            emit(f"    §{sec:<8} unchanged  cited by {ncite[sec]} model file(s)")
+
+    rolled = sorted([c for c, a in credited.items() if c != a], key=secsort)
+    if rolled:
+        emit(f"{bullet}{len(rolled)} lettered sub-clause citation(s) credited to their parent "
+             f"section (not headings in this spec): {', '.join('§' + s for s in rolled)}")
+
+    # Exposure by ENGINE, not by track -- this grouping is by model checker, and since
+    # 2026-09-06 "track" means a proof track in this repo. Scoped to THIS track's files.
+    own = list(t.get("models", []))
+    emit(f"{bullet}exposure by engine:")
+    for engine, roots in ENGINES.items():
+        paths = [f for f in own if f.split("/")[0] in roots]
+        if not paths:
+            continue
+        tc: dict[str, set[str]] = defaultdict(set)
+        for rel in paths:
+            for m in CITATION.finditer(read(os.path.join(root, rel))):
+                a = credited.get(m.group(1))
+                if a in resolved:
+                    tc[a].add(rel)
+        tmoved = [s for s in tc if resolved[s]]
+        affected = set().union(*(tc[s] for s in tmoved)) if tmoved else set()
+        emit(f"    {engine:<18} {len(tmoved)}/{len(tc)} cited § moved; "
+             f"{len(affected)}/{len(paths)} model files affected")
+
+    return (len(moved), len(resolved), sorted(unresolvable, key=secsort),
+            spec_version(live_text))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--pin", default=None, help="pinned snapshot dir (default: newest spec-data/*/)")
-    ap.add_argument("--live", required=True, help="live spec dir, e.g. a sibling's specs/")
+    ap.add_argument("--track", default=None,
+                    help="measure one proof track (default: every modeled protocol track)")
+    ap.add_argument("--live", default=None,
+                    help="override the live spec dir; only valid with --track, since each "
+                         "track's live tree is derived from TRACKS.toml and they differ")
     ap.add_argument("--root", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ap.add_argument("--format", choices=("text", "md"), default="text")
     ap.add_argument("--check-claims", action="store_true",
                     help="assert every declared prose site states the derived drift status")
     args = ap.parse_args()
 
-    pin_dir = args.pin
-    pin_note = ""
-    if pin_dir is None:
-        # spec-data/MODELING-PIN names the snapshot the models TRANSCRIBE, which is not
-        # necessarily the newest one vendored. Measuring drift from the newest vendored
-        # snapshot would report zero the moment someone copies files in, which is exactly
-        # the false all-clear this tool exists to prevent.
-        marker = os.path.join(args.root, "spec-data", "MODELING-PIN")
-        named = None
-        if os.path.exists(marker):
-            for line in read(marker).splitlines():
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    named = line
-                    break
-        if named:
-            pin_dir = os.path.join(args.root, "spec-data", named)
-            if not os.path.isdir(pin_dir):
-                print(f"MODELING-PIN names {named!r} but spec-data/{named}/ does not exist",
-                      file=sys.stderr)
-                return 2
-            vendored = sorted(
-                os.path.basename(p.rstrip("/"))
-                for p in glob.glob(os.path.join(args.root, "spec-data", "*/"))
-            )
-            newer = [v for v in vendored if v > named]
-            if newer:
-                pin_note = (f"NOTE: newer snapshot(s) vendored but not yet modeled: "
-                            f"{', '.join(newer)}")
-        else:
-            cands = sorted(glob.glob(os.path.join(args.root, "spec-data", "*/")))
-            if not cands:
-                print("no spec-data/ snapshot found", file=sys.stderr)
-                return 2
-            pin_dir = cands[-1]
-
-    files = sorted(
-        f for f in os.listdir(pin_dir)
-        if f.endswith(".md") and f not in ("MANIFEST.md", "README.md")
-    )
-    if not files:
-        print(f"no spec files in {pin_dir}", file=sys.stderr)
+    want = measured_tracks(args.root)
+    if args.track:
+        if args.track not in want:
+            print(f"--track {args.track!r} is not a modeled protocol track; have: "
+                  f"{', '.join(want)}", file=sys.stderr)
+            return 2
+        want = [args.track]
+    elif args.live:
+        print("--live without --track is ambiguous: four tracks, four live trees. Pass "
+              "--track, or drop --live and let TRACKS.toml say where each one lives.",
+              file=sys.stderr)
         return 2
 
-    out = []
+    out: list[str] = []
     emit = out.append
-    bullet = "- " if args.format == "md" else "  "
+    emit("# spec-drift\n" if args.format == "md" else "spec-drift")
+    emit(("- " if args.format == "md" else "  ") +
+         f"measuring {len(want)} modeled protocol track(s): {', '.join(want)}")
 
-    emit(f"# spec-drift\n" if args.format == "md" else "spec-drift")
-    emit(f"{bullet}modeling pin: {os.path.relpath(pin_dir, args.root)}")
-    emit(f"{bullet}live:         {args.live}")
-    if pin_note:
-        emit(f"{bullet}{pin_note}")
-    emit("")
+    derived: dict[str, tuple[int, int]] = {}
+    unresolvable: dict[str, list[str]] = {}
+    live_version: dict[str, str] = {}
+    for tr in want:
+        live = args.live if (args.track and args.live) else track_live(args.root, tr)
+        m, n, bad, ver = measure(args.root, tr, live, args.format, emit)
+        derived[tr] = (m, n)
+        live_version[tr] = ver
+        if bad:
+            unresolvable[tr] = bad
 
-    # ---- 1. file-level ------------------------------------------------------
-    emit("## Files\n" if args.format == "md" else "Files")
-    core_pin = core_live = None
-    identical = True
-    for f in files:
-        p = os.path.join(pin_dir, f)
-        l = os.path.join(args.live, f)
-        if not os.path.exists(l):
-            emit(f"{bullet}{f}: MISSING from live tree")
-            identical = False
-            continue
-        a, b = read(p), read(l)
-        same = a == b
-        identical &= same
-        va, vb = spec_version(a), spec_version(b)
-        ver = f"  version {va}" + ("" if va == vb else f" -> {vb}")
-        emit(f"{bullet}{f}: {'identical' if same else 'DIFFERS'}{ver}")
-        if "CORE-PROTOCOL" in f:
-            core_pin, core_live = a, b
+    emit("\nEvery result in this repo remains a reproducible statement about its track's PIN.")
+    emit("Sections listed as moved are where that pin no longer describes the live spec.")
 
-    if identical:
-        emit("\npin matches the live spec exactly — no drift.")
-        # The claim check still runs: a document asserting drift that does not exist is
-        # wrong in the same way as one denying drift that does, and only one of the two
-        # feels like a failure. (The leanproof both-directions lesson, D13.)
-        if args.check_claims and core_pin is not None:
-            total = len([s for s in core_citations(args.root)
-                         if section_block(core_pin, s) is not None])
-            problems = check_claims(args.root, 0, total)
-            emit("")
-            emit(report_claims(problems, 0, total))
-            print("\n".join(out))
-            return 1 if problems else 0
-        print("\n".join(out))
-        return 0
-
-    if core_pin is None:
-        print("\n".join(out))
-        return 1
-
-    # ---- 2. sections the models cite ---------------------------------------
-    cites = core_citations(args.root)
-    resolved = {}
-    for sec in cites:
-        blk = section_block(core_pin, sec)
-        if blk is not None:
-            resolved[sec] = blk not in core_live  # True == moved
-
-    moved = sorted([s for s in resolved if resolved[s]], key=secsort)
-    unchanged = sorted([s for s in resolved if not resolved[s]], key=secsort)
-
-    emit("\n## Sections the models cite\n" if args.format == "md" else "\nSections the models cite")
-    emit(f"{bullet}{len(moved)} of {len(resolved)} moved\n")
-
-    if args.format == "md":
-        emit("| § | status | model files citing it |")
-        emit("|---|---|---|")
-        for sec in moved + unchanged:
-            emit(f"| §{sec} | {'**moved**' if resolved[sec] else 'unchanged'} | {len(cites[sec])} |")
-    else:
-        for sec in moved:
-            emit(f"  §{sec:<7} MOVED      cited by {len(cites[sec])} model file(s)")
-        for sec in unchanged:
-            emit(f"  §{sec:<7} unchanged  cited by {len(cites[sec])} model file(s)")
-
-    # ---- 3. per-track exposure ---------------------------------------------
-    # "by ENGINE", not "by track": since 2026-09-06 a *track* is a proof track
-    # (core / attestation / quorum / identity, TRACKS.toml). This grouping is by model checker.
-    emit("\n## Exposure by engine\n" if args.format == "md" else "\nExposure by engine")
-    if args.format == "md":
-        emit("| engine | model files | cited § | moved | files touching a moved § |")
-        emit("|---|---|---|---|---|")
-    core_files = track_models(args.root, "core")
-    for engine, roots in ENGINES.items():
-        paths = [f for f in core_files if f.split("/")[0] in roots]
-        tcites: dict[str, set[str]] = defaultdict(set)
-        for rel in paths:
-            for m in CITATION.finditer(read(os.path.join(args.root, rel))):
-                if m.group(1) in resolved:
-                    tcites[m.group(1)].add(rel)
-        tmoved = [s for s in tcites if resolved[s]]
-        affected = set().union(*(tcites[s] for s in tmoved)) if tmoved else set()
-        if args.format == "md":
-            emit(f"| {engine} | {len(paths)} | {len(tcites)} | {len(tmoved)} | {len(affected)}/{len(paths)} |")
-        else:
-            emit(f"  {engine:<18} {len(tmoved)}/{len(tcites)} cited § moved; "
-                 f"{len(affected)}/{len(paths)} model files affected")
-
-    emit("\nEvery result in this repo remains a reproducible statement about the PIN.")
-    emit("Sections listed as moved are where the pin no longer describes the live spec.")
+    rc = 0
+    if unresolvable:
+        emit("")
+        emit("UNRESOLVABLE CITATIONS -- these resolve to no heading in the track's own spec:")
+        for tr, bad in unresolvable.items():
+            emit(f"  {tr}: {', '.join('§' + s for s in bad)}")
+        emit("")
+        emit("A bare `§N.M` in a model file means a section of that model's OWN track's spec")
+        emit("(TRACKS.toml §'The citation convention'). One that resolves to nothing is either")
+        emit("a reference to some OTHER document -- write `COVERAGE-MATRIX.md section 3b`, with")
+        emit("no sigil -- or a real section that has been renamed, which is drift this tool")
+        emit("cannot measure. Both are failures. Silently dropping them is what let `§4` sit")
+        emit("outside the core denominator for the life of this tool.")
+        rc = 1
 
     if args.check_claims:
-        problems = check_claims(args.root, len(moved), len(resolved))
+        core_moved, core_total = derived.get("core", (0, 0))
+        problems = check_claims(args.root, core_moved, core_total)
+        problems += check_live_version(args.root, live_version.get("core", "?"))
         emit("")
-        emit(report_claims(problems, len(moved), len(resolved)))
+        emit(report_claims(problems, core_moved, core_total))
+        ext = {t: v for t, v in derived.items() if t != "core"}
+        tproblems = check_track_claims(args.root, ext)
+        emit("")
+        if tproblems:
+            emit(f"PER-TRACK CLAIM CHECK FAILED -- {len(tproblems)} problem(s):")
+            for p in tproblems:
+                emit(f"  - {p}")
+            emit("")
+            emit("The measurement is the source of truth. Fix the prose, not this tool.")
+        else:
+            emit(f"PER-TRACK CLAIM CHECK OK -- {len(TRACK_CLAIM_SITES)} declared site(s) state "
+                 f"the derived status for all {len(ext)} extension track(s).")
+        # `--check-claims` grades the PROSE, never the drift. Drift is information: core has
+        # been 9-sections-behind on purpose for days and `make driftclaim` must stay green
+        # over that, or the gate that checks whether we DESCRIBE drift honestly becomes a
+        # gate that fails whenever drift exists -- which is every day, so it would be muted
+        # within a week. Caught by teeth-testing the RESTORED state after four break tests,
+        # which is the check that is easy to skip because it is the one expected to pass.
         print("\n".join(out))
-        return 1 if problems else 0
+        return 1 if (problems or tproblems or unresolvable) else 0
 
     print("\n".join(out))
-    return 1 if moved else 0
+    return rc if rc else (1 if any(m for m, _ in derived.values()) else 0)
 
 
 if __name__ == "__main__":

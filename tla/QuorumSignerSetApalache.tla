@@ -116,7 +116,7 @@
 \* resolver hook and every resolution mode, content hashing (a node's number stands in for its
 \* content hash, and both orderings below are taken over that number), and the roster VALUES
 \* themselves -- what is under test is WHICH update supplies the roster. Those sentences carry
-\* no § sigil deliberately (../docs/COVERAGE-MATRIX.md §3b).
+\* no § sigil deliberately (../docs/COVERAGE-MATRIX.md section 3b).
 \* `Integers` rather than `Naturals` because the walk's exhaustion sentinel is negative; SANY
 \* rejects `-1` under Naturals with a bare semantic-analysis failure that names no line.
 EXTENDS Integers, FiniteSets, Apalache

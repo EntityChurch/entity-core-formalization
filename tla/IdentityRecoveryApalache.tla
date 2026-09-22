@@ -551,7 +551,7 @@ ConstInitOK ==
 
 \* THE LIFT (N1). `ConstInitOK` with the handle allowed to move. Nothing is weakened: §4.3 is a
 \* normative kind of the pinned spec and section 13.3 is its ceremony (cited without a sigil:
-\* nothing here verifies the Examples chapter -- see docs/COVERAGE-MATRIX.md §3e). The greens that survive this are
+\* nothing here verifies the Examples chapter -- see docs/COVERAGE-MATRIX.md section 3e). The greens that survive this are
 \* listed in APALACHE_GREEN and are half the result.
 ConstInitRotations ==
   /\ SeedEnabled = TRUE  /\ SeedValidates = TRUE  /\ FailClosed = TRUE

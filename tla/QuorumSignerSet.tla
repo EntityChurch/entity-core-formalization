@@ -98,7 +98,7 @@
 \* under test is WHICH update supplies the roster, so a head's identity is the answer and the
 \* signer list it carries is not modeled. Those sentences carry no § sigil deliberately -- a
 \* scope disclaimer that cites a section was being counted as coverage of it
-\* (../docs/COVERAGE-MATRIX.md §3b).
+\* (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS N,               \* quorum-update attestations, 1..N. THREE is the smallest chain on

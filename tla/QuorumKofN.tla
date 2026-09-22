@@ -36,7 +36,7 @@
 \*       - §3.1's type gives `threshold: {type_ref: "primitive/uint"}` — and 0 is a uint.
 \*       - the conformance MUST list in section 9.1 constrains neither. (No sigil on that one:
 \*         this module makes no checked claim about the conformance section, and a citation
-\*         where there is no claim is how a phantom grid row gets minted -- COVERAGE-MATRIX §3a.)
+\*         where there is no claim is how a phantom grid row gets minted -- COVERAGE-MATRIX section 3a.)
 \*     The constraint exists for the operation that CHANGES a roster and not for the one that
 \*     CREATES it. `KofNRequiresASignature` is asserted under each reading.
 \*
@@ -67,7 +67,7 @@
 \* and the resolution map here is an arbitrary total function, which is strictly more permissive
 \* than any bounded resolver could produce. Those sentences carry no § sigil deliberately -- a
 \* scope disclaimer that cites a section was being counted as coverage of it
-\* (../docs/COVERAGE-MATRIX.md §3b).
+\* (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS NS,             \* entries in the §3.1 `signers` array -- the SLOTS. Three is enough

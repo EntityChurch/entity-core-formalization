@@ -4,7 +4,7 @@
 \* "Apalache-only" coverage when in fact NOTHING modeled it: the only §4.7 mention in the
 \* whole repo was the far end of a SECTION RANGE in a comment in ConnApalache.tla, written
 \* with a sigil on both ends, which the citation-derived coverage grid counted as a claim.
-\* See COVERAGE-MATRIX.md §3a-b.
+\* See COVERAGE-MATRIX.md section 3a-b.
 \*
 \* WHAT §4.7 SAYS. The table is "a normative MUST-emit contract: clients key error handling
 \* off `result.data.code`, so the code and status for each failure are fixed across
@@ -63,7 +63,7 @@
 \* §7.3 crypto wall and Tamarin's (tamarin/Binding.*). §4.7's four version/key-type
 \* negotiation codes are likewise out: they are settled before any phase this model has,
 \* and naming their own sections here would mint a citation for a section this model makes
-\* no claim about (COVERAGE-MATRIX.md §3b). What is modeled
+\* no claim about (COVERAGE-MATRIX.md section 3b). What is modeled
 \* is the three rows a phase machine can reach.
 \*
 \* HONESTY (PROPERTIES.md §C). The distinctness and status properties are assertions over the

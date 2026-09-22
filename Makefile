@@ -33,11 +33,17 @@ MAKE ?= make
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
         check-provers crosscheck matrix specdrift specdrift-gate driftclaim leanseam \
         lean lean-image lean-smoke leanproof leanproof-neg \
-        coverage runcount ledgercount enginecount trackcheck specfreeze clean caps
+        coverage runcount ledgercount enginecount retractcheck trackcheck specfreeze clean caps
 
-# Where the live spec lives, for `make specdrift`. Override per-host:
-#   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
-LIVE_SPECS ?= ../entity-core-protocol/specs
+# Where each track's live spec lives is DERIVED, per track, from TRACKS.toml's
+# `source_repo_path` + `source_dir` -- core from `entity-core-protocol/specs`, the three
+# extensions from `entity-system-architecture/specs/extensions`. It is not a variable here
+# any more, because one variable cannot name four trees and hard-wiring the core one is
+# exactly how `specdrift` spent two days as a one-of-four gate.
+#
+# To measure a single track against a tree somewhere else, both flags are required:
+#   python3 tools/spec-drift.py --track core --live /path/to/specs
+# `--live` without `--track` is rejected rather than guessed.
 
 help:
 	@echo "entity-core-formalization — make is the door (make + podman only)"
@@ -66,6 +72,8 @@ help:
 	@echo "  make runcount   is the published run total still what the gate tables produce?"
 	@echo "  make enginecount how many ENGINES carry each subject, and which rest on one?"
 	@echo "                  (D16 -- docs/CORROBORATION.md is the declaration)"
+	@echo "  make retractcheck does any live doc still state a claim we WITHDREW?"
+	@echo "                  (D14's grep-the-phrasing rule -- docs/RETRACTIONS.toml)"
 	@echo "  make clean    remove generated model-checker artifacts"
 	@echo "  make caps     print the active resource caps"
 	@echo
@@ -120,7 +128,7 @@ smoke:
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: specfreeze trackcheck coverage runcount ledgercount enginecount check-tla check-spin check-provers
+check: specfreeze trackcheck coverage runcount ledgercount enginecount retractcheck check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -135,7 +143,7 @@ check: specfreeze trackcheck coverage runcount ledgercount enginecount check-tla
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix: specfreeze trackcheck coverage runcount ledgercount enginecount
+matrix: specfreeze trackcheck coverage runcount ledgercount enginecount retractcheck
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
@@ -168,10 +176,10 @@ crosscheck: check-spin
 # `specdrift` REPORTS (always succeeds — drift is information, not a build break).
 # `specdrift-gate` FAILS on drift, for use as a precondition.
 specdrift:
-	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)" || true
+	@python3 tools/spec-drift.py || true
 
 specdrift-gate:
-	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)"
+	@python3 tools/spec-drift.py
 
 # --- driftclaim: does the PROSE state the drift status the measurement derives? ----------
 # D15's third enforcement point, after `coverage` and `runcount`, and it was earned the same
@@ -194,7 +202,7 @@ specdrift-gate:
 # and it FAILS LOUDLY on a missing sibling instead of passing quietly. Run it at a release
 # boundary and on a schedule.
 driftclaim:
-	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)" --check-claims
+	@python3 tools/spec-drift.py --check-claims
 
 # --- leanseam: has the Lean side moved under the assumption ledger? ----------
 # docs/LEAN-SEAM.md records, per abstraction in the models, the proposition the
@@ -255,6 +263,21 @@ leanproof:
 
 leanproof-neg:
 	$(MAKE) -C lean neg KEYSTONE=$(KEYSTONE)
+
+# --- retractcheck: is a withdrawn claim still live somewhere? ----------------
+# D14's second half has always been a rule with no program behind it: "a withdrawn claim has a
+# shape, and the shape is its PHRASING, not its subject -- grep the retracted words." It was
+# earned three times and failed a fourth and fifth on 2026-09-09, when two documents kept the
+# pre-2026-09-09 engine position while `runcount` and `enginecount` were green over both.
+#
+# D13 -- what does this assert? That every pattern in docs/RETRACTIONS.toml occurs ZERO times
+# across the live document set (git-tracked, minus dated history and frozen pins) and at least
+# once at its own declared `witness`. That second half is the per-row positive control, and it
+# is the difference between this gate and a list of regexes nobody has run: a mistyped pattern
+# reports a clean pass forever. What it does NOT assert is that the registry is COMPLETE --
+# nothing can derive the set of claims we have withdrawn, and the tool says so in its output.
+retractcheck:
+	@python3 tools/retractcheck.py
 
 # --- coverage: does the coverage CLAIM match what the models actually cite? ---
 # Matrix A in docs/COVERAGE-MATRIX.md is DERIVED from the models' own §-citations so the

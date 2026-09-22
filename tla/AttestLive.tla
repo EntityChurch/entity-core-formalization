@@ -62,7 +62,7 @@
 \* and for the same reason: what is under test is what the walks do with the verdict, not how
 \* the verdict is expressed), and the properties map entirely. Those sentences carry no §
 \* sigil deliberately -- a scope disclaimer that cites a section was being counted as
-\* coverage of it (../docs/COVERAGE-MATRIX.md §3b).
+\* coverage of it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS N,              \* nodes are 1..N. The chain that separates the two head algorithms

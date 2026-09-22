@@ -12,7 +12,7 @@
 \* bypass registration entirely and are modeled separately, in tla/Bootstrap.tla. Every
 \* element cites its V7 §ref — and ONLY where it makes a claim about that section. The two
 \* sentences about bootstrap here deliberately carry no sigil: a scope DISCLAIMER that cites
-\* a section was being counted as coverage of it (../docs/COVERAGE-MATRIX.md §3b).
+\* a section was being counted as coverage of it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Atomic,       \* TRUE  = §6.2 five writes + index update are atomic w.r.t. dispatch;

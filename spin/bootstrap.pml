@@ -10,7 +10,7 @@
  * while nothing modeled it: both §6.9 citations in the repo were DISCLAIMERS in
  * tla/Register.tla's header — two sentences saying bootstrap handlers bypass registration
  * and are NOT modeled. The citation-derived coverage grid counted an out-of-scope
- * declaration as a claim. See COVERAGE-MATRIX.md §3a-b.
+ * declaration as a claim. See COVERAGE-MATRIX.md section 3a-b.
  *
  * THE RULES UNDER TEST, verbatim from §6.9:
  *   "Three handlers MUST exist from system initialization, BEFORE ANY HANDLER REGISTRATION

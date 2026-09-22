@@ -5,7 +5,7 @@
 \*
 \* **THIS IS THE FIRST SECOND-ENGINE MODULE ON THE QUORUM TRACK.** Until 2026-09-08 all three
 \* quorum modules and all three identity modules rested on TLC alone; `docs/COVERAGE-MATRIX.md`
-\* §3d states the live count and this file does not restate it.
+\* section 3d states the live count and this file does not restate it.
 \*
 \* TRACK: `quorum` (TRACKS.toml). A bare §N.M means a section of EXTENSION-QUORUM.md at this
 \* track's pin.
@@ -52,7 +52,7 @@
 \* those), and the resolver's own recursion, whose depth bound and cycle detection this module
 \* does not open; the resolution map here is an arbitrary total function, strictly more
 \* permissive than any bounded resolver could produce. Those sentences carry no § sigil
-\* deliberately (../docs/COVERAGE-MATRIX.md §3b).
+\* deliberately (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets, Apalache
 
 CONSTANTS

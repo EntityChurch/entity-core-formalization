@@ -6,7 +6,7 @@
 \*
 \* **THIS IS THE FIRST SECOND-ENGINE MODULE ON THE IDENTITY TRACK**, and it was chosen first
 \* because it is where every K-of-N verdict in the extension is dispatched, which makes it the
-\* module the other two lean on. `docs/COVERAGE-MATRIX.md` §3e states the live per-track engine
+\* module the other two lean on. `docs/COVERAGE-MATRIX.md` section 3e states the live per-track engine
 \* count; this file does not restate it.
 \*
 \* TRACK: `identity` (TRACKS.toml). A bare §N.M means a section of EXTENSION-IDENTITY.md at this
@@ -63,7 +63,7 @@
 \* depth bound, `walk_attesting_chain`'s termination, the content-hash tie-break in
 \* `resolve_controller_for_grants`, revocation LOOKUP, storage paths as strings (`mode` stands in
 \* for the path §5.3 derives from it), and the arrival path entirely (that is IdentityProcess).
-\* Those sentences carry no § sigil deliberately (../docs/COVERAGE-MATRIX.md §3b).
+\* Those sentences carry no § sigil deliberately (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals
 
 CONSTANTS

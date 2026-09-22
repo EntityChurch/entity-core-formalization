@@ -349,7 +349,7 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 \* into its own peer's set exactly once, so the cardinality is 0 or 1 against a bound of 2 and
 \* the invariant could not fail in any behaviour of this model. It reported the same green a
 \* real obligation would, which is the failure mode this repo names as a first-class hazard
-\* (docs/COVERAGE-MATRIX.md §6). It was disclosed as vacuous twice without being fixed.
+\* (docs/COVERAGE-MATRIX.md section 6). It was disclosed as vacuous twice without being fixed.
 \*
 \* It is REMOVED rather than given teeth, because the property is not expressible against this
 \* module's abstractions: the bound only has content under REPEATED dispatch or multi-key

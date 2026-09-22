@@ -2,9 +2,9 @@
 
 _Updated: 2026-09-06 · this line: 0.8.2_
 
-> **The models are pinned at 0.8.2; the live spec is 0.8.2.11.** Every model in this repo is
+> **The models are pinned at 0.8.2; the live spec is 0.8.2.14.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
-> Protocol at spec version **0.8.2**. `make specdrift` reports **9 of 30 cited sections
+> Protocol at spec version **0.8.2**. `make specdrift` reports **9 of 31 cited sections
 > moved**, so the results below are a statement about **0.8.2** and not about the protocol as
 > it stands today.
 >
@@ -18,14 +18,25 @@ _Updated: 2026-09-06 · this line: 0.8.2_
 
 **4 proof tracks** — **4 modeled**, **0 scoped** — declared in `TRACKS.toml`, gated by
 `make trackcheck`. **Every number below is a statement about `core` unless it says
-otherwise**; the `attestation` and `quorum` tracks are days old and are reported separately.
+otherwise**; the `attestation`, `quorum` and `identity` tracks are days old and are reported
+separately.
 
 | Track | Subject | Status |
 |---|---|---|
 | `core` | Entity Core Protocol | **modeled** — 95 model files, 302 runs, pinned at `spec-data/v0.8.2` |
 | `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
-| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 65 runs, **TLC on all three; Apalache on §4.1 and §4.2**, pinned at `spec-data/ext-quorum-v1.2` |
-| `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 98 runs, **TLC on all three; Apalache on §9.4 and on §3.6/§9.2** — §6.3 is the one module left on a single engine, pinned at `spec-data/ext-identity-v3.10` |
+| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 100 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-quorum-v1.2` |
+| `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 139 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-identity-v3.10` |
+
+*The quorum and identity rows said "65 runs / TLC on all three; Apalache on §4.1 and §4.2" and
+"98 runs / … §6.3 is the one module left on a single engine" until 2026-09-09, both true when
+written and both false within a day.* **`make runcount` and `make enginecount` were green over
+them the whole time**, because each anchors on one declared site per file — `runcount` on
+README's proof-tracks table and one STATUS sentence, `enginecount` on
+`docs/COVERAGE-MATRIX.md` §4 — and **a second statement of the same fact in different words in
+the same file is invisible to both.** D14's sixth instance (a quantifier over a set someone else
+grew) and D15's fifth medium (a stale number hiding in a paraphrase), recurring together on the
+artifacts that recorded them. Allowing more than one anchor per file is §Next.
 
 Added 2026-09-06, **before** any extension model exists, and that order is the point. The
 coverage number is derived from a *document-blind* `§N.M` pattern, so an
@@ -612,6 +623,30 @@ human reading of two texts, and the gate detects only that one of them changed. 
 item 4.
 
 ## Next
+
+0. **~~`make specdrift` is a one-of-four gate.~~ Done 2026-09-09** — and it found three more
+   input-set defects on the way in, all of which had been subtracting silently. `--track`, per-track
+   pins and live trees derived from `TRACKS.toml`, per-track claim anchors (`docs/SPEC-DRIFT-ASSESSMENT.md`
+   §0), a `check_live_version` assertion after nine sites said **0.8.2.11** while it was **0.8.2.14**
+   with `driftclaim` green, the `## 4. Connections` trailing-dot bug that kept `§4` and `EXTENSION-QUORUM`
+   §1/§2/§7/§8 out of the denominator, and unresolvable citations promoted from a silent drop to a
+   build failure. Core's published pair is **9 of 31**. `AGENTS.md` D15 twelfth shape.
+
+0a. **~~One anchor per file is not enough.~~ Diagnosed wrong, then fixed properly, 2026-09-09.**
+   The obvious reading of the two stale engine-position sites was "each gate anchors one site per
+   file" — and it is **false**: `enginecount` already collects *every* window matching its anchor
+   and already validates every `N of M` pair whose denominator is ours. What defeated it is that
+   `docs/COVERAGE-MATRIX.md` §3c's sentence contains **no number and no anchor phrase**. It is a
+   **paraphrase**, and a gate that derives a number cannot see one. Checking the tool instead of
+   assuming its shape is the only reason the fix is the right one.
+   The fix is **`make retractcheck`** (`tools/retractcheck.py` + `docs/RETRACTIONS.toml`), in
+   `check` and `matrix` — D14's "grep the retracted words" as a program, nine rows, each with a
+   `witness` that must still quote the withdrawn phrasing so a mistyped pattern cannot pass
+   silently. Teeth-tested five ways. **It caught one on its first run**: `tla/AttestRevoke.tla`'s
+   header still asserted F5's withdrawn conclusion, in the model the correction is about.
+   **What it cannot catch is stated in the registry**: a retraction whose corrected form reuses
+   the withdrawn form's words (§QUORUM:4.2.1 "exactly sufficient", over two triggers vs three).
+   Two gates, two complementary blind spots.
 
 1. **Coverage breadth.** Measured by the `§`-citations the models carry — and now *checked*
    against them by `make coverage` — they reach **29 of 91 numbered sections** of the core

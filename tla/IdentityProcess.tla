@@ -142,7 +142,7 @@
 \* process_attestation", the L0 startup path, envelope.included ingestion, and every phase-3
 \* event field but the fact of emission. Those sentences carry no § sigil deliberately -- a
 \* scope disclaimer that cites a section was being counted as coverage of it
-\* (../docs/COVERAGE-MATRIX.md §3b).
+\* (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS PreRouteQPublish, \* TRUE  = a pre-phase-1 branch routes `quorum-publish` past

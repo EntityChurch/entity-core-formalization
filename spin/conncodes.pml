@@ -9,7 +9,7 @@
  * WHY IT EXISTS. §4.7 showed in COVERAGE-MATRIX.md as an "Apalache-only" row while in fact
  * NOTHING modeled it: the sole §4.7 mention in the repo was the far end of a SECTION RANGE
  * in a comment, written with a sigil on both ends, which the citation-derived coverage grid
- * counted as a claim. See tla/ConnCodes.tla's header and COVERAGE-MATRIX.md §3a-b.
+ * counted as a claim. See tla/ConnCodes.tla's header and COVERAGE-MATRIX.md section 3a-b.
  *
  * THE CONTRACT UNDER TEST, verbatim from §4.7:
  *   "This table is a normative MUST-emit contract: clients key error handling off
@@ -50,7 +50,7 @@
  * binding) and their codes are the §7.3 crypto wall — Tamarin's (tamarin/Binding.*), not
  * modeled here. §4.7's four version/key-type negotiation codes are settled before any phase
  * this model has, and naming their own sections would mint a citation for a section this
- * model makes no claim about (COVERAGE-MATRIX.md §3b).
+ * model makes no claim about (COVERAGE-MATRIX.md section 3b).
  * What is encoded is the three rows a connect phase machine can reach. As in the
  * TLA+ model, the content is the REACHABILITY of each row plus the code/status assignment;
  * this is stated rather than implied (docs/PROPERTIES.md §C).

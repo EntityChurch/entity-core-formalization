@@ -413,12 +413,20 @@ V1–V3; none of them is visible from any single finding.
 are three sibling repos, so they go stale with our tree untouched — the `driftclaim` class
 exactly (D15). Re-read the source before quoting a row.
 
-**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.11** and `make specdrift` reports
-**9 of 30 cited sections moved**. Eight of the nine are additive clarification no model
+**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.14** and `make specdrift` reports
+**9 of 31 cited sections moved**. Eight of the nine are additive clarification no model
 contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
 `tla/ConnCodes.tla` transcribes 400. Re-vendoring is deliberately **not** the next move
 (keystone has not upgraded yet); `docs/SPEC-DRIFT-ASSESSMENT.md` is the live measurement and
-`make driftclaim` gates every prose site that states the status. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
+`make driftclaim` gates every prose site that states the status.
+**All four pins are measured as of 2026-09-09, and until that date only one was.** `specdrift`
+is per-track now: the track list is derived from `TRACKS.toml`, each track's pin comes from its
+own `pin_file` and each track's live tree from its own `source_repo_path`, and a modeled track
+no declared site states a status for is a build failure. The three extension files all **DIFFER**
+from live and **no cited section moved** — one additive front-matter block each, before §1, zero
+sections touched — so no finding changes. Read both halves: the file-level answer and the
+section-level answer are different questions and this repo publishes the second one.
+Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
 **609-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
@@ -639,6 +647,25 @@ tool behaviour) must list every site of that mechanism and its disposition in
 `docs/PROPERTIES.md` §C or `docs/STATUS.md`. `grep -n 'dev/null' */Makefile` is the specific
 tripwire for this family: discarded output is the tell.
 
+***And for the WITHDRAWN-CLAIM half specifically, "grep the retracted words" is now a program:
+`make retractcheck` (`tools/retractcheck.py`, `docs/RETRACTIONS.toml`), in `check` and
+`matrix`.*** Nine rows, each with the phrasing, the date, why it was withdrawn — and a
+**`witness`**, a document that must still contain the words, because a mistyped tripwire reports
+a clean pass forever. It found one on its first run: **`tla/AttestRevoke.tla`'s header still
+asserted F5's withdrawn conclusion** ("termination rests on the revocation graph being acyclic"),
+in the model that is the subject of the correction, a day after the Apalache port refuted it.
+D14's fifth instance again — *a corrected defect survives longest somewhere that does not look
+like prose.*
+
+**The row it CANNOT carry is the more useful half, and it is D13's question asked of the new
+gate.** The §QUORUM:4.2.1 sufficiency retraction has no row and cannot: the withdrawn claim is
+*"the §4.2.1 contract is exactly sufficient"* over **two** triggers and the corrected claim is
+the same eight words over **three**. What was retracted is the SCOPE, and a phrasing tripwire
+cannot see a scope. Stated in `docs/RETRACTIONS.toml` rather than papered over with a brittle
+lookahead. **Two gates, two blind spots, and they are complements:** a derived-number gate
+(`enginecount`) cannot see a paraphrase, and a phrasing gate cannot see a claim whose words
+survive their own correction. Where neither reaches, the discipline is all there is.
+
 *Fifth instance, 2026-09-06 — and it names the site class that gets missed.* The `:Z`→`:z`
 bind-mount fix (2026-08-30) reached the two `MOUNT` lines and this file, and left the
 **retracted reason** — "run the engines serially because concurrent `:Z` relabels race" —
@@ -828,6 +855,39 @@ like a site that has already been thought about. Grep for the caveat, not only f
 and both were teeth-tested three ways (wrong number, wrong pair, claim deleted). *Not numbered:
 D15's mechanism — what is the input set of the gate — in an eleventh medium, and the standing
 rule holds.*
+
+*Twelfth shape, 2026-09-09 — **THE GATE FOR THE `driftclaim` CLASS WAS ITSELF IN THE
+`driftclaim` CLASS**, and three things came out of one afternoon.* `make specdrift` had no
+`--track` flag: pin, models and live tree were all hard-wired to `core`. Three tracks were
+promoted on 2026-09-07, the tool did not notice, and by 2026-09-09 **all three extension pins had
+drifted from live with every gate in this repo green** — found by hand, not by anything that runs.
+D15 written about the tool that exists to ask D15's question of somebody else's tree. Fixed the
+`runcount` way: `measured_tracks()` derives the list from `TRACKS.toml` and a modeled track no
+declared site states a status for fails the build.
+
+**Two more input-set defects fell out of the same read, and both had been SUBTRACTING silently
+for the life of the tool.** `section_block` required whitespace directly after the section
+number, and every top-level heading in every spec here is `## 4. Connections` — so a model citing
+**`§4`** (`tla/Conn.tla`, `tla/Core.tla`, about the §4 dispatch rules) resolved to nothing and left
+the denominator without a word. Same for `EXTENSION-QUORUM` §1, §2, §7, §8 — and §8 is the
+`tree:put` clause Q5's amendment turns on. And **an unresolvable citation was DROPPED rather than
+reported**, which is how eight `COVERAGE-MATRIX` document references (`§3b` meaning *that
+document's* §3b) sat inside the citation set: they cancelled out by failing to resolve, so the
+noise and the real omission hid each other. Both fixed — the published core pair is **9 of 31**,
+unresolvable citations are a build failure, and a bare `§` in a model file now means what
+`TRACKS.toml` says it means, in 31 lines across 23 files.
+
+**And a fourth, which is the one to remember: the LIVE VERSION was never gated at all.** Nine
+sites said *"the live spec is 0.8.2.11"* while it was **0.8.2.14**, `driftclaim` green throughout
+— because the gate anchored the section COUNT and the count happened to still be 9. *Two facts in
+one sentence, one of them checked, and the unchecked one is the one that moved.* Ask of a gated
+sentence what ELSE it asserts. `check_live_version` now covers it.
+
+*The teeth-test that mattered was the one expected to pass.* Four break tests fired correctly;
+the RESTORE test then showed `make driftclaim` exiting non-zero on a correct tree, because the
+rewrite had let the drift exit status leak into the claim exit status. A gate that fails whenever
+drift exists — which here is every day — gets muted within a week. **Run the restored state too,
+not just the broken ones.**
 
 *Seventh and eighth shapes, 2026-09-07, and the seventh is D15 arriving by SUBTRACTION.*
 Promoting `identity` emptied the `scoped` state: `TRACKS.toml` now has four modeled tracks and

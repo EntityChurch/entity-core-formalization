@@ -43,13 +43,25 @@
 \*
 \* A THIRD OBSERVATION, RECORDED BUT NOT CHECKED HERE. `has_live_transitive_descendant` is
 \* explicitly cycle-safe — it carries `visited` and says so. The revocation recursion has **no
-\* visited set and no depth bound**, so §4.3's termination rests on the revocation graph being
-\* acyclic as well as the supersedes graph. The one place the spec defends against cycles
-\* defends one of its two recursions. This module cannot check that, and says so rather than
+\* visited set and no depth bound**, and the one place the spec defends against cycles defends
+\* one of its two recursions. This module cannot check what that costs, and says so rather than
 \* implying otherwise: `Init` restricts BOTH relations to point at lower-numbered nodes, which
 \* is acyclic by construction, and every recursion below terminates because of that restriction
 \* rather than because of anything in the algorithm. `AttestLive`'s `BackWalkBoundedAlways` is
 \* the same question measured on the supersedes side; docs/LEAN-SEAM.md O6 owns it.
+\*
+\* !! THE CONCLUSION THIS PARAGRAPH ORIGINALLY DREW WAS WRONG, AND IT WAS WRONG *BECAUSE* IT
+\* !! WAS DRAWN HERE. It read: "so §4.3's termination rests on the revocation graph being
+\* !! acyclic as well as the supersedes graph" — struck 2026-09-08, kept rather than deleted.
+\* !! Per-relation acyclicity is NOT the assumption. `tla/AttestRevokeApalache.tla` splits the
+\* !! `Init` restriction into two constants and lifts them one at a time, and §4.3's equation
+\* !! has NO UNIQUE SOLUTION on a configuration where BOTH graphs are acyclic: the recursion
+\* !! alternates between the two relations and `visited` is scoped to one hop, so
+\* !! `4 --supersedes-reach--> 1 --revoked-by--> 4` closes a loop across the COMPOSITION. What
+\* !! §4.3 needs is a COMMON ORDER OVER BOTH, which content addressing supplies and no sentence
+\* !! states. This is D18: the model that hard-codes an assumption in `Init` is the one model
+\* !! that cannot measure it, and a disclosure reads as a conclusion. Point the second engine
+\* !! at the first one's `Init`, not at its invariants.
 \*
 \* Fidelity (5th wall, ../docs/ASSURANCE-MAP.md): ABSTRACTED AWAY -- signatures and their
 \* verification, content hashing (a node's number stands in for its content hash, and the
@@ -60,7 +72,7 @@
 \* `properties.kind = "revocation"`, because what is under test is what the liveness check does
 \* with the revocation relation, not how the relation is spelled. Those sentences carry no §
 \* sigil deliberately -- a scope disclaimer that cites a section was being counted as coverage
-\* of it (../docs/COVERAGE-MATRIX.md §3b).
+\* of it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS N,               \* nodes are 1..N. The divergence needs FOUR: a superseded

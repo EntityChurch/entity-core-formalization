@@ -39,7 +39,7 @@
 \*      names then PASSES step 3 on every subsequent arrival, forever.
 \*
 \*      Section 6.4 reasons about exactly this exposure and bounds it (cited without a sigil:
-\*      nothing here verifies the cascade -- ../docs/COVERAGE-MATRIX.md §3e): *"a peer that has not yet
+\*      nothing here verifies the cascade -- ../docs/COVERAGE-MATRIX.md section 3e): *"a peer that has not yet
 \*      observed it will cascade when the revocation arrives via sync"*, and *"the window's bound
 \*      is the convergence latency"*. On the pinned text the revocation DOES arrive and the
 \*      window does NOT close — the arrival is what deletes it. A paragraph that prices a risk
@@ -135,7 +135,7 @@
 \* lands at, ONE cert and ONE revocation and ONE retirement rather than a graph of them, the L0
 \* startup path, and every phase-3 event field but the fact of emission. Those sentences carry no
 \* § sigil deliberately — a scope disclaimer that cites a section was being counted as coverage of
-\* it (../docs/COVERAGE-MATRIX.md §3b).
+\* it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals
 
 CONSTANTS

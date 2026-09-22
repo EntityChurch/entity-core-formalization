@@ -107,7 +107,7 @@
 \* §9.4's own antecedent), the TTL garbage-collection clause, multiple contacts, multiple
 \* identities, and the whole cert graph (that is IdentityCertChain). Those sentences carry no §
 \* sigil deliberately -- a scope disclaimer that cites a section was being counted as coverage
-\* of it (../docs/COVERAGE-MATRIX.md §3b).
+\* of it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals
 
 CONSTANTS SeedEnabled,   \* does an arriving `quorum-publish` reach §6.3's

@@ -126,7 +126,7 @@
 \* clock (one `expired` flag per node; the as_of parameter and not_before with it), the
 \* properties map beyond whether an entity is a revocation, and every index. A revocation is an
 \* edge, not an entity carrying `properties.kind`. Those sentences carry no § sigil deliberately
-\* (../docs/COVERAGE-MATRIX.md §3b).
+\* (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals
 
 CONSTANTS

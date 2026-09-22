@@ -6,7 +6,7 @@
 \* were in Register.tla's header and BOTH were DISCLAIMERS — two sentences saying bootstrap
 \* handlers bypass registration and are NOT modeled. The citation-derived coverage grid
 \* counted an out-of-scope declaration as a claim.
-\* See COVERAGE-MATRIX.md §3a for the class and its tripwire.
+\* See COVERAGE-MATRIX.md section 3a for the class and its tripwire.
 \*
 \* WHAT §6.9 SAYS, and what is checkable in it:
 \*   "Three handlers MUST exist from system initialization, BEFORE ANY HANDLER REGISTRATION
@@ -42,7 +42,7 @@
 \* crypto. §6.9's "types handler SHOULD be bootstrapped" is a SHOULD over an optional fourth
 \* handler, gated on the type-system spec's Level 2+, and is not modeled — the MUST is about
 \* the three. (That gating section carries no sigil here for the same reason: a section a
-\* model makes no claim about must not be cited. COVERAGE-MATRIX.md §3b.)
+\* model makes no claim about must not be cited. COVERAGE-MATRIX.md section 3b.)
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS

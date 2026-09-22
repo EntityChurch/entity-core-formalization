@@ -117,7 +117,7 @@
 \* in STEPS**: three events over two quorums, which is what §4.2.1 non-trigger 3 needs, and the
 \* inductive obligations then hold for runs of any length over that universe. Those sentences
 \* carry no § sigil deliberately — a scope disclaimer that cites a section was being counted as
-\* coverage of it (../docs/COVERAGE-MATRIX.md §3b).
+\* coverage of it (../docs/COVERAGE-MATRIX.md section 3b).
 EXTENDS Naturals
 
 CONSTANTS
@@ -185,7 +185,7 @@ VARIABLES
              \* (`attesting == attested == quorum_id`), so §ATTEST:4.3's self-revocation rule is
              \* what makes the quorum the natural revoker of its own events. Cited without a
              \* sigil: nothing here verifies the attestation's shape, and a background mention
-             \* counted as coverage is the class ../docs/COVERAGE-MATRIX.md §3e audited nine of.
+             \* counted as coverage is the class ../docs/COVERAGE-MATRIX.md section 3e audited nine of.
   \* @type: Int -> Bool;
   cached,    \* §4.2.1: is there a cache entry for this quorum.
   \* @type: Int -> Bool;
