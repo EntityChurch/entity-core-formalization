@@ -94,12 +94,40 @@ def main() -> int:
     args = ap.parse_args()
 
     pin_dir = args.pin
+    pin_note = ""
     if pin_dir is None:
-        cands = sorted(glob.glob(os.path.join(args.root, "spec-data", "*/")))
-        if not cands:
-            print("no spec-data/ snapshot found", file=sys.stderr)
-            return 2
-        pin_dir = cands[-1]
+        # spec-data/MODELING-PIN names the snapshot the models TRANSCRIBE, which is not
+        # necessarily the newest one vendored. Measuring drift from the newest vendored
+        # snapshot would report zero the moment someone copies files in, which is exactly
+        # the false all-clear this tool exists to prevent.
+        marker = os.path.join(args.root, "spec-data", "MODELING-PIN")
+        named = None
+        if os.path.exists(marker):
+            for line in read(marker).splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    named = line
+                    break
+        if named:
+            pin_dir = os.path.join(args.root, "spec-data", named)
+            if not os.path.isdir(pin_dir):
+                print(f"MODELING-PIN names {named!r} but spec-data/{named}/ does not exist",
+                      file=sys.stderr)
+                return 2
+            vendored = sorted(
+                os.path.basename(p.rstrip("/"))
+                for p in glob.glob(os.path.join(args.root, "spec-data", "*/"))
+            )
+            newer = [v for v in vendored if v > named]
+            if newer:
+                pin_note = (f"NOTE: newer snapshot(s) vendored but not yet modeled: "
+                            f"{', '.join(newer)}")
+        else:
+            cands = sorted(glob.glob(os.path.join(args.root, "spec-data", "*/")))
+            if not cands:
+                print("no spec-data/ snapshot found", file=sys.stderr)
+                return 2
+            pin_dir = cands[-1]
 
     files = sorted(
         f for f in os.listdir(pin_dir)
@@ -114,8 +142,11 @@ def main() -> int:
     bullet = "- " if args.format == "md" else "  "
 
     emit(f"# spec-drift\n" if args.format == "md" else "spec-drift")
-    emit(f"{bullet}pin:  {os.path.relpath(pin_dir, args.root)}")
-    emit(f"{bullet}live: {args.live}\n")
+    emit(f"{bullet}modeling pin: {os.path.relpath(pin_dir, args.root)}")
+    emit(f"{bullet}live:         {args.live}")
+    if pin_note:
+        emit(f"{bullet}{pin_note}")
+    emit("")
 
     # ---- 1. file-level ------------------------------------------------------
     emit("## Files\n" if args.format == "md" else "Files")

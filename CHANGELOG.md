@@ -59,6 +59,25 @@ is unchanged and re-verified against the same pin.
   pin compared with itself, and catches a single 12-character edit injected into §6.11
   with no false positives on the other 25 cited sections.
 
+### Added — the 0.8.2 snapshot, vendored
+
+- **`spec-data/v0.8.2/`** — the three normative specs copied byte-for-byte from
+  `entity-core-protocol`'s published `master`, each hash-verified against its source blob
+  before acceptance. `v0.8.0/` stays in place as a point-in-time pin; a snapshot is never
+  edited once written.
+
+- **`spec-data/MODELING-PIN`** — names the snapshot the models actually transcribe, which
+  is a deliberately separate fact from which snapshots have been vendored. It reads
+  `v0.8.0` and does **not** move on a file copy; it moves only once the models have been
+  re-validated, as the last step of that work. Without the split, vendoring would silently
+  convert "we vendored the new spec" into "we verified the new spec" — two claims that
+  differ by roughly the entire cost of the project. `make specdrift` reads it, so the drift
+  report keeps its teeth after vendoring rather than falsely clearing.
+
+- **Citation structure re-validated against the new snapshot:** no section added, removed
+  or renumbered, every inline sub-label intact, and **0 of 35 model `§`-citations broken**.
+  The one structural addition is §6.11 (a′). The new text is a clean modeling target.
+
 ### Fixed
 
 - **Leaked tool-call markup removed from two published documents.** `</content>` at the
@@ -81,6 +100,13 @@ is unchanged and re-verified against the same pin.
   section-by-section.
 
 ### Changed
+
+- **The re-vendor ownership rule in `AGENTS.md` is corrected.** It said *"the architecture
+  repo re-vendors when the spec moves"* — naming `entity-core-architecture`, which no longer
+  exists. There was no external owner to wait on, and treating a defunct repo as a blocker
+  had left the pin two revisions stale. The rule now distinguishes the two things it had
+  conflated: an existing snapshot is frozen and never edited in place, but **adding** a new
+  snapshot is this repo's own mechanical, hash-verifiable work.
 
 - **The rolling status log moved to `docs/STATUS.md`** ([ADR-0031]), leaving `docs/status/`
   for dated snapshots so the two kinds separate by path rather than by filename.

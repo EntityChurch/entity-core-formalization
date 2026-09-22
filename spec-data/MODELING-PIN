@@ -1,0 +1,18 @@
+# The snapshot the models actually transcribe.
+#
+# Every published result in this repository is a statement about THIS snapshot and no
+# other. It is the answer to "which version of the protocol was verified?", and it is
+# deliberately a separate fact from "which snapshots have been vendored."
+#
+# Vendoring a newer snapshot does NOT move this. It moves only after the models have been
+# re-validated against the newer text, and moving it is the LAST step of that work. A pin
+# that advances when someone copies files in would quietly convert "we vendored the new
+# spec" into "we verified the new spec," which are not the same claim and differ by
+# roughly the entire cost of the project.
+#
+# Read by tools/spec-drift.py (`make specdrift`), which reports the distance between this
+# snapshot and the live spec.
+#
+# One line, the directory name under spec-data/, no leading path.
+
+v0.8.0

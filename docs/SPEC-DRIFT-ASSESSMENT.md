@@ -15,7 +15,8 @@ about the current protocol — is the exact overclaim this project was built not
 
 | | |
 |---|---|
-| Pinned at | `spec-data/v0.8.0/` — Entity Core Protocol **0.8.0** |
+| Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.0/` — Entity Core Protocol **0.8.0** |
+| Vendored, not yet modeled | `spec-data/v0.8.2/` — hash-verified 2026-08-27 |
 | Live (published `master`) | **0.8.2** |
 | Core spec delta | 197 changed lines; 25 of 93 numbered sections |
 | **Sections the models cite that moved** | **13 of 26** |
@@ -229,11 +230,27 @@ statements apart is the whole point of this document.
 
 ## What happens next
 
-Re-vendoring `spec-data/` is owned by `entity-core-protocol`; this repository does not
-author or edit the snapshot. Once a 0.8.2 snapshot lands, the re-check sequence is the one
-already recorded in `STATUS.md`: rebuild the images, re-run `make check` to confirm the
-baseline reproduces, then work the moved-section list above and re-validate the affected
-`§`-citations before extending anything.
+**The snapshot is vendored.** `spec-data/v0.8.2/` is in the tree, copied byte-for-byte from
+`entity-core-protocol`'s published `master` and hash-verified per file. An earlier version
+of this section said the re-vendor was owned by that repo and this one could not do it;
+that was wrong, and it traced to an `AGENTS.md` rule naming "the architecture repo" —
+`entity-core-architecture`, which no longer exists. The rule is corrected. The source is
+public, the copy is mechanical, and every byte is checkable by digest.
 
-Until then, `make specdrift` reports the current distance, and every claim in this
-repository is scoped to the pin.
+**The pin has not moved, and that is the point.** `spec-data/MODELING-PIN` still reads
+`v0.8.0` because that is the text the models transcribe. Vendoring changes no result. If
+the pin advanced on a file copy it would silently convert *"we vendored the new spec"* into
+*"we verified the new spec"* — two claims separated by roughly the entire cost of this
+project. `make specdrift` reads that file, so it keeps reporting the full distance and
+notes that a newer snapshot exists but is unmodeled.
+
+**The citation structure re-validated cleanly** against the new snapshot: no section added,
+removed or renumbered, all inline sub-labels intact, and **0 of 35 model `§`-citations
+broken**. The one structural addition is §6.11 (a′). So the new text is a clean target —
+the work is modeling, not repair.
+
+What remains is enumerated in `spec-data/v0.8.2/MANIFEST.md` §"What DOES need modeling
+work" and sequenced in `STATUS.md` §Next: model the three genuinely new normative
+requirements (§6.11 (a′) frame-write atomicity, §4.8 refcount use-after-free, §5.6
+malformed temporal ingest), re-read the 13 moved sections against their transcriptions,
+promote the gate-denial backlog item — and only then move the pin.

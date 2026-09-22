@@ -11,7 +11,9 @@ security** (Tamarin / ProVerif).
 > which files, and which SHA-256 each result is about. Restating a version number in prose
 > is how a repo ends up publishing three different answers to one question.
 >
-> Today that pin is `spec-data/v0.8.0/` — spec version **0.8.0** — and the protocol has
+> Today `spec-data/MODELING-PIN` reads `v0.8.0` — spec version **0.8.0**. The 0.8.2
+> snapshot is vendored beside it (`spec-data/v0.8.2/`) but the models have not been
+> re-validated against it yet, so the pin has deliberately not moved. The protocol has
 > since advanced to **0.8.2**, so 13 of the 26 sections the models cite have moved — a count that overstates the change
 > (16 lines of pre-existing text altered against 105 added; nothing proved here is
 > contradicted). Results here

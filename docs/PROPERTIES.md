@@ -7,7 +7,8 @@ that overclaims is the worst kind of overclaim, so this states — per property,
 exactly — the *strength* of each result and where it stops.
 
 > **Which spec version this scorecard is about.** Everything below is machine-checked
-> against the SHA-pinned snapshot in `spec-data/v0.8.0/` — the Entity Core Protocol at
+> against the SHA-pinned snapshot named by `spec-data/MODELING-PIN`, currently
+> `spec-data/v0.8.0/` — the Entity Core Protocol at
 > spec version **0.8.0**. As of 2026-08-27 the protocol has advanced to **0.8.2**, and
 > **13 of the 26 spec sections the models cite have changed.**
 > That count overstates it: only 16 lines of pre-existing text changed against 105 added,

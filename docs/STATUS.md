@@ -94,11 +94,21 @@ critical path and route findings to architecture, never spec edits. Ranked by va
 
 ## Waiting on
 
-- **The spec advanced; `spec-data/` must be re-vendored.** This is no longer "nothing
-  blocking." Measured 2026-08-27 against `entity-core-protocol` `master` (published;
-  byte-identical to their `dev`): all three vendored files differ from the pin, and
-  `ENTITY-CORE-PROTOCOL.md` has moved from spec version **0.8.0 to 0.8.2** — 197 changed
+- **The spec advanced; `spec-data/v0.8.2/` is vendored and the models have not caught up
+  yet.** Measured 2026-08-27 against `entity-core-protocol` published `master`:
+  `ENTITY-CORE-PROTOCOL.md` moved from spec version **0.8.0 to 0.8.2** — 197 changed
   lines, 25 of 93 numbered sections.
+
+  The snapshot is now in the tree, hash-verified byte-for-byte
+  (`spec-data/v0.8.2/MANIFEST.md`). **`spec-data/MODELING-PIN` still reads `v0.8.0`**,
+  because that is the text the models transcribe and every published result is a statement
+  about. It moves only when the models have been re-validated — vendoring is the first
+  step of that work, not the last, and `make specdrift` deliberately keeps reporting the
+  distance until then.
+
+  **Structurally the new snapshot is a clean target:** no section added, removed or
+  renumbered; every inline sub-label intact; **all 35 model `§`-citations still resolve**.
+  The only structural addition is §6.11 (a′), which breaks no reference.
 
   **Of the 26 core-protocol sections the models actually cite, 13 have moved.** The full
   per-section table, the method, its negative controls and its limits are in
@@ -142,9 +152,12 @@ critical path and route findings to architecture, never spec edits. Ranked by va
   is pre-existing, and 0.8.2 raises its value by giving the denial case an explicit
   normative rule with a named ALLOW-bug lineage.
 
-- Re-vendoring is owned by the sibling spec repo (`entity-core-protocol`); this repo does
-  not edit `spec-data/`. The re-check discipline once it lands is already written down
-  under **Next**.
+- **Nothing is blocked on another repo.** An earlier version of this entry said
+  re-vendoring was owned by the spec repo and this one could not do it. That was wrong: it
+  traced to an `AGENTS.md` rule naming "the architecture repo" — `entity-core-architecture`,
+  which no longer exists. The spec is public, the copy is byte-for-byte and every step is
+  hash-verifiable. The rule is corrected and the snapshot is vendored. What remains is
+  re-modeling, which was always this repo's own work.
 - The deepest open assumption is the **5th wall — spec↔model fidelity**: every result is a
   property of a *model*. The two-paradigm agreement (Spin independent encoding + Apalache
   unbounded matching TLC; ProVerif + Tamarin lockstep) **narrows** it but cannot close it —
@@ -181,17 +194,31 @@ critical path and route findings to architecture, never spec edits. Ranked by va
 
 ## Next
 
-1. **Re-vendor `spec-data/` to spec 0.8.2.** Owned by `entity-core-protocol`; this repo
-   does not author the snapshot. Until it lands, every result here is explicitly a
-   statement about the 0.8.0 design.
-2. **Then run the re-check cycle already written down here:** rebuild the engine images,
-   re-run `make check` to confirm the green baseline still reproduces, then diff
-   `spec-data/` and re-validate the affected §-citations **before** extending — keeping the
-   lockstep + negative-control + §-citation discipline on every new increment. The eight
-   moved sections in *Waiting on* are the work-list; §6.11, §4.8 and §5.9/§4.10 carry new
-   normative MUSTs that the current models do not encode at all.
-3. **Re-check the §5.2 three-valued-authority rule against the abstraction**, ahead of the
-   rest. It is the one change that questions a modeling choice rather than a modeled fact,
-   and it promotes the backlog's "model gate denials" item out of optional.
-4. **Phase 3 extension-protocol attacker models** stay gated on vendoring `EXTENSION-*`,
-   behind the re-vendor above.
+**Done:** `spec-data/v0.8.2/` vendored and hash-verified; citation structure re-validated
+(0 of 35 broken); green matrix re-confirmed against the `v0.8.0` pin.
+
+1. **Model the new normative surface.** This is the substantive work and the reason the
+   pin has not moved. Enumerated with affected models in `spec-data/v0.8.2/MANIFEST.md`
+   §"What DOES need modeling work":
+   - **§6.11 (a′) frame-write atomicity** — two frames' bytes MUST NOT interleave on a
+     pooled connection. `Reentry.tla` / `reentry.pml` model the mutex discipline around
+     send+recv, not byte-level write atomicity. Closest to the spike-A target; do first.
+   - **§4.8 refcount use-after-free** — an unsynchronized refcount decrement under
+     concurrent dispatch is now named a §4.9 no-crash violation. `Store*` abstracts
+     refcounts away entirely.
+   - **§5.6 `CAP-6a` malformed temporal ingest** — an unrepresentable `expires_at` is
+     malformed and MUST NOT read as absent, because absent means no expiry. A named
+     fail-open, and `Expiry.*` models validity but not malformed ingest.
+   Each needs the standing discipline: a §-citation, a negative control with teeth, and
+   ProVerif/Tamarin lockstep or Spin/Apalache corroboration as appropriate.
+2. **Re-read the 13 moved sections against their transcriptions.** Cheap now the list is
+   known, and it is the only thing that can close the 5th wall for 0.8.2. The two genuine
+   semantic changes (§3.6 `F40`, §6.1 `CAP-1`) were already checked and touch nothing the
+   models encode.
+3. **Promote the "model gate denials" backlog item.** `tla/Reentry.tla`'s `Gate(p) == TRUE`
+   is a constant, so `NoDispatchWithoutGate` cannot fail there. Pre-existing, but §5.2's
+   new three-valued rule gives the denial case explicit normative weight.
+4. **Then move `spec-data/MODELING-PIN` to `v0.8.2`** — last, and only once 1–3 hold. That
+   single line is what converts "we vendored the new spec" into "we verified it."
+5. **Phase 3 extension-protocol attacker models** stay gated on vendoring `EXTENSION-*`,
+   which is still not in `spec-data/`.

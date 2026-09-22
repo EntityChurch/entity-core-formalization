@@ -59,12 +59,19 @@ Read in order: `README.md` → `docs/ASSURANCE-MAP.md` → `docs/SCOPING-AND-SPI
 (capstone) → `docs/CROSSCHECK-RESULTS.md`. `docs/PRIOR-ART.md`
 is the learning on-ramp; `docs/PROPERTIES.md` is the PROVEN/MODELED scorecard.
 
-- `spec-data/vX/` — vendored, SHA-pinned, byte-for-byte spec snapshot (the model target).
+- `spec-data/` — vendored, SHA-pinned, byte-for-byte spec snapshots. Currently `v0.8.0/`
+  and `v0.8.2/`; **`spec-data/MODELING-PIN` names the one the models actually transcribe**
+  (`v0.8.0`) and therefore the one every published result is about. `make specdrift`
+  reports the distance from that pin to the live spec.
 - `tla/`, `spin/`, `tamarin/` — per-engine workspaces and reports.
 - Per-spike deliverable: a `FORMALIZATION-REPORT`-style note (properties proved /
   counterexamples / scope boundaries / on-ramp pain / go-no-go).
 
-**Status:** paused clean — Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
+**Status:** the spec has moved out from under the pin. `spec-data/v0.8.2/` is vendored
+and hash-verified; the models still transcribe `v0.8.0` and the next substantive work is
+modeling the new normative surface (§6.11 (a′) frame-write atomicity, §4.8 refcount
+use-after-free, §5.6 malformed temporal ingest) — `docs/STATUS.md` §Next is the work-list.
+Prior arc, all still green against the pin: Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker), and Phase 2 (prover surface-closure) done; the full
 76-run matrix re-verified and the TLA+ cross-check complete across every subsystem (Spin
 re-encodes all 6 concurrency modules, reproducing the Class-G deadlock; Apalache proves
@@ -73,8 +80,22 @@ Only optional leftovers remain — the capstone `docs/FINAL-ASSURANCE-SUMMARY.md
 
 ## Boundaries — do NOT modify
 
-- **`spec-data/vX/` is frozen** — vendored, SHA-pinned. Model against it, never a live
-  checkout, never edit it; the architecture repo re-vendors when the spec moves.
+- **An existing `spec-data/vX/` snapshot is frozen** — vendored, SHA-pinned. Model against
+  it, never against a live checkout, and **never edit a snapshot in place**: a pin whose
+  bytes can change is not a pin, and every result here is quoted against one.
+  **Adding a new snapshot is not editing one.** When the spec advances, vendor a new
+  `spec-data/vX.Y.Z/` beside the old — this repo does that itself, because the source is
+  the public `entity-core-protocol` `specs/` and the operation is mechanical and
+  hash-verifiable (copy byte-for-byte, recompute SHA-256, record provenance and what
+  moved). Prior snapshots stay in place as point-in-time pins. Procedure:
+  `spec-data/<pin>/MANIFEST.md` §"Re-vendor discipline".
+  *(This rule previously said "the architecture repo re-vendors." That named
+  `entity-core-architecture`, which no longer exists — the same stale reference corrected
+  elsewhere in this file. There is no external owner to wait on.)*
+- **`spec-data/MODELING-PIN` names the snapshot the models actually transcribe** — the one
+  every published result is a statement about. Vendoring a newer snapshot does **not**
+  move it. It moves only when the models have been re-validated against the new text, and
+  moving it is the last step of that work, not the first. `make specdrift` reads it.
 - **Ratified / superseded phase reports are historical record.** The phase outcomes are
   lineage; `docs/FINAL-ASSURANCE-SUMMARY.md` is the single live capstone pointer — don't
   rewrite closed reports to look current.
