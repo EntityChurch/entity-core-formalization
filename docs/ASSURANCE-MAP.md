@@ -38,19 +38,27 @@ validate the protocol design itself.
   function symbol — precisely so they can focus on concurrency and the adversary.
   No re-modeling of the Lean-proven algorithm.
 
-  > **The seam between row 1 and rows 4–5 is asserted, not checked — say so.** "Lean owns
-  > the interior, we abstract it away" is a *division of labour*, and a division of labour
-  > is only sound if the property each model **assumes** of the abstraction is the property
-  > Lean **proves**. Nothing in this repo writes that correspondence down, and no tool
-  > checks it. It is not vacuous — spot-checking finds the two sides consistent, and in the
-  > one case examined closely Lean's result is the *stronger* of the pair (TLA+'s
-  > `VerdictFnOfLayer1` assumes determinism only at equal `t`; Lean's
-  > `verifyChain_time_stable` proves it across any two times agreeing on each link's
-  > temporal predicate). But "spot-checking finds them consistent" is exactly the standard
-  > this repo refuses everywhere else. There are ≥9 such correspondences
-  > (`docs/STATUS.md` §Next item 4). Until they are enumerated with each one's discharging
-  > theorem cited or marked **unclosed**, complementarity is a claim of the same kind as an
-  > ungated green.
+  > **The seam between row 1 and rows 4–5 is now written down: `docs/LEAN-SEAM.md`.**
+  > "Lean owns the interior, we abstract it away" is a *division of labour*, and a division
+  > of labour is only sound if the property each model **assumes** of the abstraction is the
+  > property Lean **proves**. That correspondence used to live nowhere. The ledger states it
+  > per abstraction — the proposition relied on, the discharging theorem cited by
+  > `(name, file, sha256)`, any residual hypothesis, and a verdict of CLOSED /
+  > CLOSED-MODULO-H / OPEN / BY-DESIGN — and `make leanseam` fails when the cited Lean text
+  > moves. Writing it produced two results a spot-check could not: `verifyChain` takes
+  > `localPeer` as an argument, so the structural verdict is **not** peer-independent and
+  > `Revoke.tla`'s cross-peer abstraction is closed only modulo a frame assumption it does
+  > not state (L1); and §5.5a namespace isolation is "covered" by ProVerif/Tamarin *and*
+  > Lean while **both** rest on the same unproved canonicalization-framing proposition —
+  > Lean as the hypothesis `hframed`, ProVerif as the rewrite `canon(star, fr) = awild(fr)`
+  > (L7, §4.1). Two engines, one shared assumption: redundancy counted by engine cannot see
+  > that, which is the argument for counting by assumption instead.
+  >
+  > **The ledger does not machine-check any correspondence** — every verdict in it is a
+  > human reading of two texts, and `make leanseam` only detects that one of the texts
+  > changed. Differential trace checking (replaying Apalache `.itf.json` counterexamples
+  > through the Lean executable model) is what would put a machine on this half of the wall;
+  > it is on the work-list, not done.
 - **validate-peer** owns "implementations match the spec" (row 2).
 - **Fuzzing + adversarial-authz** own hostile-input rejection in the real code (row
   6). Tamarin proves the *design* resists an attacker; fuzzing checks the *code*

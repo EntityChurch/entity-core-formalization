@@ -22,8 +22,9 @@ translated — and **Apalache** SMT proofs that turn the key safety invariants f
 a bound* into *proven inductive (unbounded)*. **Tamarin + ProVerif** (two provers, lockstep)
 cover the active-attacker surface — **14 lemmas closed by both**, plus `BindingReplay` in
 ProVerif only. **Every concurrency module is checked by all three engines of its family**
-(that is per *module*; at *section* granularity two rows still rest on one engine — §4.7 and
-§6.9, named in `docs/COVERAGE-MATRIX.md` §3) — see `docs/COVERAGE-MATRIX.md` for the grid,
+(that is per *module*; at *section* granularity one row still rests on one engine — §3.3, and
+only as the *subject* of §6.11(a′) rather than as a property of its own) — see
+`docs/COVERAGE-MATRIX.md` for the grid,
 what each engine can and cannot do, and the exact bound on every claim. Every property is §-cited to
 `spec-data/v0.8.2/`,
 every secure result has a negative control with teeth, and the scope boundaries — above all the
@@ -140,24 +141,29 @@ notice if they ever stopped matching.
 
 | Matrix | Runs | Outcome |
 |---|---|---|
-| **TLA+** (TLC) | 49 | 9 base configs green + `Store`'s liveness slice; **30 negative controls each caught their defect** (invariant violation / deadlock / temporal-property violation); **9 non-vacuity witnesses each violated as required**. Clean sweep. |
+| **TLA+** (TLC) | 59 | 11 base configs green + `Store`'s liveness slice; **36 negative controls each caught their defect** (invariant violation / deadlock / temporal-property violation); **11 non-vacuity witnesses each violated as required**. Clean sweep. Two modules new at the second gate audit — `ConnCodes` (§4.7) and `Bootstrap` (§6.9), for sections the coverage grid claimed were covered when nothing modeled them. |
 | **ProVerif** | 30 | 15 secure theories — security query `is true` + non-vacuity query reachable; **15 bug controls each falsified** (`is false` + attack). Every query of every theory declares the verdict it must produce (`PV_EXPECT` / `PV_NEG_EXPECT`). |
 | **Tamarin** | 29 | 14 secure theories `verified`, including each theory's `exists-trace` non-vacuity lemma; **15 bug controls each `falsified` + trace**. Graded per lemma against `TM_EXPECT` / `TM_NEG_EXPECT`. The 15th is `BindingReplayBug`, which was on disk but in no gate list — so `Binding.spthy`'s `no_replay` lemma had no control running at all. |
 | **Tamarin `RevokeMech`** | 1 | **Expected non-termination confirmed empirically** — the backward search loops the regenerated `Valid` fact; the run was observed still executing after **2–8 hours** across two sessions (vs. the report's conservative ">130s"). The documented irreducible tool split, excluded from the matrix. NB: `timeout` wraps the `podman run` client, not the detached container — kill the container directly (`podman kill`) to reclaim it. |
-| **Spin cross-check** | 45 | **All 9 concurrency modules** (reentry/conn/store/revoke/emit/register/**core**/**authority**/**bounds**) × fix + defect variants. Every fix clean (safety + liveness); every defect caught the same way the matching TLC control fails (Class-G deadlock, handshake-ordering, store race, admission-bound, §5.1 revocation-ignored, §5.10 determinism-leak, emit mis-fire, marker-type, registration partial-residue, system-guard, and all liveness controls). |
-| **Apalache cross-check** | 51 | **ALL 9 modules, 18 safety invariants** × {base, step} proven **inductive (unbounded in steps)** + 15 negative controls caught symbolically (`ERROR 12`), matching TLC. Added at 0.8.2: `InvUAF` (§4.8 refcount use-after-free) and ports for `Reentry`, `Authority`, `Bounds` and `Core` — four modules that previously had TLC coverage only. `CoreApalache`'s `InvComposed` is the **composed whole-protocol conjunction deferred since Phase 1**. |
+| **Spin cross-check** | 53 | **All 11 modules** (reentry/conn/store/revoke/emit/register/core/authority/bounds/**conncodes**/**bootstrap**) × fix + defect variants. Every fix clean (safety + liveness); every defect caught the same way the matching TLC control fails (Class-G deadlock, handshake-ordering, store race, admission-bound, §5.1 revocation-ignored, §5.10 determinism-leak, emit mis-fire, marker-type, registration partial-residue, system-guard, and all liveness controls). |
+| **Apalache cross-check** | 67 | **ALL 11 modules, 23 safety invariants** × {base, step} proven **inductive (unbounded in steps)** + 21 negative controls caught symbolically (`ERROR 12`), matching TLC. Added at 0.8.2: `InvUAF` (§4.8 refcount use-after-free) and ports for `Reentry`, `Authority`, `Bounds` and `Core` — four modules that previously had TLC coverage only. `CoreApalache`'s `InvComposed` is the **composed whole-protocol conjunction deferred since Phase 1**. |
 
 The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**204 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**238 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
-surface, the 9 non-vacuity witnesses, the four Apalache ports and three Spin re-encodings the
-coverage audit added, controls for all of it, and — in the second gate audit —
-`BindingReplayBug`, a control
-that existed on disk but was in no gate list, leaving `Binding.spthy`'s `no_replay` lemma
-with none.)
+surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
+audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a
+control that existed on disk but was in no gate list, leaving `Binding.spthy`'s `no_replay`
+lemma with none, plus two whole new modules. `ConnCodes` (§4.7 connection error codes) and
+`Bootstrap` (§6.9 pre-loaded handler safety) exist because the coverage grid listed both
+sections as covered when **nothing modeled either**: §4.7's only mention in the repo was the
+far end of a section range in one comment, and both of §6.9's were disclaimers saying
+bootstrap is not modeled. Modeling §4.7 then surfaced a **normative contradiction in the
+spec** — see §5. `docs/COVERAGE-MATRIX.md` §3a-b has the class and the `make coverage` gate
+that now checks the claim against the models' own citations.)
 Method note: the first
 automated pass ran all three matrices concurrently, which produced four spurious
 failures from an SELinux `:Z` bind-mount relabel race (three concurrent containers on
@@ -184,7 +190,7 @@ load-bearing ones:
   worst case for the concurrency bugs (Class-G is deterministic at N=2). That bound is no
   longer the whole story: **Apalache proves each module's key safety invariant *inductive*
   (`Init⇒Inv`, `Inv∧Next⇒Inv'`), i.e. for all states, not just the enumerated ones**
-  (**18 invariants across all 9 modules**, including the composed whole-protocol conjunction).
+  (**23 invariants across all 11 modules**, including the composed whole-protocol conjunction).
   What remains bounded-only is **liveness** (deadlock-/stall-freedom, settling, convergence) —
   Apalache does safety/inductive by construction, so liveness stays TLC + Spin at the modeled
   bound. Note also that "unbounded" here means unbounded in *steps*: the peer set is fixed at
@@ -198,21 +204,35 @@ load-bearing ones:
 
 ## 5. Findings and residual risk
 
-**Findings routed to architecture: none new.** The models *re-derived* the known
-Class-G reentry deadlock (already fixed upstream) and otherwise confirmed the pinned
-design admits no deadlock, store race, resource leak, registration partial-residue,
-emit mis-fire, Layer-1 verdict leak, or — under an active attacker — forgery,
-escalation, replay, deep cross-peer frame confusion, threshold bypass, or
-"trusted-forever" fail-open, at the modeled bound. Per repo discipline any defect
-would be a proposal/review-note in `entity-core-protocol`, never a spec edit here.
+**One finding routed to `entity-core-protocol`: §4.6 step 1 and §4.7's table give
+contradictory normative answers for the same input.** An `authenticate` frame arriving
+before any hello nonce was issued is named explicitly by both, and they disagree on the
+reason code *and* the status class — §4.6 step 1 says **401 `invalid_nonce`**, §4.7 table
+row 10 says **400 `connection_sequence_error`**. Both are MUSTs, and §4.7's own preamble
+("an impl that collapses several of these to one code, **or returns a different status**, is
+non-conformant") makes each reading non-conformant by the other's lights. The disagreement
+lands on `result.data.code`, the field §4.7 says clients key error handling off, so two
+conformant peers can give a client different instructions for the same failure. Exhibited
+independently by **all three TLA+-track engines** (`ConnCodesSeqReadingBug.cfg` /
+`ConstInitSeqReading` / `DEFS=-DSEQREADING`) — the only control in this repo whose "defect"
+is a conformant reading of the spec rather than something injected. Full statement and a
+suggested resolution: `docs/PROPERTIES.md` §D.1. Per repo discipline it is a proposal in the
+sibling protocol repo, never a spec edit here.
+
+**Otherwise none new.** The models *re-derived* the known Class-G reentry deadlock (already
+fixed upstream) and otherwise confirmed the pinned design admits no deadlock, store race,
+resource leak, registration partial-residue, emit mis-fire, Layer-1 verdict leak,
+bootstrap-ordering hazard, or — under an active attacker — forgery, escalation, replay, deep
+cross-peer frame confusion, threshold bypass, or "trusted-forever" fail-open, at the modeled
+bound.
 
 **Residual risk, ranked (carried verbatim from the reports — not papered over):**
 
 1. **TLA+ cross-check: complete across every modeled subsystem (was the highest risk;
    now retired).** The TLA+ track is no longer singly attested on any module: Spin
-   independently re-encodes all **9** concurrency modules (reproducing the Class-G deadlock and
-   reaching TLC's verdict on every defect), and Apalache proves **18 safety invariants across
-   all 9** **inductive (unbounded in steps)** — both engines agreeing with TLC on green and
+   independently re-encodes all **11** modules (reproducing the Class-G deadlock and
+   reaching TLC's verdict on every defect), and Apalache proves **23 safety invariants across
+   all 11** **inductive (unbounded in steps)** — both engines agreeing with TLC on green and
    every negative control (`docs/CROSSCHECK-RESULTS.md`). **Nothing is deferred**, including
    the composed Core-conjunction. The 5th wall is now **substantially narrowed** — two
    independent paradigms agree across the whole surface — but **not closed**: they could in
@@ -245,22 +265,38 @@ would be a proposal/review-note in `entity-core-protocol`, never a spec edit her
    decidable EPR fragment, `mypyvy`, or TLAPS), which proves an inductive invariant for all
    N. Revocation propagation (§5.10) and cross-peer chain topology (§5.8) are where N > 2
    is most plausible. `docs/STATUS.md` §Next item 5.
-7. **The Lean↔model seam is asserted, not checked.** `docs/ASSURANCE-MAP.md` divides labour:
-   Lean owns the authority-logic interior, TLA+ and Tamarin abstract it to a predicate /
-   function symbol. That division is sound only if the property each model **assumes** of the
-   abstraction is the property Lean **proves** — and nothing writes the correspondence down,
-   so nothing checks it. At least nine correspondences exist (§5.10 determinism ↔
-   `verifyChain_time_stable`; §5.2 deny-by-default ↔ `checkPermission_no_grants_deny`; §6.2
-   namespace guard ↔ `grantPattern_namespace_isolation`; §3.6 K-of-N ↔
-   `multiSigRootOk_quorum`; and others). Spot-checks find them consistent — in the one
-   examined closely, Lean's theorem is the *stronger* of the pair — but a spot-check is the
-   standard this repo refuses everywhere else. An **assumption ledger** and
-   **counterexample-replay differential checking** are the two proposed closures;
-   `docs/STATUS.md` §Next item 4.
-8. **Two negative controls are weak, and two section rows are single-engine.**
-   `DeepChainBug`/`DeepChainNBug` falsify their lemma in a variant whose honest path is
-   unreachable at 2 steps; §4.7 (Apalache-only) and §6.9 (TLC-only) rest on one engine each.
-   Both are declared in `docs/COVERAGE-MATRIX.md` and open.
+7. **The Lean↔model seam is written down but not machine-checked.**
+   `docs/ASSURANCE-MAP.md` divides labour: Lean owns the authority-logic interior, TLA+ and
+   Tamarin abstract it to a predicate / function symbol. That division is sound only if the
+   property each model **assumes** of the abstraction is the property Lean **proves**, and
+   that correspondence now lives in **`docs/LEAN-SEAM.md`** — 21 Lean theorems cited by
+   `(name, file, sha256)`, one rejected correspondence pinned as such, each row carrying a
+   verdict and any residual hypothesis. `make leanseam` fails when the cited Lean text moves.
+
+   Two rows are **not** closed, and writing the ledger is what surfaced both. **L1:**
+   `verifyChain` takes `localPeer` as an argument and §5.5a's granter frame threads it through
+   the walk, so the structural verdict is not peer-independent and `Revoke.tla`'s cross-peer
+   abstraction holds only where the two peers' frames agree — a restriction the model does not
+   state. **L7:** §5.5a namespace isolation is covered by ProVerif/Tamarin *and* by Lean, and
+   **both rest on the same unproved proposition** — that canonicalization roots a relative
+   pattern at the granter's namespace. Lean takes it as the hypothesis `hframed` and declines
+   to prove it; ProVerif asserts it as a rewrite rule. Redundancy counted by *engine* cannot
+   see that.
+
+   **The residual risk is that the ledger is a human reading of two texts.** The gate detects
+   that one of them changed; it cannot tell you the reading was right. Replaying Apalache
+   `.itf.json` counterexamples through the Lean executable model is the only proposed closure
+   that puts a machine on this half of the wall. `docs/STATUS.md` §Next item 4.
+8. **~~Two weak controls and two single-engine section rows.~~ Both closed, and neither was
+   what it looked like.** All *three* controls that falsified their own reachability lemma —
+   `ChainTopologyBug` as well as `DeepChainBug`/`DeepChainNBug` — now carry a §5.5a
+   absolute-form leaf, which is frame-independent and so beyond reach of a
+   canonicalization-frame defect; the honest path survives and each falsifies its target
+   alone. §4.7 and §6.9 were not single-engine results but **phantom rows** — a section-range
+   endpoint and an out-of-scope disclaimer, each counted as a citation — and are now real
+   modules on all three engines. `make coverage` makes that class of mistake a build failure
+   (`docs/COVERAGE-MATRIX.md` §3a-b). What remains single-engine is §3.3, and only as the
+   *subject* of §6.11(a′) rather than as a property in its own right.
 
 ## 6. Bottom line
 

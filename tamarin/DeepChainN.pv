@@ -92,7 +92,14 @@ let DelegB(gB: pkey) =
   let (=gB, =allp, gAp: pkey) = checksign(lc1, pk(skA)) in   (* link A->B signed by A *)
   in(net, gC: pkey);
   event DelegatedLeaf(gB, gC);
-  out(net, sign((gC, star, gB), skB)).                       (* leaf B->C: bare star, parent B *)
+  out(net, sign((gC, star, gB), skB));                       (* leaf B->C: bare star, parent B *)
+  (* B ALSO delegates at the ABSOLUTE form `/B/*` = awild(gB). §5.5a: an absolute pattern
+   * names its namespace outright, so canon leaves it alone in EVERY frame
+   * (canon(awild(p), fr) = awild(p) above) and the foreign-granter defect cannot reach it.
+   * Added at the 0.8.2 second gate audit: without it, DeepChainNBug's mis-framing moved the
+   * ONLY leaf out of B's namespace, so the control falsified its own non-vacuity query
+   * alongside the security one and could not show which had broken. *)
+  out(net, sign((gC, awild(gB), gB), skB)).
 
 (* Verifier dispatch (§5.5 + §5.5a): root(V->A) + link(A->B) + leaf(B->C). Canonicalizes
  * the leaf pattern against the LEAF's granter frame (gB = B). *)

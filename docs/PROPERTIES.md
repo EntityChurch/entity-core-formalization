@@ -40,7 +40,7 @@ that is the mitigation, not a closure. Human review against the vendored spec ow
 
 ## A. Concurrency / distributed correctness (TLA+ track)
 
-### A1 — PROVEN unbounded (Apalache inductive): 18 safety invariants / 9 modules
+### A1 — PROVEN unbounded (Apalache inductive): 23 safety invariants / 11 modules
 
 These are the key **safety** invariants of each concurrency module, proven
 inductive — they hold in every reachable state, for any number of peers/requests,
@@ -61,9 +61,21 @@ not just the enumerated ones.
 | **Authority** | **`InvGrantless` / `InvEntry` / `InvResource` / `InvTarget`** | **§5.2** | **all four 0.8.2 dispatch-authority rules** |
 | **Bounds** | **`InvBrake` / `InvCount` / `InvCodes`** | **§5.9 / §4.10(b)** | **depth brake before TTL; single decrement; distinct reason strings — over SYMBOLIC constants** |
 | **Core** | **`InvComposed`** | **all of the above, together** | **the composed whole-protocol safety conjunction** |
+| **ConnCodes** | **`ReasonCodesDistinct` / `StatusMatchesCode`** | **§4.7** | **distinct failures never share a reason code; each code carries the status the table fixes — over BOTH permitted readings of the contested §4.6/§4.7 cell** |
+| **Bootstrap** | **`InvAllOrNothing` / `InvRegGate` / `InvConnect`** | **§6.9** | **nothing dispatch-visible before all its facets exist; registration only after all three bootstrap handlers do; connect pre-authorized** |
 
-Three of these deserve a note:
+Five of these deserve a note:
 
+- **`ConnCodes` and `Bootstrap` exist because the coverage grid was wrong about them.**
+  §4.7 was listed as an Apalache-only result and §6.9 as a TLC-only one; in fact **neither was
+  modeled at all** — §4.7's sole mention in the repo was the far end of a section range in one
+  comment, and both of §6.9's were disclaimers saying bootstrap is not modeled
+  (`docs/COVERAGE-MATRIX.md` §3a). Both are now on all three engines, and modeling §4.7
+  surfaced the spec contradiction in §D.1.
+- **`ConnCodes`'s two invariants are proven over a SYMBOLIC `PreHelloAuthRow`**, ranging over
+  both readings the spec's two clauses permit rather than one chosen reading. The §4.6-step-1
+  property itself is deliberately *not* in the inductive invariant: it is false under one of
+  the two permitted assignments, and that is the finding.
 - **`Core`'s `InvComposed` was the last deferred item in the repo.** It had been carried
   since Phase 1 as "consciously deferred, lowest value" on the reasoning that each invariant
   is proven separately and Spin corroborates the deadlock. That does not survive scrutiny:
@@ -88,10 +100,12 @@ Reproduce: `make -C tla apalache-green` (each: base case length 0 + inductive st
 ### A2 — MODELED, bounded-exhaustive (TLC + Spin): everything, incl. ALL liveness
 
 At the tight bound (2 peers — the faithful worst case; the Class-G reentry deadlock
-is deterministic at N=2), TLC enumerates every interleaving over **9 modules** and Spin
-**independently re-encodes all 9** from the spec (a different formalism — explicit-state
+is deterministic at N=2), TLC enumerates every interleaving over **11 modules** and Spin
+**independently re-encodes all 11** from the spec (a different formalism — explicit-state
 Promela — agreeing corroborates the transcription). At v0.8.0 Spin covered 6 of them and the
-composed `Core` model had no independent encoding at all; the 0.8.2 audit closed that.
+composed `Core` model had no independent encoding at all; the 0.8.2 audit closed that. The
+second gate audit added `ConnCodes` (§4.7) and `Bootstrap` (§6.9), both on all three engines
+from the day they landed.
 
 - **Safety** at the bound: all of A1 **plus** the composed 2-peer `Core` model
   (deadlock-free establish→request→revoke), plus the two modules added at 0.8.2:
@@ -140,7 +154,8 @@ Tamarin proves 14). Unbounded in sessions/attacker behaviour; crypto is ideal.
 > `no_replay` was a green lemma the reports quote with **no control running anywhere in the
 > matrix**. The control was fine when run (wellformedness clean; `binding` still verified, so
 > the defect is replay-specific; `no_replay` falsified; reachability intact). It is now in
-> `TM_NEG`, which takes the matrix to **204 runs**.
+> `TM_NEG`, which took the matrix to **204 runs** at the time (238 now — see the inventory
+> below and `docs/STATUS.md`).
 
 | Lemma | Property | V8 basis |
 |---|---|---|
@@ -272,20 +287,24 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Ten targets decide the 204 runs:
+     the finding is what made that discipline necessary). Ten targets decide the 238 runs:
 
      | Target | Runs | Grades on |
      |---|---|---|
-     | `tlc-green` | 10 | TLC exit status — fail-safe: a tool error also fails the build |
-     | `tlc-neg` | 30 | declared verdict line per row |
-     | `tlc-witness` | 9 | **now** declared violation line per row |
-     | `apalache-green` | 36 | Apalache exit status — fail-safe, same reason |
-     | `apalache-neg` | 15 | **now** `EXITCODE: ERROR (12)`, not merely non-zero |
-     | `spin green` | 16 | explicit `errors: 0` |
-     | `spin neg` | 29 | positive `errors: N` |
-     | `proverif-green` | 15 | **now** `PV_EXPECT`, per query |
-     | `proverif-neg` | 15 | **now** `PV_NEG_EXPECT`, per query |
-     | `tamarin-green` / `-neg` | 14 / 14 | **now** `TM_EXPECT` / `TM_NEG_EXPECT`, per lemma, + wellformedness |
+     | `tlc-green` | 12 | TLC exit status — fail-safe: a tool error also fails the build |
+     | `tlc-neg` | 36 | declared verdict line per row |
+     | `tlc-witness` | 11 | declared violation line per row |
+     | `apalache-green` | 46 | Apalache exit status — fail-safe, same reason |
+     | `apalache-neg` | 21 | `EXITCODE: ERROR (12)`, not merely non-zero |
+     | `spin green` | 18 | explicit `errors: 0` |
+     | `spin neg` | 35 | **now** the declared pan failure signature, matched against the `pan:N:` error line — a positive `errors: N` alone cannot tell a caught assertion from a deadlock |
+     | `proverif-green` | 15 | `PV_EXPECT`, per query |
+     | `proverif-neg` | 15 | `PV_NEG_EXPECT`, per query |
+     | `tamarin-green` / `-neg` | 14 / 15 | `TM_EXPECT` / `TM_NEG_EXPECT`, per lemma, + wellformedness |
+
+     An eleventh target now grades a **number** rather than a run: `make coverage` checks the
+     coverage claim in `COVERAGE-MATRIX.md` against the models' own `§`-citations (AGENTS.md
+     D15). It is not counted in the 238 because it verifies no model.
 
      The two "fail-safe" rows are the ones where grading on exit status is *sound*: a green
      slice wants the run to succeed, so any failure — verification or tool — correctly fails
@@ -355,7 +374,41 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
 Per repo discipline any defect is a proposal/review-note in the sibling protocol repo,
 **never a spec edit here.**
 
-1. **§5.9 recommended TTL/`chain_depth` ratio has zero margin at worst-case fan-out.**
+1. **§4.6 step 1 and §4.7's table give contradictory normative answers for the same input.**
+   *This is the first finding here that is a genuine defect in the spec text rather than a
+   boundary worth stating, and it is the only one machine-exhibited by all three TLA+-track
+   engines.* An `authenticate` frame arriving before any hello nonce has been issued is named
+   explicitly by both clauses, which disagree on the code **and** the status class:
+
+   | Clause | Says | Code | Status |
+   |---|---|---|---|
+   | §4.6 step 1 (Nonce-echo, normative) | "A mismatch — **or an `authenticate` received before any hello nonce was issued** — MUST be rejected with status 401 `invalid_nonce`." | `invalid_nonce` | **401** |
+   | §4.7 table row 10 (normative MUST-emit contract) | "Out-of-order operation (**e.g., authenticate before hello**)" | `connection_sequence_error` | **400** |
+
+   Both are MUSTs. §4.7's preamble then forbids the divergence it creates: the table is "a
+   normative MUST-emit contract ... an impl that collapses several of these to one code, **or
+   returns a different status**, is non-conformant". So whichever clause an implementation
+   follows, the other one calls it non-conformant — and the disagreement lands on
+   `result.data.code`, the exact field §4.7 says "clients key error handling off". 401 and
+   400 are also different *classes*: one is the authentication boundary (§4.6), the other is
+   a client-correctable structural error. A client that retries on 400 and re-authenticates
+   on 401 behaves differently against two conformant peers.
+
+   Two conformant readings, so the models check **both** rather than picking one: the row
+   assignment for a pre-hello `authenticate` is a constant (`PreHelloAuthRow` /
+   `PREHELLO_ROW`), and the §4.7 reading violates §4.6 step 1 transcribed as an invariant.
+   Reproduce — the only control in this repo whose "defect" is a conformant reading of the
+   spec rather than something injected:
+   `tla/ConnCodesSeqReadingBug.cfg` (TLC) · `ConstInitSeqReading` (Apalache) ·
+   `make verify MODEL=conncodes DEFS=-DSEQREADING` (Spin).
+
+   **Suggested resolution** (for the sibling repo to decide, not this one): §4.6 step 1 is
+   the more specific and more recently hardened clause, and the 401 classification matches
+   the other two step-failures (`authentication_failed`, `identity_mismatch`). Narrowing
+   §4.7 row 10's parenthetical to an example that is *not* the pre-hello authenticate — a
+   second `hello` after `hello_done`, say — removes the overlap without touching §4.6.
+
+2. **§5.9 recommended TTL/`chain_depth` ratio has zero margin at worst-case fan-out.**
    §5.9 requires the ratio be "chosen so the deterministic depth brake engages before the
    TTL backstop **under the peer's worst-case sub-dispatch fan-out**", and recommends 8×
    (seed 512 at ceiling 64). `Bounds` shows the property needs
@@ -365,7 +418,7 @@ Per repo discipline any defect is a proposal/review-note in the sibling protocol
    worst-case fan-out of 8 therefore has no margin. This is **not** a claim the default
    is wrong — §5.9 explicitly puts the choice on the deployment — but the boundary is
    worth stating where operators will read it. Reproduce: `BoundsRatioBug.cfg`.
-2. **§5.8's topology rule is load-bearing for this repo's own prior results.** See §B1:
+3. **§5.8's topology rule is load-bearing for this repo's own prior results.** See §B1:
    the pre-0.8.2 `DeepChain` models sit in exactly the same-peer topology §5.8 says cannot
    witness a cross-peer seam. Recorded as a note on modeling practice for anyone building
    cross-peer chain-construction tests, not as a spec defect.

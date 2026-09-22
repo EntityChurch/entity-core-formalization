@@ -54,6 +54,43 @@ rule DelegateB:
   --[ Eq(verify(sigA, mlink, gAp), true), DelegatedLeaf(pk(~skB), gC) ]->
     [ Out(<gC, 'star', pk(~skB), lsig>) ]
 
+// B ALSO delegates at the ABSOLUTE form '/B/*' (<'awild', B>). §5.5a: an absolute pattern
+// names its namespace outright, so it is frame-independent — there is nothing to
+// canonicalize and the foreign-granter defect cannot reach it. Added at the 0.8.2 second
+// gate audit; these two rules are byte-identical in DeepChainN.spthy — this control still
+// differs from its green twin by exactly the injected defect, one Eq() term. They are what
+// keeps the honest path alive under it, so the control falsifies its TARGET alone instead
+// of taking its own non-vacuity lemma down with it.
+rule DelegateB_Abs:
+    let mlink = <pk(~skB), 'allp', gAp>
+        pat   = <'awild', pk(~skB)>
+        mleaf = <gC, pat, pk(~skB)>
+        lsig  = sign(mleaf, ~skB)
+    in
+    [ !LtkB(~skB), !PkA(gAp), In(<pk(~skB), 'allp', gAp, sigA>), In(gC) ]
+  --[ Eq(verify(sigA, mlink, gAp), true), DelegatedLeaf(pk(~skB), gC) ]->
+    [ Out(<gC, pat, pk(~skB), lsig>) ]
+
+// Verifier dispatch for the ABSOLUTE-form leaf: the request namespace is bound to the
+// pattern's OWN peer `p`, never to any frame.
+rule Verify_AbsLeaf:
+    let mroot = <gA, 'allp'>
+        mlink = <gB, 'allp', gA>
+        pat   = <'awild', p>
+        mleaf = <gC, pat, gB>
+    in
+    [ !PkV(pkV), !PkA(gA), !PkB(gB),
+      In(<gA, 'allp', sigroot>),
+      In(<gB, 'allp', gA, siglink>),
+      In(<gC, pat, gB, sigleaf>),
+      In(<reqns, path>) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true),
+      Eq(verify(siglink, mlink, gA),  true),
+      Eq(verify(sigleaf, mleaf, gB),  true),
+      Eq(reqns, p),                           // §5.5a: absolute form is frame-independent
+      Authorized(res(reqns, path)) ]->
+    [ ]
+
 // BUG: bind the request to the VERIFIER frame pkV, not the leaf granter B.
 rule Verify_StarLeaf:
     let mroot = <gA, 'allp'>

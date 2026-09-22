@@ -6,9 +6,9 @@ in the assurance family without a parallel attestation; they now have two, on bo
 dimensions that gap was about — **independent re-encoding** (Spin) and **unbounded proof**
 (Apalache).
 
-**Coverage now (was: priority surface only):** **all 9** concurrency modules have an
+**Coverage now (was: priority surface only):** **all 11** modules have an
 independent **Spin** re-encoding (`Reentry`, `Conn`, `Store`, `Revoke`, `Emit`, `Register`,
-`Core`, `Authority`, `Bounds`), and **18 safety invariants across all 9** are proven
+`Core`, `Authority`, `Bounds`, `ConnCodes`, `Bootstrap`), and **23 safety invariants across all 11** are proven
 **inductive (unbounded in steps) in Apalache**. Both engines agree with TLC on every secure
 result and every negative control, and **nothing is deferred** — the composed
 *Core-conjunction* inductive invariant, carried as the one optional deferral since Phase 1,
@@ -25,7 +25,7 @@ Read with `tla/PHASE1-FORMALIZATION-REPORT.md` (the models being corroborated).
 > independent encoding at all**, which the 0.8.2 audit identified as the worst-placed gap in
 > the repo. **29 negative controls**, up from 6 wired into the gate.
 >
-> Apalache went from 9 invariants over 5 modules to **18 over all 9**, including the composed
+> Apalache went from 9 invariants over 5 modules to **23 over all 11**, including the composed
 > conjunction (`CoreApalache.InvComposed`) that had been carried as "consciously deferred"
 > since Phase 1. Every module is now checked by all three engines; nothing is deferred.
 >
@@ -166,14 +166,18 @@ use `--init=Init --length=0` for the base case and `--cinit=ConstInitBug*` for t
 
 ## Coverage — what is and isn't cross-checked (honest scope)
 
-- **Spin (fidelity): all 9 concurrency modules.** `Reentry`, `Conn`, `Store`, `Revoke`,
+- **Spin (fidelity): all 11 modules.** `Reentry`, `Conn`, `Store`, `Revoke`,
   `Emit`, `Register`, `Core` (the marquee deadlock, and the composed model — which had **no**
-  independent encoding before the 0.8.2 audit), plus `Authority` and `Bounds` structurally.
-  Each with a clean fix and every negative control caught the same way the matching TLC
-  control fails.
-- **Apalache (unbounded in steps): 18 safety invariants across all 9 modules** — `Revoke` (2),
+  independent encoding before the 0.8.2 audit), plus `Authority`, `Bounds`, `ConnCodes` and
+  `Bootstrap` structurally. Each with a clean fix and every negative control caught the same
+  way the matching TLC control fails.
+- **Apalache (unbounded in steps): 23 safety invariants across all 11 modules** — `Revoke` (2),
   `Store` (3), `Conn` (1), `Emit` (2), `Register` (1), `Reentry` (1), `Authority` (4),
-  `Bounds` (3), `Core` (1) — proven inductive, controls caught. Liveness is out of Apalache's
+  `Bounds` (3), `Core` (1), `ConnCodes` (2), `Bootstrap` (3) — proven inductive, controls
+  caught. `ConnCodesApalache` ranges `PreHelloAuthRow` over **both** readings of the
+  contested §4.6-step-1-vs-§4.7-row-10 cell, so its result covers every row assignment the
+  spec's two clauses permit rather than one chosen reading — the honest shape for a property
+  whose input is a spec ambiguity (`docs/PROPERTIES.md` §D.1). Liveness is out of Apalache's
   scope by construction (left to TLC + Spin); `Conn`'s `TokenBounded` and `Register`'s
   relational `IndexMatchesTree` are deliberately left to TLC + Spin (the inductive port adds
   no fidelity over what Spin already corroborates — stated in each module header).

@@ -96,7 +96,7 @@ define
   \* §4.8 (0.8.1, RT-13a) — THE USE-AFTER-FREE PREDICATE. A key absent from the store has
   \* been freed; if any request still holds a reference to it, that reference is dangling.
   \* On a manually-memory-managed substrate this is the double-free / use-after-free the
-  \* §7b concurrency gate observed, and §4.8 classes it as a crash == a §4.9 violation.
+  \* keystone's section-7b concurrency gate observed, and §4.8 classes it as a crash == a §4.9 violation.
   NoUseAfterFree    == \A k \in StoreKeys : (k \notin store) => (holders[k] = {})
 
   \* §4.9(b)/§4.10: resource use is bounded under load. pending never exceeds the admission

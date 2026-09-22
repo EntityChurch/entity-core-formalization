@@ -88,6 +88,41 @@ rule Setup_Canon:
 rule Setup_Cov:
     [ In(p), In(path) ] --> [ !Cov(<'awild', p>, <'res', p, path>) ]
 
+// A ALSO delegates at the ABSOLUTE form '/A/*'. §5.5a: an absolute pattern names its
+// namespace outright, so it canonicalizes to itself in EVERY frame (Setup_Canon_Abs below)
+// and no choice of verifier frame can mis-resolve it. Added at the 0.8.2 second gate audit:
+// these three rules are byte-identical in ChainTopologyBug.spthy, and they are what keeps
+// that control's honest path alive under the injected defect, so it falsifies its TARGET
+// security lemma alone instead of taking its own reachability lemma down with it.
+rule Leaf_Delegate_Abs:
+    let pat = <'awild', pk(~skA)>
+        lm  = <gB, pat, pk(~skA)>  lsig = sign(lm, ~skA) in
+    [ !LtkA(~skA), In(gB) ]
+  --[ Delegated(pk(~skA), gB, pat) ]->
+    [ Out(<gB, pat, pk(~skA), lsig>) ]
+
+/* §5.5a: the ABSOLUTE form is frame-independent — canon is the identity on it, for any fr. */
+rule Setup_Canon_Abs:
+    [ In(p), In(fr) ] --> [ !Canon(<'awild', p>, fr, <'awild', p>) ]
+
+// Verifier dispatch for the ABSOLUTE-form leaf. Identical in ChainTopologyBug.spthy: the
+// defect is a choice of FRAME, and this pattern has no frame to get wrong.
+rule Verify_W_Abs:
+    let rm  = <gA, 'allp'>
+        pat = <'awild', p>
+        lm  = <gB, pat, gA>
+    in
+    [ !PkP(pkP), !PkA(gA), !PkW(pkW),
+      In(<gA, 'allp', rsig>),
+      In(<gB, pat, gA, lsig>),
+      !Canon(pat, gA, cpat),
+      !Cov(cpat, target) ]
+  --[ Eq(verify(rsig, rm, pkP), true),
+      Eq(verify(lsig, lm, gA), true),
+      Authorized(target) ]->
+    [ ]
+
+
 // THE THIRD-PARTY VERIFIER W (§5.8). W constructed no link and resolves every identity from
 // what the envelope carries. §5.5a: canonicalize the leaf against the LEAF'S OWN GRANTER
 // frame (gA) — not the root's, not its own. With P, A and W distinct, all three frames give

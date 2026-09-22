@@ -69,19 +69,26 @@ is the learning on-ramp; `docs/PROPERTIES.md` is the PROVEN/MODELED scorecard.
 
 **Status:** pinned at `v0.8.2` and `make specdrift` reports **no drift** — the models
 transcribe the live spec. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
-Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done; the 0.8.2
-re-target modeled the new normative surface (§6.11 (a′) frame-write atomicity, §4.8 refcount
-use-after-free, §5.6 malformed temporal ingest, §5.2 dispatch authority, §5.9 bounds) and the
-coverage audit closed every single-tool gap **at module granularity** — two remain at
-*section* granularity (§4.7 Apalache-only, §6.9 TLC-only; `COVERAGE-MATRIX.md` §3).
-No inductive invariant is deferred. The full **204-run** `make matrix` is the gate: all 9
-concurrency modules checked by TLC + Apalache (18 inductive invariants) + Spin, both provers
-running every attacker theory (15 ProVerif / 14 Tamarin lemmas), 104 negative controls and
-9 non-vacuity witnesses. `docs/COVERAGE-MATRIX.md` is the section×engine map and the limits;
-`docs/STATUS.md` §Next is the work-list; `docs/FINAL-ASSURANCE-SUMMARY.md` is the capstone.
+Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
+**238-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
+(15 ProVerif / 14 Tamarin lemmas), 92 negative controls and 11 non-vacuity witnesses.
+No inductive invariant is deferred; no control is known-weak.
+
+Two things are new and change how you read the rest. **`docs/LEAN-SEAM.md`** is the
+assumption ledger — per abstraction in the models, the proposition relied on and the Lean
+theorem (or sibling engine, or nothing) that discharges it, cited by content digest and
+gated by `make leanseam`. It is where the complementarity claim stops being prose.
+**`make coverage`** checks the coverage *claim* against the models' own `§`-citations,
+because two rows of the grid turned out to be phantoms. **One protocol finding is open** —
+§4.6 step 1 vs §4.7's table, `docs/PROPERTIES.md` §D.1 — routed to `entity-core-protocol`.
+`docs/COVERAGE-MATRIX.md` is the section×engine map and the limits; `docs/STATUS.md` §Next is
+the work-list; `docs/FINAL-ASSURANCE-SUMMARY.md` is the capstone.
 
 **The failure mode this repo actually has is in the verification, not the protocol** — every
-defect found by the last three audits was one, and they have earned two ratified disciplines.
+defect found by the last three audits was one, and they have earned three ratified
+disciplines. (The one exception is now `docs/PROPERTIES.md` §D.1 — a real contradiction in
+the spec text, surfaced by modeling a section the coverage grid wrongly claimed was covered.)
 
 ### D13 — a gate must assert the outcome it claims, not merely a symptom of it
 
@@ -89,17 +96,20 @@ For every grading target, answer in the file: **what does this assert, and what 
 satisfies it?** Exit status is almost never the answer. Demonstrated repeatedly here:
 ProVerif exits `0` with a *false* query; TLC exits non-zero for an undefined invariant exactly
 as for a violation; Apalache exits `255` for a config error and `12` for a counterexample;
-Spin prints `errors: 0` for a compile failure; Tamarin exits `0` while printing "the analysis
-results might be wrong"; and "some RESULT is false" is how a *passing* non-vacuity query
-reports, so a secure theory satisfied its own negative control's criterion. A control must
-fail **for its stated reason**, a green must **positively** report success, and a tool warning
-is a build failure.
+Spin prints `errors: 0` for a compile failure **and a positive `errors: N` for a deadlock,
+a broken liveness claim and a caught assertion alike**; Tamarin exits `0` while printing "the
+analysis results might be wrong"; and "some RESULT is false" is how a *passing* non-vacuity
+query reports, so a secure theory satisfied its own negative control's criterion. A control
+must fail **for its stated reason**, a green must **positively** report success, and a tool
+warning is a build failure.
 
 *Enforcement:* every row of `TLC_NEG`, `TLC_WITNESS`, `PV_EXPECT`, `PV_NEG_EXPECT`,
-`TM_EXPECT`, `TM_NEG_EXPECT` carries its expected verdict; `apalache-neg` requires
-`EXITCODE: ERROR (12)`; `spin/Makefile` requires a positive `errors: N` from controls and an
-explicit `errors: 0` from greens. Adding a run without adding its expected verdict fails the
-build — the graders reject a theory that declares nothing.
+`TM_EXPECT`, `TM_NEG_EXPECT`, **`SPIN_NEG`** carries its expected verdict; `apalache-neg`
+requires `EXITCODE: ERROR (12)`; `spin/neg` requires the declared **pan failure signature**
+(matched against the `pan:N:` error line only — the search-options header contains
+`invalid end state` in every run) and `spin/green` an explicit `errors: 0`. Adding a run
+without adding its expected verdict fails the build — the graders reject a theory that
+declares nothing.
 
 ### D14 — a finding is not closed until it is applied to every instance of its shape
 
@@ -111,10 +121,46 @@ the audit that hardened `tlc-neg`, Spin and Tamarin against exit-status grading 
 found only because a later pass re-asked the question of every target rather than the one that
 had failed.
 
+Twice more since: `spin/neg` was hardened against compile failure and exit status by the
+first audit and left grading on `errors: [1-9]`, which a *deadlocking* control satisfies —
+found when two brand-new controls did exactly that; and the three Tamarin controls that
+falsified their own reachability lemma were **disclosed** rather than fixed, then all three
+narrowed together once the move was found for one.
+
 *Enforcement:* a fix whose finding names a mechanism (a grading criterion, an idiom, a
 tool behaviour) must list every site of that mechanism and its disposition in
 `docs/PROPERTIES.md` §C or `docs/STATUS.md`. `grep -n 'dev/null' */Makefile` is the specific
 tripwire for this family: discarded output is the tell.
+
+### D15 — a derived number is a claim; derive it from claims, and gate it
+
+D13 applies to **metrics**, not only to graders. Ask of any number this repo publishes: *what
+does it assert, and what else produces it?* Deriving a figure from the artifacts instead of
+choosing it by hand feels like it settles the question and does not: the derivation is only
+as honest as what it counts, and it is written into prose that nothing re-reads.
+
+Earned on the coverage grid, in two different shapes and then a third. Matrix A is derived
+from the models' own `§`-citations precisely so the number cannot be hand-picked — and a `§`
+mention is not a claim of coverage. **§4.7** was counted because a header comment wrote a
+section *range* with a sigil on both ends, so the endpoint scanned as a citation; **§6.9**
+because both of its mentions were out-of-scope **disclaimers** saying bootstrap is not
+modeled. Two rows of the published grid described work that did not exist, through a
+release. Then, within the hour of writing the rule down, the two new modules closing those
+gaps shipped three fresh phantoms of the same kind (`§1.2`, `§1.5`, `§2.11`, all inside
+scope notes) — which is the argument for the gate over the discipline alone.
+
+*Enforcement:* `make coverage` (`tools/coverage-check.py`), in `check` and `matrix`. It
+asserts the cited `§N.M` set equals Matrix A's rows **in both directions**, that the stated
+numerator and denominator match, and that neither citation-hygiene tripwire fires. It states
+in the file what it does **not** assert — the engine columns — rather than letting a reader
+assume the whole grid is machine-checked. The residue is named in `docs/STATUS.md` §Next
+item 9: the run-count totals quoted in prose are still hand-derived from the gate tables.
+
+*Corollary, learned by getting it wrong twice in one session:* **teeth-test a gate rather
+than reasoning about it.** The first draft of the Spin failure-signature check matched
+`invalid end state` against pan's whole output — where that string appears in the
+*search-options header of every run* — so the two rows that legitimately expect a deadlock
+asserted nothing. Reading the code did not catch it; deliberately breaking a control did.
 
 ## Boundaries — do NOT modify
 

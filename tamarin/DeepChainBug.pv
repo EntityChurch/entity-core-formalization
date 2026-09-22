@@ -3,6 +3,13 @@
  * cross-peer-escalation query to FALSIFY: A's bare-star leaf, mis-canonicalized
  * against V, widens into V's namespace and the verifier authorizes a cross-peer
  * request it must deny. The FOREIGN-GRANTER / captok_form_dispatch_minted_pl bug class.
+ *
+ * NARROWED at the 0.8.2 second gate audit — see the absolute-form leaf in Delegator. This
+ * control used to falsify BOTH queries: the mis-framed bare-star leaf was the only leaf, so
+ * widening it into V's namespace narrowed it out of A's, and the non-vacuity query died with
+ * the security one. A control that kills its own witness cannot show that the SECURITY
+ * property is what broke. The absolute leaf is frame-independent by §5.5a, so it survives the
+ * defect and A's namespace stays reachable; the control now falsifies its target alone.
  * canonicalizes against ITS OWN GRANTER's peer frame — NOT the verifier's. A bare `*`
  * means `/{granter}/*` (the granter's namespace), never a universal cross-peer wildcard
  * and never the verifier's namespace. The bug class (AUTHZ-ATTENUATION-FOREIGN-GRANTER-*,
@@ -90,7 +97,14 @@ let Delegator(gA: pkey) =
   let (=gA, rres: bitstring) = checksign(rc, pk(skV)) in   (* root signed by V, grantee A *)
   in(net, gB: pkey);
   event Delegated(gA, gB, star);
-  out(net, sign((gB, star, gA), skA)).                     (* leaf: (grantee, pattern, parent-granter A) *)
+  out(net, sign((gB, star, gA), skA));                     (* leaf: (grantee, pattern, parent-granter A) *)
+  (* A ALSO delegates at the ABSOLUTE form `/A/*` = awild(gA). §5.5a: an absolute pattern
+   * names its namespace outright, so canon leaves it alone in EVERY frame
+   * (canon(awild(p), fr) = awild(p) above) and the foreign-granter defect cannot touch it.
+   * Added at the 0.8.2 second gate audit: without it, DeepChainBug's mis-framing moved the
+   * ONLY leaf out of A's namespace, so the control falsified its own non-vacuity query
+   * alongside the security one and could not show which had broken. *)
+  out(net, sign((gB, awild(gA), gA), skA)).
 
 (* Verifier dispatch (V7 §5.5 + §5.5a). Accepts root(V->A) + leaf(A->B), then checks the
  * request's target resource is covered by the leaf, canonicalizing the leaf pattern

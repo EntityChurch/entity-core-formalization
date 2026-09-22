@@ -73,6 +73,12 @@ blurb = "How far the pinned spec snapshot has aged behind the live protocol, by 
 group = "Assurance"
 
 [[doc]]
+path  = "docs/LEAN-SEAM.md"
+title = "The assumption ledger — what the models take on faith, and who discharges it"
+blurb = "Per abstraction in the models: the proposition relied on, and what discharges it — the Lean authority proof in the keystone peer, another engine here, or nothing. Turns the division of labour between tools from prose into a checkable artifact. Check it with `make leanseam`."
+group = "Assurance"
+
+[[doc]]
 path  = "docs/ASSURANCE-MAP.md"
 title = "Assurance Map & the limits walls"
 blurb = "The complete formal-assurance map and the trust boundaries — above all the 5th wall (spec↔model fidelity)."

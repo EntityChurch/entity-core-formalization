@@ -56,8 +56,8 @@ ltl:
 shell:
 	$(PODMAN) run --rm -it $(PODMAN_RUN_CAPS) $(MOUNT) --entrypoint /bin/sh $(IMAGE)
 
-# Green sweep — the independent-encoding cross-check of all 9 concurrency modules
-# (7 with an LTL claim below, plus the 2 structural ones in SPIN_GREEN_SAFETY):
+# Green sweep — the independent-encoding cross-check of all 11 modules
+# (7 with an LTL claim below, plus the 4 structural ones in SPIN_GREEN_SAFETY):
 # exhaustive SAFETY (verify) + LTL LIVENESS (ltl) on each FIXED model (no DEFS).
 # Defect variants (DEFS=-D<DEFECT>) are the negative controls, run separately.
 # Models carrying an LTL liveness claim — checked BOTH ways (safety + acceptance cycles).
@@ -65,53 +65,99 @@ shell:
 # re-encoding at all, which the audit flagged as the worst-placed single-tool gap in the repo.
 SPIN_GREEN := reentry conn store revoke emit register core
 
-# Structural models with no concurrency and therefore no LTL claim — safety only. Added at
-# 0.8.2 alongside their TLA+ modules, which had shipped with TLC coverage only. Spin's
-# contribution here is an independently-written enumerator agreeing on the verdicts, NOT
-# interleaving search; that weaker form of corroboration is stated in each .pml header.
-SPIN_GREEN_SAFETY := authority bounds
+# Structural models with no concurrency and therefore no LTL claim — safety only. `authority`
+# and `bounds` were added at 0.8.2 alongside their TLA+ modules, which had shipped with TLC
+# coverage only; `conncodes` (§4.7) and `bootstrap` (§6.9) at the second gate audit, alongside
+# brand-new TLA+ modules for two sections the coverage grid claimed were covered when nothing
+# modeled them (../docs/COVERAGE-MATRIX.md §3a). Spin's contribution here is an
+# independently-written enumerator agreeing on the verdicts, NOT interleaving search; that
+# weaker form of corroboration is stated in each .pml header.
+SPIN_GREEN_SAFETY := authority bounds conncodes bootstrap
 
 # NEGATIVE CONTROLS — each row MUST report errors > 0. Format: MODEL DEFS MODE.
 # MODE is `safety` (assertions / invalid-end) or `ltl` (acceptance cycles under -a -f).
 # Added at 0.8.2: store NOSYNCREFS (§4.8 RT-13a refcount use-after-free) and
 # reentry NOATOMICFRAME (§6.11(a') frame-write atomicity).
+# NEGATIVE CONTROLS — each row MUST fail, AND MUST FAIL FOR THE STATED REASON.
+# Format: MODEL|DEFS|MODE|expected pan failure signature.
+# MODE is `safety` (assertions / invalid-end) or `ltl` (acceptance cycles under -a -f).
+#
+# THE FOURTH FIELD was added at the second gate audit. Before it this target graded on
+# `errors: [1-9]` alone, which cannot distinguish HOW a control failed — and pan has three
+# unrelated ways to report a positive error count:
+#   assertion violated <expr>   the targeted property broke                  <- the only pass
+#   invalid end state           the model DEADLOCKED (or a process blocked)
+#   acceptance cycle            a liveness claim broke
+# So a control whose model blocks on a mis-written guard scores exactly as one that catches
+# its defect. That is not hypothetical: writing bootstrap.pml's registration precondition as
+# a two-stage guard `(!registered) -> (index...) ->` made -DGATEONE and -DNOCONNGATE both
+# report `errors: 1` from an invalid end state, never reaching their assertions, and the old
+# criterion accepted both. Audited against all 29 pre-existing rows at the same time: every
+# one was in fact failing for its stated reason, so nothing here changed verdict — the gate
+# was blind, not wrong. (`reentry`/`core -DSERIALIZED` legitimately expect `invalid end
+# state`: the Class-G reentry defect IS a deadlock.)
+#
+# The signature is matched against pan's `pan:N:` ERROR LINE ONLY, never against the whole
+# run output. pan prints its enabled search options in every run --
+#     assertion violations  +
+#     invalid end states    +
+# -- so a signature grepped over the full output would find "invalid end state" in EVERY run,
+# passing the two rows that legitimately expect a deadlock no matter how they actually failed.
+# That hole was introduced by the first draft of this very check and caught by teeth-testing
+# it, which is the argument for teeth-testing a grader rather than reasoning about it.
+#
+# Both sides are whitespace-normalized (`tr -s ' '`) before comparison: pan pads its error
+# line with a double space after "assertion violated", which is invisible in a diff and would
+# otherwise make every assertion row a false failure.
+#
+# The signature is a DISCRIMINATING FRAGMENT of pan's error line, not the whole compiled
+# assertion expression. The fragment names which property broke — which is what the check
+# has to establish — while pinning the full expression would make any cosmetic edit
+# elsewhere in the model read as a regression. Same trade as TLC_NEG's verdict line.
 SPIN_NEG := \
-  "reentry  -DSERIALIZED     safety" \
-  "reentry  -DNOATOMICFRAME  safety" \
-  "conn     -DNOENFORCE      safety" \
-  "conn     -DDROPFRAME      ltl" \
-  "store    -DNOSERIALIZE    safety" \
-  "store    -DNOADMIT        safety" \
-  "store    -DNOSYNCREFS     safety" \
-  "store    -DSILENTDROP     ltl" \
-  "revoke   -DNOHONOR        safety" \
-  "revoke   -DLEAKL1         safety" \
-  "revoke   -DNOCONVERGE     ltl" \
-  "emit     -DEMITFIRE       safety" \
-  "emit     -DEMITMARKER     safety" \
-  "emit     -DEMITSTALL      ltl" \
-  "register -DNOATOMIC       safety" \
-  "register -DNOSYSGUARD     safety" \
-  "register -DWEDGE          ltl" \
-  "authority -DOPTALLOW      safety" \
-  "authority -DOPTDENY       safety" \
-  "authority -DNOSUBCHECK    safety" \
-  "authority -DINHERITRES    safety" \
-  "bounds   -DEQUALMAG       safety" \
-  "bounds   -DRATIOBOUND     safety" \
-  "bounds   -DDOUBLECOUNT    safety" \
-  "bounds   -DSHARECODE      safety" \
-  "core     -DSERIALIZED     safety" \
-  "core     -DNOATOMICFRAME  safety" \
-  "core     -DNOESTABGATE    safety" \
-  "core     -DNOREVGATE      safety"
+  "reentry|-DSERIALIZED|safety|invalid end state" \
+  "reentry|-DNOATOMICFRAME|safety|assertion violated !(interleaved)" \
+  "conn|-DNOENFORCE|safety|assertion violated (tokensIssued<=1)" \
+  "conn|-DDROPFRAME|ltl|acceptance cycle" \
+  "store|-DNOSERIALIZE|safety|assertion violated (writers<=1)" \
+  "store|-DNOADMIT|safety|assertion violated (pending<=2)" \
+  "store|-DNOSYNCREFS|safety|(live[k]==0)&&(truth[k]>0)" \
+  "store|-DSILENTDROP|ltl|acceptance cycle" \
+  "revoke|-DNOHONOR|safety|!(revObserved[0])||" \
+  "revoke|-DLEAKL1|safety|(t[0]!=t[1])||" \
+  "revoke|-DNOCONVERGE|ltl|acceptance cycle" \
+  "emit|-DEMITFIRE|safety|(sEvt==hashNew)&&(tEvt==changed)" \
+  "emit|-DEMITMARKER|safety|!(tEvt)||(etype==" \
+  "emit|-DEMITSTALL|ltl|acceptance cycle" \
+  "register|-DNOATOMIC|safety|(tree[0]==0)||(tree[0]==5)" \
+  "register|-DNOSYSGUARD|safety|assertion violated (tree[1]==0)" \
+  "register|-DWEDGE|ltl|acceptance cycle" \
+  "authority|-DOPTALLOW|safety|(kind[d]==2)&& !(hasGrant[d])" \
+  "authority|-DOPTDENY|safety|(kind[d]==1)&&((res[d]==0)" \
+  "authority|-DNOSUBCHECK|safety|(outcome[d]==1)&&(res[d]!=0)" \
+  "authority|-DINHERITRES|safety|res[(parent[d]-1)]" \
+  "bounds|-DEQUALMAG|safety|assertion violated (halt!=2)" \
+  "bounds|-DRATIOBOUND|safety|assertion violated (halt!=2)" \
+  "bounds|-DDOUBLECOUNT|safety|assertion violated (spent==dispatches)" \
+  "bounds|-DSHARECODE|safety|(halt==1)&&(code!=1)" \
+  "core|-DSERIALIZED|safety|invalid end state" \
+  "core|-DNOATOMICFRAME|safety|assertion violated !(interleaved)" \
+  "core|-DNOESTABGATE|safety|assertion violated established[p]" \
+  "core|-DNOREVGATE|safety|assertion violated !(servedRevoked)" \
+  "conncodes|-DCOLLAPSE|safety|rowOf[i]!=rowOf[j]" \
+  "conncodes|-DWRONGSTATUS|safety|statOf[i]!=want" \
+  "conncodes|-DSEQREADING|safety|fired[3]&&(codeOf[3]!=1)" \
+  "bootstrap|-DEARLYINDEX|safety|inIndex[i]&&(facets[i]!=2)" \
+  "bootstrap|-DGATEONE|safety|registered&&(facets[j]!=2)" \
+  "bootstrap|-DNOCONNGATE|safety|established&&(facets[2]!=2)"
 
 .PHONY: green neg
 # Each negative control MUST fail. Inverted exit status: a clean run is the failure.
 neg:
 	@for row in $(SPIN_NEG); do \
-	  set -- $$row; m=$$1; d=$$2; mode=$$3; \
-	  echo "== Spin neg control $$m $$d ($$mode, MUST fail) =="; \
+	  m=$$(echo "$$row" | cut -d'|' -f1); d=$$(echo "$$row" | cut -d'|' -f2); \
+	  mode=$$(echo "$$row" | cut -d'|' -f3); want=$$(echo "$$row" | cut -d'|' -f4); \
+	  echo "== Spin neg control $$m $$d ($$mode, MUST fail: $$want) =="; \
 	  $(RUN) spin -a $$d $$m.pml >/dev/null || exit 1; \
 	  if [ "$$mode" = "safety" ]; then \
 	    out=$$($(RUN) sh -c "gcc -O2 -DNOCLAIM -o pan pan.c && ./pan" 2>&1); \
@@ -129,7 +175,17 @@ neg:
 	    echo "$$out" | tail -5; \
 	    exit 1; \
 	  fi; \
-	  echo "   ok (failed as required: $$(echo "$$out" | grep -oE 'errors: [1-9][0-9]*' | head -1))"; \
+	  errline=$$(echo "$$out" | tr -s ' ' | grep -oE 'pan:[0-9]+: .*' | head -1); \
+	  if ! echo "$$errline" | grep -qF "$$want"; then \
+	    echo "FAIL: $$m $$d failed, but NOT for the reason it exists to demonstrate."; \
+	    echo "      expected: $$want"; \
+	    echo "      got:      $${errline:-<no pan: error line at all>}"; \
+	    echo "      pan reports a positive error count for an assertion, a DEADLOCK (invalid"; \
+	    echo "      end state) and a broken liveness claim alike; without this check a control"; \
+	    echo "      whose model merely blocks scores exactly as one that catches its defect."; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (failed as required: $$want)"; \
 	done
 
 # A green run must positively report "errors: 0". Relying on pan's exit status alone would let

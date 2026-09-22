@@ -60,13 +60,16 @@ its family, and both provers close every attacker lemma but two** — that redun
 answer to the obvious objection, *"who formalizes the formalization?"* The two exceptions are
 named, not glossed: `BindingReplay` is ProVerif-only (ProVerif's tables do not model single-use
 atomically, so no-replay is Tamarin's) and `RevokeMech` does not terminate in Tamarin. The grid
-above is per *module*; at *section* granularity two rows still rest on one engine (§4.7, §6.9)
-and `docs/COVERAGE-MATRIX.md` §3 names them.
+above is per *module*; at *section* granularity one row still rests on one engine (§3.3, and
+only as the *subject* of §6.11(a′) rather than as a property of its own). The two that used
+to sit beside it, §4.7 and §6.9, turned out not to be single-tool results but **phantom
+rows** — a section-range endpoint and an out-of-scope disclaimer, each counted as a citation.
+Both are now genuinely modeled; `docs/COVERAGE-MATRIX.md` §3a-b has the story and the gate.
 
 | Module | Protocol surface | TLC<br>*bounded* | Apalache<br>*unbounded* | Spin<br>*independent* |
 |---|---|:---:|:---:|:---:|
 | `Reentry` | §6.11 transport reentry + (a′) frame-write atomicity | ● | ● | ● |
-| `Conn` | §4.1–4.7 connection establishment | ● | ● | ● |
+| `Conn` | §4.1–4.6 connection establishment | ● | ● | ● |
 | `Store` | §4.8–4.10 store safety, refcount, admission | ● | ● | ● |
 | `Revoke` | §5.1/§5.10 revocation + verdict determinism | ● | ● | ● |
 | `Emit` | §6.10 event emission | ● | ● | ● |
@@ -74,15 +77,19 @@ and `docs/COVERAGE-MATRIX.md` §3 names them.
 | `Core` | **composition of all of the above** | ● | ● | ● |
 | `Authority` | §5.2 three-valued dispatch authority | ● | ● | ● |
 | `Bounds` | §5.9/§4.10(b) TTL vs chain-depth brakes | ● | ● | ● |
+| `ConnCodes` | §4.7 connection error-code contract | ● | ● | ● |
+| `Bootstrap` | §6.9 pre-loaded handler safety | ● | ● | ● |
 
 | Active attacker (Dolev–Yao) | ProVerif | Tamarin |
 |---|:---:|:---:|
 | 14 lemmas — unforgeability, no-escalation, binding/no-replay, caveats, depth-bound, deep-chain integrity, expiry, malformed-temporal ingest, third-party chain topology, K-of-N multisig, revocation, persistent re-check | ● *(+`BindingReplay`)* | ● |
 
-**Coverage: 28 of 85 numbered spec sections (33%)** — by area, **§4 70% · §5 90% · §6 62%**,
-the three surfaces this repo owns. The near-zero coverage of §2, §3, §7–§9 is deliberate
-scope (type system, encoding, trusted crypto, conformance profiles belong to other layers),
-not neglect. Which is which — and every limit and bound on every result — is set out in:
+**Coverage: 28 of 85 numbered spec sections (33%)** — by area, the **§4 · §5 · §6** surfaces
+this repo owns. The near-zero coverage of §2, §3, §7–§9 is deliberate scope (type system,
+encoding, trusted crypto, conformance profiles belong to other layers), not neglect. That
+figure is **derived from the models' own `§`-citations and checked by `make coverage`**,
+which fails if the published grid and the models disagree in either direction — because for
+one release it did. Which is which — and every limit and bound on every result — is in:
 
 > ### ⇒ **[`docs/COVERAGE-MATRIX.md`](docs/COVERAGE-MATRIX.md)** — start here
 > What each engine can and cannot do · protocol section × engine · what is *not* covered,
@@ -120,9 +127,11 @@ ProVerif toolchain) runs everything; the model checkers are all containerized.
 ```
 make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
-make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (204 runs)
+make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (238 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
+make coverage  # does the coverage claim match what the models actually cite?
+make leanseam  # has Lean moved under the assumption ledger? (needs the keystone sibling)
 make clean    # remove generated model-checker artifacts
 make caps     # print the active per-container resource ceilings
 ```
@@ -146,10 +155,12 @@ AGENTS.md                 ← repo-specific agent guidance (build/test, layout, 
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
   COVERAGE-MATRIX.md      ← section x engine, the limits, what is NOT covered (start here)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 204-run matrix
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 238-run matrix
   STATUS.md               ← rolling status: where it is, what is next
   SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls
+  LEAN-SEAM.md            ← the assumption ledger: what each model takes on faith, and
+                            who discharges it (`make leanseam`)
   CROSSCHECK-RESULTS.md   ← Spin + Apalache independent corroboration
   SCOPING-AND-SPIKE-PLAN.md ← scope calls + Phase 0 gates + Phase 1 trigger
   PRIOR-ART.md            ← TLA+ & Tamarin learning resources + comparable models
@@ -159,6 +170,8 @@ tla/                      ← TLA+/PlusCal + TLC (concurrency + liveness) + Apal
 spin/                     ← Spin/Promela independent re-encoding (cross-check)
 tamarin/                  ← Tamarin/ProVerif (active-attacker, Dolev-Yao)
 tools/spec-drift.py       ← the pin-vs-live-spec detector behind `make specdrift`
+tools/lean-seam.py        ← the assumption-ledger drift check behind `make leanseam`
+tools/coverage-check.py   ← the coverage-claim check behind `make coverage`
 ```
 
 ## Where the spec lives

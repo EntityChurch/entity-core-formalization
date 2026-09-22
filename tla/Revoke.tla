@@ -13,7 +13,7 @@
 \* that verdict: `t` as a declared per-verdict input, revocation as a convergent (async-observed)
 \* Layer-1 input, and the Layer-1/Layer-2 separation. Both peers are pinned to the
 \* `supports_revocation = true` (full) tier; the core tier (treats observed set as empty, §5.1)
-\* is noted, not modeled (PHASE1-SCOPE §7). Every element cites its V7 §ref.
+\* is noted, not modeled (PHASE1-SCOPE section 7). Every element cites its V7 §ref.
 EXTENDS Naturals
 
 CONSTANTS HonorRevocation,   \* TRUE = §5.1: an observed revocation makes the cap fail every

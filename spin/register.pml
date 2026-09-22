@@ -14,7 +14,7 @@
  * is presence/atomicity w.r.t. dispatch. The §6.6 dispatch index is a cache (`disp`); the
  * tree-walk it must equal is captured by `tree[h] == FULL`. Same abstraction the TLA+ model makes.
  *
- * NB (handoff §6): IndexMatchesTree / atomicity are *relational/structural* — the genuinely
+ * NB (handoff section 6): IndexMatchesTree / atomicity are *relational/structural* — the genuinely
  * awkward-in-Spin case (Alloy would model the index↔tree-walk relation natively). With the cache
  * abstraction the coherence reduces to the per-handler bi-implication `disp[h] <=> tree[h]==FULL`,
  * which Spin checks cleanly as a state assertion after every atomic mutation; a full relational

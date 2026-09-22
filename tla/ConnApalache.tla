@@ -1,6 +1,6 @@
 ---- MODULE ConnApalache ----
 \* Apalache (SMT) cross-check of the Conn module (tla/Conn.tla), cross-check #A per
-\* docs/HANDOFF-CROSSCHECK.md Track A. A typed HAND-PORT of the §4.1-§4.7 connection-lifecycle
+\* docs/HANDOFF-CROSSCHECK.md Track A. A typed HAND-PORT of the §4.1–4.6 connection-lifecycle
 \* responder state machine: the phase (new -> hello_done -> established), the issued nonce
 \* (§4.6 step 1), the token count (§4.2), and the dispatch flag (§4.2).
 \*

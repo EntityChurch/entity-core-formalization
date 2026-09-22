@@ -165,11 +165,11 @@ PV_NEG_EXPECT := \
   "CaveatsBug|AcceptedDeleg\([^,]*,okdeleg\)|false" \
   "ChainTopologyBug|pk\(skW\[\]\)|true" \
   "ChainTopologyBug|pk\(skP\[\]\)|false" \
-  "ChainTopologyBug|pk\(skA\[\]\)|true" \
+  "ChainTopologyBug|pk\(skA\[\]\)|false" \
   "DeepChainBug|pk\(skV\[\]\)|false" \
-  "DeepChainBug|pk\(skA\[\]\)|true" \
+  "DeepChainBug|pk\(skA\[\]\)|false" \
   "DeepChainNBug|pk\(skV\[\]\)|false" \
-  "DeepChainNBug|pk\(skB\[\]\)|true" \
+  "DeepChainNBug|pk\(skB\[\]\)|false" \
   "DepthBoundBug|AcceptedLeaf\([^,]*,two\)|false" \
   "DepthBoundBug|AcceptedLeaf\([^,]*,one\)|false" \
   "ExpiryBug|Accepted\([^,]*,t0\)|false" \
@@ -265,15 +265,22 @@ proverif-neg:
 #   (b) a DIFFERENT security lemma broke — the control is measuring something else;
 #   (c) the theory's own `exists-trace` NON-VACUITY lemma collapsed — the variant made the
 #       honest path unreachable, and "falsified - no trace found" also matches /falsified/.
-# (c) is not hypothetical here: `ChainTopologyBug`, `DeepChainBug` and `DeepChainNBug` all
-# report `falsified - no trace found` on their reachability lemma. For `ChainTopologyBug` that
-# is the expected consequence of the injected defect (canonicalizing against the root frame
-# moves which namespace is authorized, so the grantee's own namespace stops being reachable —
-# the same flip its ProVerif twin shows). For `DeepChainBug`/`DeepChainNBug` the honest chain
-# dies at 2 steps, which makes those two the WEAKEST controls in the prover matrix: the
-# security lemma is falsified, but in a variant where the legitimate path no longer runs.
-# Declared here so it is a stated property of those controls rather than something a
-# `grep falsified` silently absorbs. Narrowing them is on the work-list, not done.
+# (c) was not hypothetical here. `ChainTopologyBug`, `DeepChainBug` and `DeepChainNBug` all
+# used to report `falsified - no trace found` on their own reachability lemma as well as on
+# the security lemma they target — so each falsified its non-vacuity witness and its target
+# at once, and a run could not show which had broken. Each was an "honest consequence of the
+# injected defect" (re-framing a bare-`*` leaf moves which namespace it covers, so the
+# grantee's own namespace stops being reachable) and each was still a bad control, for the
+# reason (c) exists: the same word reports both.
+#
+# NARROWED at the second gate audit, all three together (D14 — the class, not the instance).
+# §5.5a gives two pattern forms, and only the peer-relative one has a frame to get wrong: an
+# absolute `/{p}/` + wildcard canonicalizes to itself in every frame. Each of the three
+# theories now carries an ABSOLUTE-form leaf alongside its bare-`*` one, byte-identical in
+# the green twin and the control, so each control still differs from its green by exactly the
+# injected defect while the honest path survives it. All three now report their reachability
+# lemma `verified` and falsify their TARGET ALONE — the escalation is exhibited ALONGSIDE
+# normal operation rather than instead of it. The rows below carry the new verdicts.
 TM_EXPECT := \
   "Binding|binding|verified" \
   "Binding|no_replay|verified" \
@@ -321,11 +328,11 @@ TM_NEG_EXPECT := \
   "CaveatsBug|accepted_reachable|verified" \
   "ChainTopologyBug|no_escalation_to_verifier|verified" \
   "ChainTopologyBug|no_escalation_to_root|falsified" \
-  "ChainTopologyBug|authorized_own_namespace_reachable|falsified" \
+  "ChainTopologyBug|authorized_own_namespace_reachable|verified" \
   "DeepChainBug|no_xpeer_escalation|falsified" \
-  "DeepChainBug|legit_reachable|falsified" \
+  "DeepChainBug|legit_reachable|verified" \
   "DeepChainNBug|no_xpeer_escalation|falsified" \
-  "DeepChainNBug|legit_reachable|falsified" \
+  "DeepChainNBug|legit_reachable|verified" \
   "DepthBoundBug|depth_bound_honored|falsified" \
   "DepthBoundBug|accepted_reachable|verified" \
   "ExpiryBug|expiry_validity|falsified" \

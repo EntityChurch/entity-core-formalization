@@ -88,7 +88,14 @@ let Delegator(gA: pkey) =
   let (=gA, rres: bitstring) = checksign(rc, pk(skV)) in   (* root signed by V, grantee A *)
   in(net, gB: pkey);
   event Delegated(gA, gB, star);
-  out(net, sign((gB, star, gA), skA)).                     (* leaf: (grantee, pattern, parent-granter A) *)
+  out(net, sign((gB, star, gA), skA));                     (* leaf: (grantee, pattern, parent-granter A) *)
+  (* A ALSO delegates at the ABSOLUTE form `/A/*` = awild(gA). §5.5a: an absolute pattern
+   * names its namespace outright, so canon leaves it alone in EVERY frame
+   * (canon(awild(p), fr) = awild(p) above) and the foreign-granter defect cannot touch it.
+   * Added at the 0.8.2 second gate audit: without it, DeepChainBug's mis-framing moved the
+   * ONLY leaf out of A's namespace, so the control falsified its own non-vacuity query
+   * alongside the security one and could not show which had broken. *)
+  out(net, sign((gB, awild(gA), gA), skA)).
 
 (* Verifier dispatch (V7 §5.5 + §5.5a). Accepts root(V->A) + leaf(A->B), then checks the
  * request's target resource is covered by the leaf, canonicalizing the leaf pattern

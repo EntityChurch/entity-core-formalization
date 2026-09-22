@@ -6,6 +6,16 @@ theory DeepChainBug
  * V's namespace and the verifier authorizes a cross-peer request it must deny. The
  * FOREIGN-GRANTER / captok_form_dispatch_minted_pl_presented_xpeer bug class. Tamarin
  * cross-check of DeepChainBug.pv.
+ *
+ * NARROWED at the 0.8.2 second gate audit. This control used to falsify BOTH lemmas: the
+ * mis-framed bare-star leaf was the theory's only leaf, so moving it into V's namespace
+ * moved it out of A's, and `legit_reachable` collapsed with `no_xpeer_escalation`. A
+ * control that also kills its own non-vacuity witness cannot show that the SECURITY
+ * property is what broke. The absolute-form leaf below (§5.5a `/{p}/` + wildcard, frame-independent
+ * by definition, so the defect cannot touch it) keeps A's namespace reachable, and the
+ * control now falsifies its target ALONE. The Delegate_Abs / Verify_AbsLeaf rules are
+ * byte-identical to DeepChain.spthy's — this theory still differs from its green twin by
+ * exactly the injected defect, one Eq() term.
  */
 begin
 
@@ -36,6 +46,32 @@ rule Delegate:
     [ !LtkA(~skA), !PkV(pkV), In(<pk(~skA), 'allp', sigroot>), In(gB) ]
   --[ Eq(verify(sigroot, mroot, pkV), true), Delegated(pk(~skA), gB, 'star') ]->
     [ Out(<gB, 'star', pk(~skA), lsig>) ]
+
+// The ABSOLUTE-form delegation and its dispatch rule, byte-identical to DeepChain.spthy.
+// §5.5a: an absolute pattern names its namespace outright, so there is no frame to
+// mis-canonicalize and the injected defect cannot reach it. This is what keeps the honest
+// path alive under the defect and makes this control narrow.
+rule Delegate_Abs:
+    let mroot = <pk(~skA), 'allp'>
+        pat   = <'awild', pk(~skA)>
+        mleaf = <gB, pat, pk(~skA)>
+        lsig  = sign(mleaf, ~skA)
+    in
+    [ !LtkA(~skA), !PkV(pkV), In(<pk(~skA), 'allp', sigroot>), In(gB) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true), Delegated(pk(~skA), gB, pat) ]->
+    [ Out(<gB, pat, pk(~skA), lsig>) ]
+
+rule Verify_AbsLeaf:
+    let mroot = <gA, 'allp'>
+        pat   = <'awild', p>
+        mleaf = <gB, pat, gA>
+    in
+    [ !PkV(pkV), In(<gA, 'allp', sigroot>), In(<gB, pat, gA, sigleaf>), In(<reqns, path>) ]
+  --[ Eq(verify(sigroot, mroot, pkV), true),
+      Eq(verify(sigleaf, mleaf, gA),  true),
+      Eq(reqns, p),                         // §5.5a: absolute form is frame-independent
+      Authorized(res(reqns, path)) ]->
+    [ ]
 
 // DEFECT: coverage frame = verifier pkV, not leaf granter gA.
 rule Verify_StarLeaf:

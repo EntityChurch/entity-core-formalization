@@ -4,7 +4,7 @@
  * `Store` model (tla/Store.tla).
  *
  * DISCIPLINE (docs/HANDOFF-CROSSCHECK.md, Track B): this is written FROM the V7
- * §4.8-§4.10 design — a single peer dispatching NReq concurrent per-request
+ * §4.8–4.10 design — a single peer dispatching NReq concurrent per-request
  * activities against one shared content store behind an admission gate — NOT by
  * translating the .tla line-by-line. The whole point of the cross-check is an
  * independent formalism (Promela processes + atomic guards) reaching the SAME

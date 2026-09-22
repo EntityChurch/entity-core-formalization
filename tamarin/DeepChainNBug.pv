@@ -3,9 +3,17 @@
  * The ONLY change from DeepChainN.pv: the verifier canonicalizes the leaf against the
  * VERIFIER frame (pk(skV)) instead of the leaf's granter B. Two foreign hops deep, B's
  * bare-`*` leaf now widens into V's namespace — the deep FOREIGN-GRANTER cross-peer admit.
- * The V-namespace query flips to false-with-attack. (As in Phase-1 DeepChainBug, the legit
- * B-namespace case also breaks — the mis-framing redirects B's authority to V — an honest
- * consequence of the wrong frame, not a separate property.)
+ * The V-namespace query flips to false-with-attack.
+ *
+ * NARROWED at the 0.8.2 second gate audit. The parenthetical that used to sit here said the
+ * legit B-namespace case "also breaks ... an honest consequence of the wrong frame, not a
+ * separate property". That was true and it was still a bad control: falsifying the security
+ * query AND the non-vacuity query at once means the run cannot show WHICH broke, and both
+ * report the same way. B now also holds an ABSOLUTE-form leaf `/B/*` (see the B delegator),
+ * which §5.5a makes frame-independent — there is no frame to mis-canonicalize — so it
+ * survives the defect, B's namespace stays reachable, and the control falsifies its target
+ * alone. The absolute leaf is present in DeepChainN.pv too: this theory still differs from
+ * its green twin by exactly one term, the verifier's canon frame.
  *)
 
 set traceDisplay = long.
@@ -63,7 +71,14 @@ let DelegB(gB: pkey) =
   let (=gB, =allp, gAp: pkey) = checksign(lc1, pk(skA)) in
   in(net, gC: pkey);
   event DelegatedLeaf(gB, gC);
-  out(net, sign((gC, star, gB), skB)).
+  out(net, sign((gC, star, gB), skB));
+  (* B ALSO delegates at the ABSOLUTE form `/B/*` = awild(gB). §5.5a: an absolute pattern
+   * names its namespace outright, so canon leaves it alone in EVERY frame
+   * (canon(awild(p), fr) = awild(p) above) and the foreign-granter defect cannot reach it.
+   * Added at the 0.8.2 second gate audit: without it, DeepChainNBug's mis-framing moved the
+   * ONLY leaf out of B's namespace, so the control falsified its own non-vacuity query
+   * alongside the security one and could not show which had broken. *)
+  out(net, sign((gC, awild(gB), gB), skB)).
 
 (* BUG: canonicalize the leaf against the VERIFIER frame pk(skV), not the leaf granter B. *)
 let Verifier(gA: pkey, gB: pkey) =

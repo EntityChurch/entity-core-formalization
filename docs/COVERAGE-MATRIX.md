@@ -108,7 +108,7 @@ see §5 for why the zeros are zeros.
 | 4.1 | connection establishment | handshake ordering | ● | ● | ● | | |
 | 4.2 | pre-auth gate | no dispatch pre-establishment | ● | ● | ● | | |
 | 4.6 | nonce handshake | no establish without issued nonce | ● | ● | ● | | |
-| 4.7 | connection teardown | lifecycle safety | | ● | | | |
+| **4.7** | **connection error codes** | **MUST-emit reason-code contract; status per code** | ● | ● | ● | | |
 | **4.8** | **store safety + refcount** | **data race; use-after-free** | ● | ● | ● | | |
 | 4.9 | resilience under load | responsive; deliver-or-signal; recover | ● | ● | ● | | |
 | 4.10 | resource bounds / admission | clean reject; bounded in-flight; chain depth | ● | ● | ● | | |
@@ -126,29 +126,79 @@ see §5 for why the zeros are zeros.
 | 6.5 | dispatch chain | no handler entry pre-gate | ● | ● | ● | | |
 | 6.6 | handler resolution | longest-prefix dispatch | ● | | ● | | |
 | 6.8 | handler grant | confused deputy; persistent re-check | ● | ● | ● | ● | ● |
-| 6.9 | bootstrap | pre-loaded handler safety | ● | | | | |
+| **6.9** | **bootstrap** | **pre-loaded handler safety; registration precondition** | ● | ● | ● | | |
 | 6.10 | event emission | event iff real work; correct type | ● | ● | ● | | |
 | **6.11** | **transport reentry** | **Class-G deadlock; frame-write atomicity** | ● | ● | ● | | |
 | 7.3 | signatures | signature verification (as crypto wall) | | | | ● | ● |
 
 **Bold** rows are the surface added or sharpened at 0.8.1/0.8.2.
 
-### Three rows are single-engine — read them as such
+### 3a. One row is single-engine — and the other two were never covered at all
 
 The "every module is checked by all three engines of its family" claim in §1 and §4 is about
-**modules**, and it holds. At **section** granularity three rows still rest on one engine, and
-a reader scanning the grid should not have to infer which:
+**modules**, and it holds. At **section** granularity one row still rests on one engine:
 
 | § | Only engine | What that means |
 |---|---|---|
 | 3.3 | TLC (`Reentry.tla`) | §3.3 is not modeled *as* a wire-frame property. It appears only as the **subject** of §6.11(a′) — "these bytes are what must not interleave". The frame's own structure is the CBOR spec's and the conformance vectors', per §5(a). Not a gap in this repo's surface; a row that looks thinner than the claim behind it. |
-| 4.7 | Apalache (`ConnApalache.tla`) | **A real single-tool result.** Connection-teardown lifecycle safety is proven inductive but has no bounded-exhaustive TLC run and no independent Spin encoding. It is the one row in the grid where a transcription error in a single file would be invisible to the cross-check. |
-| 6.9 | TLC (`Register.tla`) | **A real single-tool result.** Pre-loaded-handler bootstrap safety is checked at the bound only — no inductive lift, no independent encoding. |
 
-§4.7 and §6.9 are **open**, listed in `docs/STATUS.md` §Next. They survived a commit whose
-message was "close every single-tool coverage gap" — that pass closed the gaps at *module*
-granularity (`Reentry`, `Authority`, `Bounds`, `Core` gained Apalache and Spin) and the
-section-level residue was not re-checked against the grid afterwards.
+**§4.7 and §6.9 used to sit in that table, described as "real single-tool results". They were
+not single-tool results. They were not results.** Both rows came from a `§`-mention that was
+never a claim of coverage:
+
+- **§4.7** — the sole §4.7 citation in the entire repo was the *range endpoint* of
+  `§4.1-§4.7` in a header comment in `ConnApalache.tla`. Five other files write the same
+  range as `§4.1–4.7` (no second `§`), which the extractor reads as citing only §4.1. The row
+  showed "Apalache-only" because of one file's punctuation. Nothing modeled §4.7, and §4.7 is
+  not "connection teardown" — the label was wrong too. It is the **connection error-code
+  table**.
+- **§6.9** — both §6.9 citations were **disclaimers** in `Register.tla`'s header: *"Bootstrap
+  handlers (§6.9) bypass registration and are not modeled"* and *"System bootstrap handlers
+  bypass registration (§6.9)"*. An out-of-scope declaration was counted as coverage.
+
+Both are now genuinely modeled, by all three engines, in modules of their own —
+`ConnCodes` / `conncodes.pml` and `Bootstrap` / `bootstrap.pml`. Modeling §4.7 surfaced a
+**normative contradiction in the spec** (§4.6 step 1 vs §4.7 table row 10); see
+`docs/PROPERTIES.md` §D. So the grid's 28 is right today and was wrong before: it was 26.
+
+### 3b. The class: what does a `§`-citation assert, and what else produces one?
+
+This is **D13** asked of a *derived metric* instead of a gate, and the answer is the same
+shape: the criterion was blind to the outcome it claimed. Matrix A is derived from the
+models' own `§`-citations precisely so it is not a list someone chose — but the extractor
+counts *mentions*, and a mention is not a claim. Four things produce one:
+
+| Producer | Instances found | Disposition |
+|---|---|---|
+| **A range endpoint** `§X-§Y` | 2 — `ConnApalache.tla` `§4.1-§4.7`, `store.pml` `§4.8-§4.10` | The first was the phantom §4.7. The second is benign: §4.10 is independently cited 11 more times in the same file and genuinely modeled. |
+| **An out-of-scope disclaimer** | 2 — both §6.9 citations in `Register.tla` | Was the phantom §6.9. |
+| **A cross-reference to another DOCUMENT's section** | 5 — `COVERAGE-MATRIX.md §6`, `handoff §6` ×2, `PHASE1-SCOPE §7`, keystone's `§7b` | Harmless for the grid, which counts only `§N.M`, so bare `§6`/`§7`/`§7b` never entered it. Named because the same extractor feeds `make specdrift`'s dependency set, where they *are* counted. |
+| **A genuine claim** | everything else | — |
+
+*Enforcement — `make coverage`, and it is a gate, not a grep.* Every `§` mention in a model
+was re-read against this taxonomy, not just the two that failed (D14 — the class, not the
+instance), and the result is now checked on every `make check` / `make matrix`:
+
+| `tools/coverage-check.py` asserts | |
+|---|---|
+| **A** | the cited `§N.M` set **equals** Matrix A's rows, in **both** directions — a new citation with no row fails, and a row with no citation behind it fails (that is how §4.7 and §6.9 got in) |
+| **B** | the stated numerator equals that set's size, and the denominator equals the pinned spec's numbered-section count |
+| **C** | neither tripwire fires: no `§X-§Y` range form, no `§` inside a scope-disclaimer sentence |
+
+It does **not** assert the engine columns. A citation says a model is *about* a section, not
+which engine verifies what; those are still hand-maintained and the tool says so rather than
+letting a reader assume the whole grid is machine-checked. All five failure modes were
+teeth-tested by breaking them.
+
+**The rule caught its own author within the hour.** The two new modules written to close
+§4.7 and §6.9 shipped three fresh phantoms — `§1.2`, `§1.5` and `§2.11`, every one of them
+inside an out-of-scope note ("§4.7's four §1.2/§1.5 negotiation codes are settled before any
+phase this model has"). The count went 28 → 31 while genuine coverage went 26 → 28. That is
+the argument for the gate rather than the discipline alone: knowing the rule, having just
+written it down, and violating it in the same session is the normal case.
+
+**A model must cite a section only where it makes a claim about it.** A section it
+deliberately does *not* model is named in prose without the `§` sigil.
 
 ---
 
@@ -319,13 +369,17 @@ bitten by it and treats it as a first-class hazard:
   the verdict it must produce and the run must produce exactly that set, so an added or
   dropped query fails too. **No verdict moved**; all 203 were re-derived by hand and match the
   reports. The gate's ability to notice if one ever moved is what was missing.
-- **Three negative controls break the model, not only the property.** Pinning Tamarin per
-  lemma exposed that `ChainTopologyBug`, `DeepChainBug` and `DeepChainNBug` each report
-  `falsified - no trace found` on their own reachability lemma — the honest path is gone in
-  the variant. For `ChainTopologyBug` that is the injected defect's expected consequence (see
-  `docs/PROPERTIES.md` §B1); for the other two the honest chain dies at 2 steps, making them
-  the weakest controls in the prover matrix. Now declared rather than absorbed by a
-  `grep falsified`. Open.
+- **~~Three negative controls break the model, not only the property.~~ Narrowed, all three.**
+  Pinning Tamarin per lemma exposed that `ChainTopologyBug`, `DeepChainBug` and
+  `DeepChainNBug` each reported `falsified - no trace found` on its own reachability lemma:
+  the honest path was gone in the variant, so the run could not show *which* lemma the defect
+  had broken. Each was an honest consequence of the injected defect and each was still a bad
+  control. **§5.5a gives two pattern forms and only the peer-relative one has a frame to get
+  wrong** — an absolute `/{p}/` + wildcard canonicalizes to itself in every frame. All three
+  theories now carry an absolute-form leaf alongside the bare-`*` one, byte-identical in the
+  green twin and the control, so each control still differs from its green by exactly the
+  injected defect while the honest path survives it. All three report their reachability
+  lemma `verified` and falsify their target alone.
 - **Two ProVerif theories had no non-vacuity query.** `Unforge.pv` and `Binding.pv` are pure
   correspondence lemmas, which a model that can never accept satisfies vacuously — and their
   Tamarin twins both carried an `exists-trace` lemma the ProVerif side lacked. The flagship

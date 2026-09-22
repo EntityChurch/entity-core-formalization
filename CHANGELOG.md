@@ -17,6 +17,139 @@ moves only as the last step of re-validating the models, never on a file copy.
 
 ## [Unreleased]
 
+### Fixed — two sections the coverage grid said were verified, and nothing modeled
+
+`docs/COVERAGE-MATRIX.md` listed **§4.7** and **§6.9** as real single-tool results. Neither
+was a result. Matrix A is *derived* from the models' own `§`-citations precisely so the
+number cannot be one someone chose — but the extractor counts **mentions**, and a mention is
+not a claim:
+
+- **§4.7** — the only §4.7 mention in the entire repo was the far end of a section *range* in
+  one header comment, written with a sigil on both ends so the endpoint scanned as a
+  citation. Five other files write the same range without it. The row read "Apalache-only"
+  because of one file's punctuation — and §4.7 is not "connection teardown" as the grid's
+  label said, it is the **connection error-code table**.
+- **§6.9** — both of its mentions were **disclaimers** in `Register.tla`'s header saying
+  bootstrap handlers bypass registration and *are not modeled*. An out-of-scope declaration
+  counted as coverage.
+
+Both are now genuinely modeled, on all three TLA+-track engines, in modules of their own:
+`ConnCodes` / `ConnCodesApalache` / `conncodes.pml` (§4.7) and `Bootstrap` /
+`BootstrapApalache` / `bootstrap.pml` (§6.9), each with its negative controls and a
+non-vacuity witness. The published coverage figure was 28 and the true one was 26; it is 28
+again now, and checked.
+
+### Added — the first genuine defect this repo has found in the spec text
+
+Modeling §4.7 surfaced a **normative contradiction**. An `authenticate` frame arriving before
+any hello nonce has been issued is named explicitly by two clauses that disagree on the
+reason code **and** the status class:
+
+- **§4.6 step 1**: "A mismatch — or an `authenticate` received before any hello nonce was
+  issued — MUST be rejected with status **401 `invalid_nonce`**."
+- **§4.7 table row 10**: "Out-of-order operation (e.g., **authenticate before hello**)" →
+  **`connection_sequence_error`**, **400**.
+
+Both are MUSTs, and §4.7's own preamble — "an impl that collapses several of these to one
+code, **or returns a different status**, is non-conformant" — makes each reading
+non-conformant by the other's lights. The disagreement lands on `result.data.code`, the field
+§4.7 exists to fix across implementations, so two conformant peers can hand a client
+different instructions for the same failure.
+
+The models check **both** readings rather than picking one: the row assignment for a
+pre-hello `authenticate` is a constant, and the §4.7 reading violates §4.6 step 1 transcribed
+as an invariant. Exhibited independently by TLC, Apalache and Spin — the only control in the
+repo whose "defect" is a conformant reading of the spec. Routed to `entity-core-protocol` as
+a proposal, with a suggested resolution; full statement in `docs/PROPERTIES.md` §D.1.
+
+### Added — the assumption ledger, and a gate on it
+
+`docs/LEAN-SEAM.md`. `docs/ASSURANCE-MAP.md` divides labour in prose — the Lean authority
+proof owns the authority-logic interior, TLA+ and Tamarin abstract it away — and a division
+of labour is sound only if the property each model **assumes** of the abstraction is the
+property Lean **proves**. Nothing wrote that correspondence down. The ledger now states it
+per abstraction: the proposition relied on, the discharging theorem cited by
+`(name, file, sha256)`, any residual hypothesis, and a verdict of CLOSED / CLOSED-MODULO-H /
+OPEN / BY-DESIGN — 21 Lean theorems, one explicitly **rejected** correspondence pinned as
+such, plus intra-repo rows (a TLA+ model assuming what a prover proves) and rows nothing
+owns. `make leanseam` fails when the cited Lean text moves.
+
+Writing it produced two results a spot-check had not:
+
+- **The chain verdict is not peer-independent.** `verifyChain` takes `localPeer` as an
+  argument and §5.5a's granter frame threads it through the walk, so `Revoke.tla` holding its
+  structural verdict equal at both peers is sound only where the two peers' frames agree — a
+  restriction the model does not state.
+- **Two engines, one shared undischarged assumption.** §5.5a namespace isolation is "covered"
+  by ProVerif/Tamarin *and* by Lean, and **both** rest on the same unproved proposition: that
+  canonicalization roots a relative pattern at the granter's namespace. Lean takes it as the
+  hypothesis `hframed` and says in the source that it declines to prove it; ProVerif asserts
+  it as a rewrite rule. Redundancy counted by *engine* cannot see this — the audit that
+  "closed every single-tool coverage gap" was right about engines and blind to it.
+
+A local Lean tree in this repo was considered and rejected: the value of the seam is that
+Lean's theorems are about the same executable code the conformance suite runs, and a fork
+would make them statements about our copy, which nothing gates.
+
+### Added — `make coverage`, and D15
+
+A discipline with no enforcement point does not count. `tools/coverage-check.py` asserts that
+the cited `§N.M` set equals Matrix A's rows **in both directions**, that the stated numerator
+and denominator match the models and the pinned spec, and that neither citation-hygiene
+tripwire fires. It states in the file what it does *not* assert — the engine columns — rather
+than letting a reader assume the whole grid is machine-checked. In `check` and `matrix`; five
+failure modes teeth-tested.
+
+It earned its keep immediately: the two new modules written to close §4.7 and §6.9 shipped
+three fresh phantoms of exactly the same kind (`§1.2`, `§1.5`, `§2.11`, all inside scope
+notes), taking the count 28 → 31 while genuine coverage went 26 → 28. Knowing the rule and
+violating it in the same session is the normal case, which is the argument for the gate.
+
+**AGENTS.md D15** — *a derived number is a claim; derive it from claims, and gate it.* D13
+asked of a metric rather than a grader.
+
+### Fixed — Spin's negative controls were graded by a criterion a deadlock satisfies
+
+`spin/neg` graded on `errors: [1-9]`. pan reports a positive error count for a caught
+assertion, an **invalid end state** (deadlock) and a broken liveness claim alike, so a
+control whose model merely *blocks* scored exactly as one that catches its defect. Found
+live, not by inspection: `bootstrap.pml`'s registration precondition was first written as a
+two-stage guard, which commits to the do-option and then blocks, and two brand-new controls
+"passed" without ever reaching their assertions.
+
+Every one of the 35 rows now declares its **pan failure signature**, matched against the
+`pan:N:` error line only. All 29 pre-existing rows were audited at the same time (D14):
+every one was in fact failing for its stated reason, so the gate was blind rather than
+wrong — including the two `-DSERIALIZED` rows that legitimately expect `invalid end state`,
+because the Class-G reentry defect *is* a deadlock.
+
+The first draft of this check matched the signature against pan's whole output, where
+`invalid end state` appears in the **search-options header of every run** — so those two rows
+asserted nothing. Reading the code did not catch it; deliberately breaking a control did.
+
+### Fixed — three negative controls that took their own witness down with them
+
+`DeepChainBug`, `DeepChainNBug` and `ChainTopologyBug` each falsified its target security
+lemma **and** its own `exists-trace` non-vacuity lemma, because re-framing the bare-`*` leaf
+moved the grantee's namespace out of reach as a side effect. Faithful to the defect, and
+still a bad control: falsifying both at once means the run cannot show *which* broke, and
+both report the same word.
+
+All three narrowed together (D14 — the class, not the instance). §5.5a gives two pattern
+forms and only the peer-relative one has a frame to get wrong: an absolute `/{p}/` + wildcard
+canonicalizes to itself in every frame. Each theory now carries an absolute-form leaf
+alongside its bare-`*` one — **byte-identical in the green twin and the control**, so each
+control still differs from its green by exactly the injected defect — and the honest path
+survives it. All three now report their reachability lemma `verified` and falsify their
+target alone.
+
+### Changed — the matrix is 238 runs
+
+11 TLA+ modules (was 9), 23 Apalache inductive invariants across all 11 (was 18 across 9),
+11 Spin re-encodings, 92 negative controls and 11 non-vacuity witnesses, plus the unchanged
+15 ProVerif / 14 Tamarin attacker theories. `make matrix`: exit 0, zero failures.
+`make specdrift`: no drift. `make leanseam`, `make coverage`: clean.
+
 ### Fixed — the *rest* of the gates now check what they claimed to check
 
 The pass below hardened three of the repo's ten grading targets and closed the finding. A

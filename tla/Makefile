@@ -62,12 +62,15 @@ repl:
 # cfgs and ConstInitBug* cinits) are exercised separately; see the reports.
 # ----------------------------------------------------------------------------------
 # TLC: each module's base .cfg against its .tla (safety + the liveness temporal
-# props declared in the cfg). 9 modules = the all-Core concurrency surface, plus the
-# two modules added at 0.8.2 (Authority = §5.2 dispatch authority; Bounds = §5.9/§4.10
-# TTL-vs-chain_depth). StoreLive is Store's liveness slice at a smaller bound — TLC's
+# props declared in the cfg). 11 modules: the 7 all-Core concurrency ones, the two added at
+# 0.8.2 (Authority = §5.2 dispatch authority; Bounds = §5.9/§4.10 TTL-vs-chain_depth), and
+# the two added at the second gate audit (ConnCodes = §4.7 error codes; Bootstrap = §6.9
+# pre-loaded handler safety) — both for sections the coverage grid claimed were covered when
+# nothing modeled them at all (../docs/COVERAGE-MATRIX.md §3a). StoreLive is Store's liveness slice at a smaller bound — TLC's
 # liveness graph exhausts the 2g cap at Store's safety bound of NReq = 4, so the two are
 # separate configs rather than one that silently drops a property.
-TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds
+TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds \
+              ConnCodes Bootstrap
 
 # NON-VACUITY WITNESSES (added 0.8.2). TLC has no ProVerif-style reachability query, so a
 # witness is an invariant asserted in order to be VIOLATED: the violation exhibits the
@@ -90,7 +93,9 @@ TLC_WITNESS := \
   "Register|RegisterWitness|Invariant WitnessHandlerLive is violated" \
   "Core|CoreWitness|Invariant WitnessExchangeComplete is violated" \
   "Authority|AuthorityWitness|Invariant WitnessSubAllowed is violated" \
-  "Bounds|BoundsWitness|Invariant WitnessDepthBrakeFires is violated"
+  "Bounds|BoundsWitness|Invariant WitnessDepthBrakeFires is violated" \
+  "ConnCodes|ConnCodesWitness|Invariant WitnessAllRowsEmitted is violated" \
+  "Bootstrap|BootstrapWitness|Invariant WitnessBootComplete is violated"
 
 # NEGATIVE CONTROLS. Every row MUST fail — a green here means the property has no teeth —
 # AND IT MUST FAIL FOR THE STATED REASON. Format: MODULE|CFG|expected TLC verdict line.
@@ -132,7 +137,13 @@ TLC_NEG := \
   "Bounds|BoundsEqualBug|Invariant DepthBrakeFirst is violated" \
   "Bounds|BoundsRatioBug|Invariant DepthBrakeFirst is violated" \
   "Bounds|BoundsDoubleCountBug|Invariant TtlNotDoubleCounted is violated" \
-  "Bounds|BoundsCodeBug|Invariant ReasonCodesDistinct is violated"
+  "Bounds|BoundsCodeBug|Invariant ReasonCodesDistinct is violated" \
+  "ConnCodes|ConnCodesCollapseBug|Invariant ReasonCodesDistinct is violated" \
+  "ConnCodes|ConnCodesStatusBug|Invariant StatusMatchesCode is violated" \
+  "ConnCodes|ConnCodesSeqReadingBug|Invariant PreHelloAuthIsInvalidNonce is violated" \
+  "Bootstrap|BootstrapEarlyIndexBug|Invariant BootAllOrNothing is violated" \
+  "Bootstrap|BootstrapGateBug|Invariant NoRegistrationBeforeBootstrap is violated" \
+  "Bootstrap|BootstrapConnectBug|Invariant ConnectPreAuthorized is violated"
 
 .PHONY: tlc-green apalache-green green tlc-witness tlc-neg
 tlc-green:
@@ -193,7 +204,8 @@ tlc-neg:
 # base case (Init => Inv, length 0) and inductive step (IndInit /\ Next => Inv',
 # length 1). Operator names are in each *Apalache.tla
 # header. Format per line: MODULE CINIT INV INDINIT
-# 18 invariants across 9 modules (was 8 across 5 at v0.8.0). Added at 0.8.2: StoreApalache
+# 23 invariants across 11 modules (was 8 across 5 at v0.8.0; 18 across 9 before the second
+# gate audit added ConnCodesApalache and BootstrapApalache). Added at 0.8.2: StoreApalache
 # InvUAF (§4.8 RT-13a refcount use-after-free), and three modules that previously had TLC
 # coverage ONLY — ReentryApalache (§6.11(a') frame-write atomicity), AuthorityApalache (all
 # four §5.2 rules) and BoundsApalache (§5.9 / §4.10(b)). Single-tool coverage was a hole the
@@ -216,7 +228,12 @@ APALACHE_GREEN := \
   "BoundsApalache ConstInitOK InvBrake IndInitBrake" \
   "BoundsApalache ConstInitOK InvCount IndInitCount" \
   "BoundsApalache ConstInitOK InvCodes IndInitCodes" \
-  "CoreApalache ConstInitOK InvComposed IndInitComposed"
+  "CoreApalache ConstInitOK InvComposed IndInitComposed" \
+  "ConnCodesApalache ConstInitOK ReasonCodesDistinct IndInit" \
+  "ConnCodesApalache ConstInitOK StatusMatchesCode IndInit" \
+  "BootstrapApalache ConstInitOK InvAllOrNothing IndInitAllOrNothing" \
+  "BootstrapApalache ConstInitOK InvRegGate IndInitRegGate" \
+  "BootstrapApalache ConstInitOK InvConnect IndInitConnect"
 
 # Apalache NEGATIVE CONTROLS. Format: MODULE CINIT INV INIT LENGTH. Every row MUST report an
 # error. NOTE the §4.8 refcount control (ConstInitBugRefs) runs BOUNDED FROM Init against the
@@ -246,7 +263,13 @@ APALACHE_NEG := \
   "BoundsApalache ConstInitBugCode   ReasonCodesDistinct Init 6" \
   "CoreApalache ConstInitBugFrame  FramesNotInterleaved     Init 8" \
   "CoreApalache ConstInitBugEstab  DispatchNeedsEstablished Init 6" \
-  "CoreApalache ConstInitBugRevoke NoServeWhenRevoked       Init 8"
+  "CoreApalache ConstInitBugRevoke NoServeWhenRevoked       Init 8" \
+  "ConnCodesApalache ConstInitBugCollapse ReasonCodesDistinct Init 6" \
+  "ConnCodesApalache ConstInitBugStatus   StatusMatchesCode   Init 6" \
+  "ConnCodesApalache ConstInitSeqReading  PreHelloAuthIsInvalidNonce Init 6" \
+  "BootstrapApalache ConstInitBugEarlyIndex BootAllOrNothing             Init 6" \
+  "BootstrapApalache ConstInitBugGate       NoRegistrationBeforeBootstrap Init 6" \
+  "BootstrapApalache ConstInitBugConnect    ConnectPreAuthorized          Init 6"
 
 # Every row MUST fail, AND MUST FAIL BY FINDING A COUNTEREXAMPLE — not by erroring out.
 #

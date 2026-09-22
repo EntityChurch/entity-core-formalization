@@ -122,7 +122,14 @@ let Delegator(gA: pkey) =
   let (=gA, rres: bitstring) = checksign(rc, pk(skP)) in   (* root link signed by P, grantee A *)
   in(net, gB: pkey);
   event Delegated(gA, gB, star);
-  out(net, sign((gB, star, gA), skA)).                     (* leaf: (grantee, pattern, granter A) *)
+  out(net, sign((gB, star, gA), skA));                     (* leaf: (grantee, pattern, granter A) *)
+  (* A ALSO delegates at the ABSOLUTE form `/A/*` = awild(gA). §5.5a: an absolute pattern
+   * names its namespace outright, so canon leaves it alone in EVERY frame
+   * (canon(awild(p), fr) = awild(p) above) and no choice of frame can mis-canonicalize it.
+   * Added at the 0.8.2 second gate audit for the same reason as in DeepChain.pv: without
+   * it, ChainTopologyBug's re-framing moved the ONLY leaf out of A's namespace, so the
+   * control falsified its own non-vacuity query alongside the security one. *)
+  out(net, sign((gB, awild(gA), gA), skA)).
 
 (* THE THIRD-PARTY VERIFIER W (§5.8). W constructed no link: it holds neither skP nor skA, and
  * resolves every identity in the chain from what the envelope carries (§5.8 chain inclusion).

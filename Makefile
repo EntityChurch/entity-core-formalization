@@ -31,7 +31,8 @@ include caps.mk
 MAKE ?= make
 
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
-        check-provers crosscheck matrix specdrift specdrift-gate clean caps
+        check-provers crosscheck matrix specdrift specdrift-gate leanseam \
+        coverage clean caps
 
 # Where the live spec lives, for `make specdrift`. Override per-host:
 #   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
@@ -46,6 +47,9 @@ help:
 	@echo "  make matrix   green + negative controls + non-vacuity witnesses (full gate)"
 	@echo "  make test     alias of check — the proof matrix IS this repo's suite"
 	@echo "  make specdrift  has the spec moved under the pin? (host python3 only)"
+	@echo "  make leanseam   has Lean moved under the assumption ledger? (needs the"
+	@echo "                  keystone sibling; NOT in matrix — see docs/LEAN-SEAM.md §5)"
+	@echo "  make coverage   does COVERAGE-MATRIX.md match what the models actually cite?"
 	@echo "  make clean    remove generated model-checker artifacts"
 	@echo "  make caps     print the active resource caps"
 	@echo
@@ -87,16 +91,16 @@ smoke:
 	$(MAKE) -C tamarin smoke
 
 # --- check: the GREEN matrix — properties that MUST hold ---------------------
-# TLA+ : 9 modules bounded-exhaustive (TLC, safety+liveness; + Store's liveness
-#        slice) + 18 invariants proven inductive/unbounded (Apalache).
-# Spin : all 9 concurrency modules independently re-encoded (7 safety + LTL,
-#        2 structural safety-only) — the cross-check that the TLA+
-#        transcription is faithful.
+# Coverage: does the coverage CLAIM match the models' own §-citations? (see below)
+# TLA+ : 11 modules bounded-exhaustive (TLC, safety+liveness; + Store's liveness
+#        slice) + 23 invariants proven inductive/unbounded (Apalache).
+# Spin : all 11 modules independently re-encoded (7 safety + LTL, 4 structural
+#        safety-only) — the cross-check that the TLA+ transcription is faithful.
 # Provers: 15 ProVerif + 14 Tamarin active-attacker lemmas (lockstep), each
 #        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
-check: check-tla check-spin check-provers
+check: coverage check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
 	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
@@ -111,7 +115,7 @@ check: check-tla check-spin check-provers
 # A green-only run cannot distinguish a correct model from an inert one; the
 # witness slice is what closes that, and it was missing from the TLA+ track
 # entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
-matrix:
+matrix: coverage
 	$(MAKE) -C tla     matrix
 	$(MAKE) -C spin    green
 	$(MAKE) -C spin    neg
@@ -146,6 +150,42 @@ specdrift:
 
 specdrift-gate:
 	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)"
+
+# --- leanseam: has the Lean side moved under the assumption ledger? ----------
+# docs/LEAN-SEAM.md records, per abstraction in the models, the proposition the
+# model RELIES ON and the Lean theorem that discharges it. Those correspondences
+# are a human reading of two texts; this detects when one of the texts changes.
+#
+# D13 — what does this assert? Exactly one claim: nothing on the Lean side has
+# moved under us (pinned files byte-identical; every cited name still present and
+# still under a `#print axioms` gate; prose citations and pin block in sync both
+# ways). It does NOT assert any correspondence is CORRECT — that is the human
+# reading, and re-doing it is the work a red run is asking for.
+#
+# Deliberately NOT part of `make matrix`: matrix must run on a bare clone with
+# only make + podman, and this needs a sibling keystone checkout. A target folded
+# into the gate that skips when its input is absent asserts nothing — so this one
+# FAILS LOUDLY on a missing sibling rather than passing quietly. Host python3 only.
+KEYSTONE ?= ../entity-core-keystone
+
+leanseam:
+	@python3 tools/lean-seam.py --keystone "$(KEYSTONE)"
+
+# --- coverage: does the coverage CLAIM match what the models actually cite? ---
+# Matrix A in docs/COVERAGE-MATRIX.md is DERIVED from the models' own §-citations so the
+# number cannot be one someone chose. Deriving is not checking: the derivation was done by
+# hand and written into prose nothing re-reads, and two phantom rows lived there for a
+# release — §4.7 (a section-range endpoint in one comment) and §6.9 (two out-of-scope
+# DISCLAIMERS). D13 asked of a derived metric: what does this number assert, and what else
+# produces it? A § mention is not a claim.
+#
+# Asserts: the cited §N.M set equals Matrix A's rows in BOTH directions; the stated
+# numerator equals that set's size; the denominator equals the pinned spec's numbered-section
+# count; and neither citation-hygiene tripwire fires. Does NOT assert the engine columns —
+# a citation says a model is ABOUT a section, not which engine verifies what. Host python3
+# only, so it is safe to keep in `check`.
+coverage:
+	@python3 tools/coverage-check.py
 
 clean:
 	$(MAKE) -C tla     clean

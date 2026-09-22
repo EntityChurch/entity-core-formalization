@@ -9,7 +9,10 @@
 \* grant attenuation chain (Lean), and the grant-signature crypto (Tamarin) are abstracted;
 \* what is modeled is their *presence/atomicity* w.r.t. dispatch. The §6.6 dispatch index is a
 \* cache (`disp`); the tree-walk it must equal is captured by Live(tree[h]). Bootstrap handlers
-\* (§6.9) bypass registration and are not modeled. Every element cites its V7 §ref.
+\* bypass registration entirely and are modeled separately, in tla/Bootstrap.tla. Every
+\* element cites its V7 §ref — and ONLY where it makes a claim about that section. The two
+\* sentences about bootstrap here deliberately carry no sigil: a scope DISCLAIMER that cites
+\* a section was being counted as coverage of it (../docs/COVERAGE-MATRIX.md §3b).
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Atomic,       \* TRUE  = §6.2 five writes + index update are atomic w.r.t. dispatch;
@@ -26,7 +29,8 @@ FACETS  == {"manifest", "types", "grant", "sig", "iface"}
 Live(s) == s = FACETS     \* §6.6: a handler is dispatchable iff all five facets are present.
 
 \* Two user-installed handlers exercise the guard: one at a domain path (legitimate), one at a
-\* system path (must be rejected, §6.2). System bootstrap handlers bypass registration (§6.9).
+\* system path (must be rejected, §6.2). System bootstrap handlers bypass registration
+\* entirely; their own safety properties live in tla/Bootstrap.tla.
 Handlers  == {"hLocal", "hSys"}
 Who(h)    == "user"
 Where(h)  == IF h = "hSys" THEN "system" ELSE "local"
