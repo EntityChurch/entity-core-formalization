@@ -10,7 +10,7 @@ accompanies protocol `0.8.2`, so the two line up when read side by side.
 
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
-**`v0.8.2`**. The live protocol has since advanced to **0.8.2.14** and `make specdrift`
+**`v0.8.2`**. The live protocol has since advanced to **0.8.2.15** and `make specdrift`
 reports **9 of 31 cited sections moved**. That gap is deliberate and visible rather than
 hidden: the pin moves only as the last step of re-validating the models, never on a file
 copy, so between a spec release and a re-validation this repository is *behind on purpose*.

@@ -431,7 +431,7 @@ V1–V3; none of them is visible from any single finding.
 are three sibling repos, so they go stale with our tree untouched — the `driftclaim` class
 exactly (D15). Re-read the source before quoting a row.
 
-**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.14** and `make specdrift` reports
+**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.15** and `make specdrift` reports
 **9 of 31 cited sections moved**. Eight of the nine are additive clarification no model
 contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
 `tla/ConnCodes.tla` transcribes 400. Re-vendoring is deliberately **not** the next move
@@ -473,7 +473,7 @@ facets its own sentence states. `rows` was gated, `Class L` was gated, and `OPEN
 them in the same clause, was declared nowhere. **A gate that reads SOME facets of a claim asserts
 nothing about the rest, and the unchecked facet is the one that moves.** Exactly the shape found
 the same afternoon in `spec-drift`, where the section COUNT was anchored and the live spec VERSION
-beside it went from 0.8.2.11 to 0.8.2.14 with `driftclaim` green. The facet is declared now.
+beside it went from 0.8.2.11 to 0.8.2.15 with `driftclaim` green. The facet is declared now.
 **Ask of any gated sentence which of its claims the gate actually reads** — a warning against
 recalling a number is not a substitute for deriving the number, even when the warning is the
 sentence carrying it.
@@ -926,7 +926,7 @@ unresolvable citations are a build failure, and a bare `§` in a model file now 
 `TRACKS.toml` says it means, in 31 lines across 23 files.
 
 **And a fourth, which is the one to remember: the LIVE VERSION was never gated at all.** Nine
-sites said *"the live spec is 0.8.2.11"* while it was **0.8.2.14**, `driftclaim` green throughout
+sites said *"the live spec is 0.8.2.11"* while it was **0.8.2.15**, `driftclaim` green throughout
 — because the gate anchored the section COUNT and the count happened to still be 9. *Two facts in
 one sentence, one of them checked, and the unchecked one is the one that moved.* Ask of a gated
 sentence what ELSE it asserts. `check_live_version` now covers it.

@@ -20,7 +20,7 @@ one tool, on the layer it can actually reach.
 > `identity` were "vendored, unpinned and unmodeled" until 2026-09-07; both were promoted the
 > same day, hours apart.)*
 
-> **Pinned at spec 0.8.2; the live spec is 0.8.2.14.** Rows 4 and 5 below — the two this
+> **Pinned at spec 0.8.2; the live spec is 0.8.2.15.** Rows 4 and 5 below — the two this
 > repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and
 > `make specdrift` reports **9 of 31 cited sections moved**. Eight of the nine are additive
 > clarification; §4.7 is the one that contradicts a model constant. Measured section by

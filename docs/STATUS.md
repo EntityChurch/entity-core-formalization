@@ -2,7 +2,7 @@
 
 _Updated: 2026-09-06 · this line: 0.8.2_
 
-> **The models are pinned at 0.8.2; the live spec is 0.8.2.14.** Every model in this repo is
+> **The models are pinned at 0.8.2; the live spec is 0.8.2.15.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
 > Protocol at spec version **0.8.2**. `make specdrift` reports **9 of 31 cited sections
 > moved**, so the results below are a statement about **0.8.2** and not about the protocol as
@@ -627,7 +627,7 @@ item 4.
 0. **~~`make specdrift` is a one-of-four gate.~~ Done 2026-09-09** — and it found three more
    input-set defects on the way in, all of which had been subtracting silently. `--track`, per-track
    pins and live trees derived from `TRACKS.toml`, per-track claim anchors (`docs/SPEC-DRIFT-ASSESSMENT.md`
-   §0), a `check_live_version` assertion after nine sites said **0.8.2.11** while it was **0.8.2.14**
+   §0), a `check_live_version` assertion after nine sites said **0.8.2.11** while it was **0.8.2.15**
    with `driftclaim` green, the `## 4. Connections` trailing-dot bug that kept `§4` and `EXTENSION-QUORUM`
    §1/§2/§7/§8 out of the denominator, and unresolvable citations promoted from a silent drop to a
    build failure. Core's published pair is **9 of 31**. `AGENTS.md` D15 twelfth shape.

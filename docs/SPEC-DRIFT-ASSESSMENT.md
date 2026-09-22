@@ -1,7 +1,7 @@
 # Spec-drift assessment — the pin vs the live spec
 
 > **LIVE — the pin is behind again, and this document is the measurement.** The models are
-> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.14**, and `make specdrift`
+> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.15**, and `make specdrift`
 > reports **9 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
 > and re-derived 2026-09-09. §0 is the **per-track** table, new on 2026-09-09 and the reason
 > this document had been telling one quarter of the truth. §2 onward is the previous cycle's
@@ -44,7 +44,7 @@ before believing a zero (D15, ninth shape).
 
 ---
 
-# 1. Live measurement — 0.8.2 pin vs 0.8.2.14 live
+# 1. Live measurement — 0.8.2 pin vs 0.8.2.15 live
 
 **Measured 2026-09-06, re-derived 2026-09-09.** Reproduce with `make specdrift`; the prose
 sites that state the status are gated by `make driftclaim`.
@@ -52,7 +52,7 @@ sites that state the status are gated by `make driftclaim`.
 | | |
 |---|---|
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
-| Live (`entity-core-protocol/specs`) | **0.8.2.14** · CBOR encoding 1.5 → 1.6 · type system also differs |
+| Live (`entity-core-protocol/specs`) | **0.8.2.15** · CBOR encoding 1.5 → 1.6 · type system also differs |
 | Core spec delta | +152 lines added, −33 removed |
 | **Sections the models cite that moved** | **9 of 31** |
 | Sections whose movement contradicts a model | **1** (§4.7) |
@@ -70,7 +70,7 @@ subtraction, which is also how eight `COVERAGE-MATRIX` document references were 
 inside the citation set wearing a `§` sigil they had no right to.
 
 **The pin is not being moved yet, and that is a decision rather than a backlog item.** The
-sibling `entity-core-keystone` has not upgraded to 0.8.2.14; re-vendoring and re-targeting
+sibling `entity-core-keystone` has not upgraded to 0.8.2.15; re-vendoring and re-targeting
 the models before the peer that ships has moved would put this repo's assumption ledger and
 the peer's Lean proofs on two different spec texts, which is the one configuration that makes
 `docs/LEAN-SEAM.md` unreadable. Re-vendor is sequenced *after* the sign-off, per
@@ -99,7 +99,7 @@ below records an earlier draft of this document making.
 moved under them:
 
 1. **`connection_sequence_error` moved 400 → 409.** `ConnCodes.tla`'s `NormativeStatus`
-   maps it to 400 (via the `OTHER` arm, line 128). Against 0.8.2.14 that constant is wrong,
+   maps it to 400 (via the `OTHER` arm, line 128). Against 0.8.2.15 that constant is wrong,
    and `StatusMatchesCode` would be transcribing a status the spec no longer fixes.
 2. **`incompatible_key_type` is retired** — MUST NOT be emitted. Not modeled (the module
    declares the negotiation codes out of scope), so no impact beyond the transcription note.
@@ -110,7 +110,7 @@ moved under them:
 
 **The contested cell is resolved, in our favour.** `ConnCodes.tla`'s header documents
 `ConnCodesSeqReadingBug.cfg` as *"not a bug we injected — it is a conformant reading of the
-spec, and that is the point."* At 0.8.2.14 that reading is **no longer conformant**: row 10's
+spec, and that is the point."* At 0.8.2.15 that reading is **no longer conformant**: row 10's
 parenthetical was narrowed exactly as this repo argued (`docs/PROPERTIES.md` §D.1). So when
 the pin does move, the model gets **simpler** — the contested-cell constant collapses and the
 control demotes from "a conformant reading" to an ordinary injected defect. That is the whole
@@ -119,7 +119,7 @@ argument coming back to it as spec text.**
 
 ## What this measurement does not assert
 
-- **Not that the models would pass at 0.8.2.14.** Nothing has been re-run against the new
+- **Not that the models would pass at 0.8.2.15.** Nothing has been re-run against the new
   text and nothing can be, because the models transcribe 0.8.2. Only a re-vendor and
   re-validation can speak to the current spec, and that is the point of keeping the two
   statements apart.
