@@ -1,6 +1,16 @@
 # entity-core-formalization — status
 
-_Updated: 2026-06-30 · public: v0.8.0 (master)_
+_Updated: 2026-08-27 · public: v0.8.0 (master)_
+
+> **The pin has gone stale — read this before taking any result as current.**
+> Every model in this repo is written against the SHA-pinned snapshot in
+> `spec-data/v0.8.0/`, which is the Entity Core Protocol at spec version **0.8.0**.
+> The protocol has since advanced to **0.8.2**, and **13 of the 26 spec sections the
+> models cite have changed** (`docs/SPEC-DRIFT-ASSESSMENT.md`; `make specdrift`). The results below are
+> reproducible and remain true **of the 0.8.0 design**; they are *not* a current
+> statement about the protocol as it stands today. Re-vendoring `spec-data/` and
+> re-validating the affected §-citations is now the first substantive work, not an
+> optional leftover.
 
 ## Where it is
 
@@ -48,10 +58,11 @@ What is proved, at demonstrator altitude against the SHA-pinned `spec-data/v0.8.
   and each result graded against its expected verdict (25 TLC + 26 ProVerif + 25 Tamarin),
   plus **50 cross-check runs** (28 Spin + 22 Apalache). All behave exactly as designed.
 
-The project is stable at the v0.8.0 research-preview line; no code or model changes are
-in flight. The verification surface stays paused until `spec-data/` is re-vendored or an
-extension protocol lands (see **Next**), at which point the Phase 3 extension-protocol
-attacker models are the first substantive work.
+The models and their results are stable at the v0.8.0 research-preview line; no model
+changes are in flight. **The condition that kept the verification surface paused has now
+been met** — the spec advanced to 0.8.2 while this repo was paused (see *Waiting on*), so
+the re-vendor-and-re-check cycle, not the Phase 3 extension models, is the next
+substantive work.
 
 ## Backlog
 
@@ -83,9 +94,57 @@ critical path and route findings to architecture, never spec edits. Ranked by va
 
 ## Waiting on
 
-- **Nothing blocking.** Re-vendoring of `spec-data/` (and thus any re-modeling, including
-  the gate on Phase 3) is owned by the sibling architecture/spec repo and happens only
-  when the spec advances.
+- **The spec advanced; `spec-data/` must be re-vendored.** This is no longer "nothing
+  blocking." Measured 2026-08-27 against `entity-core-protocol` `master` (published;
+  byte-identical to their `dev`): all three vendored files differ from the pin, and
+  `ENTITY-CORE-PROTOCOL.md` has moved from spec version **0.8.0 to 0.8.2** — 197 changed
+  lines, 25 of 93 numbered sections.
+
+  **Of the 26 core-protocol sections the models actually cite, 13 have moved.** The full
+  per-section table, the method, its negative controls and its limits are in
+  **`docs/SPEC-DRIFT-ASSESSMENT.md`** — one canonical home, not restated here. Reproduce
+  any of it with `make specdrift`.
+
+  The headline for a returning reader: the drift is **even across all three tracks**
+  (52% / 59% / 54% of each track's cited sections). What is stable is *depth* — the two
+  most-depended-on sections in the repo, §5.5 chain verification (33 model files) and §7.3
+  signatures (22), did not move, nor did §5.4 or §6.8. So the foundations the
+  unforgeability and confused-deputy results rest on are unmoved.
+
+  **And the section count badly overstates it.** Across all 13 moved sections, only **16
+  lines of pre-existing text** changed against **105 lines added** — 0–10% of any section,
+  1–4% for most, and 0% for §5.2, §5.10 and §6.11, which are pure additions. Of those 16
+  lines, most are status-code discrimination (a blanket 403 split into 401-auth vs
+  403-authz — rejected either way, and the models model accept/reject, not status codes) or
+  appended clarification. Exactly two are genuine semantic changes (§3.6 `F40` id-scope
+  literal matching, §6.1 `CAP-1` empty grants) and **neither intersects anything the models
+  encode** — checked, not assumed. **No property this repo proved has been contradicted.**
+
+  The real finding is narrower: there is genuinely new normative surface no model covers —
+  §6.11 frame-write atomicity (the spike-A target), §4.8 the unsynchronized-refcount
+  use-after-free, §5.6 malformed temporal-field ingest. New territory to model, not
+  contradictions of old results.
+
+- **One change questions a modeling choice rather than a modeled fact.** §5.2 at 0.8.2
+  requires the dispatch authority to be three-valued — SELF, GRANT, and an ABSENT case
+  that MUST deny — and says collapsing it to a two-valued optional has no correct default.
+  `tla/Reentry.tla` abstracts the verdict to a constant (`Gate(p) == TRUE`), so the denial
+  case is inexpressible there and `NoDispatchWithoutGate` cannot fail.
+
+  Stated carefully, because an earlier draft of this entry overstated it: 0.8.2 does
+  **not** invalidate the result and does not name our abstraction as a defect. That rule
+  addresses implementations representing an authority value; the model declares the
+  verdict out of scope and Lean-owned. The underlying security property — gate on the
+  handler grant, never on the propagated caller capability — is **§6.8, which did not
+  move**, is cited by 8 model files, and is what 0.8.2's new §5.2 text defers to.
+  `tla/Core.tla` does model denying gates. What survives is narrower and still worth
+  acting on: the backlog item *"model gate denials so the dispatch gate is load-bearing"*
+  is pre-existing, and 0.8.2 raises its value by giving the denial case an explicit
+  normative rule with a named ALLOW-bug lineage.
+
+- Re-vendoring is owned by the sibling spec repo (`entity-core-protocol`); this repo does
+  not edit `spec-data/`. The re-check discipline once it lands is already written down
+  under **Next**.
 - The deepest open assumption is the **5th wall — spec↔model fidelity**: every result is a
   property of a *model*. The two-paradigm agreement (Spin independent encoding + Apalache
   unbounded matching TLC; ProVerif + Tamarin lockstep) **narrows** it but cannot close it —
@@ -122,10 +181,17 @@ critical path and route findings to architecture, never spec edits. Ranked by va
 
 ## Next
 
-1. **Leave the verification surface paused** unless `spec-data/` is re-vendored or an
-   extension protocol lands. If so: rebuild the engine images, re-run `make check` to
-   confirm a green baseline, then diff `spec-data/` and re-validate affected §-citations
-   **before** extending — and keep the lockstep + negative-control + §-citation discipline
-   on every new increment.
-</content>
-</invoke>
+1. **Re-vendor `spec-data/` to spec 0.8.2.** Owned by `entity-core-protocol`; this repo
+   does not author the snapshot. Until it lands, every result here is explicitly a
+   statement about the 0.8.0 design.
+2. **Then run the re-check cycle already written down here:** rebuild the engine images,
+   re-run `make check` to confirm the green baseline still reproduces, then diff
+   `spec-data/` and re-validate the affected §-citations **before** extending — keeping the
+   lockstep + negative-control + §-citation discipline on every new increment. The eight
+   moved sections in *Waiting on* are the work-list; §6.11, §4.8 and §5.9/§4.10 carry new
+   normative MUSTs that the current models do not encode at all.
+3. **Re-check the §5.2 three-valued-authority rule against the abstraction**, ahead of the
+   rest. It is the one change that questions a modeling choice rather than a modeled fact,
+   and it promotes the backlog's "model gate denials" item out of optional.
+4. **Phase 3 extension-protocol attacker models** stay gated on vendoring `EXTENSION-*`,
+   behind the re-vendor above.

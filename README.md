@@ -1,16 +1,27 @@
 # entity-core-formalization
 
-**Formal design assurance for the Entity Core Protocol (v0.8.0 / V8).** Machine-checked
-verification of the *protocol design* on the two layers Lean structurally cannot
-reach: **distributed correctness + liveness under concurrency** (TLA+) and
-**active-attacker protocol security** (Tamarin / ProVerif). v0.8.0 is the de-versioned
-V8 release cutover of the V7 line this project proved — **wire-byte-identical**, so the
-proofs carry forward unchanged.
+**Formal design assurance for the Entity Core Protocol.** Machine-checked verification of
+the *protocol design* on the two layers Lean structurally cannot reach: **distributed
+correctness + liveness under concurrency** (TLA+) and **active-attacker protocol
+security** (Tamarin / ProVerif).
 
-This is a sibling project to `entity-core-architecture` (the spec authority),
-`entity-core-keystone` (per-language peer generation + conformance), and the
-reference implementations. It is **arch-owned**: it verifies the *design* (the
-protocol itself), not any generated peer.
+> **Which spec version is verified here is a property of the pin, not of this sentence.**
+> The models are written against the SHA-pinned snapshot in `spec-data/`, and
+> `spec-data/*/MANIFEST.md` is the single authoritative statement of which spec version,
+> which files, and which SHA-256 each result is about. Restating a version number in prose
+> is how a repo ends up publishing three different answers to one question.
+>
+> Today that pin is `spec-data/v0.8.0/` — spec version **0.8.0** — and the protocol has
+> since advanced to **0.8.2**, so 13 of the 26 sections the models cite have moved — a count that overstates the change
+> (16 lines of pre-existing text altered against 105 added; nothing proved here is
+> contradicted). Results here
+> are reproducible statements about the 0.8.0 design, not about the protocol as it stands
+> today. See `docs/STATUS.md` for the per-section detail and the re-check work-list.
+
+This is a sibling project to `entity-core-protocol` (the spec authority — it publishes
+the three specifications this repo models), `entity-core-keystone` (per-language peer
+generation + conformance), and the reference implementations. It is **arch-owned**: it
+verifies the *design* (the protocol itself), not any generated peer.
 
 ## Why this exists (the one-paragraph version)
 

@@ -6,6 +6,17 @@ This is the load-bearing honesty document for the release. A formal-methods repo
 that overclaims is the worst kind of overclaim, so this states — per property,
 exactly — the *strength* of each result and where it stops.
 
+> **Which spec version this scorecard is about.** Everything below is machine-checked
+> against the SHA-pinned snapshot in `spec-data/v0.8.0/` — the Entity Core Protocol at
+> spec version **0.8.0**. As of 2026-08-27 the protocol has advanced to **0.8.2**, and
+> **13 of the 26 spec sections the models cite have changed.**
+> That count overstates it: only 16 lines of pre-existing text changed against 105 added,
+> and no property proved here has been contradicted. Nothing below becomes false: these
+> remain reproducible results *about the 0.8.0 design*. But this scorecard is **not** a
+> current statement about the protocol as it stands today, and the strength column does
+> not carry across the drift. The per-section table and what it implies is in
+> `docs/SPEC-DRIFT-ASSESSMENT.md` — method, negative controls and limits included.
+
 > **Frame, once, plainly:** this project is **design assurance, off the release
 > critical path.** It machine-checks **models of the V7 design**, not the prose
 > and not the code. It is **not** a claim that "the Entity Core Protocol is proven
@@ -136,7 +147,7 @@ fixed in V7) and otherwise found the v7.76 design admits no deadlock, store race
 resource leak, registration partial-residue, emit mis-fire, Layer-1 verdict leak, or
 — under an active attacker — forgery, escalation, replay, deep frame confusion,
 threshold bypass, or trusted-forever fail-open, at the modeled bound. Per repo
-discipline any defect is a proposal/review-note in `entity-core-architecture`, never a
+discipline any defect is a proposal/review-note in `entity-core-protocol`, never a
 spec edit here.
 
 *Full narrative + the 76-run re-verification matrix: `docs/FINAL-ASSURANCE-SUMMARY.md`.

@@ -4,6 +4,14 @@ The point of this map: **nothing double-owned, nothing assumed without a named
 owner.** Each formal question about the Entity Core Protocol is answered by exactly
 one tool, on the layer it can actually reach.
 
+> **Pinned at spec 0.8.0; the protocol is at 0.8.2.** Rows 4 and 5 below — the two this
+> repo owns — are answered against the SHA-pinned `spec-data/v0.8.0/` snapshot. Measured
+> 2026-08-27, 13 of the 26 spec sections the models cite have since moved — a count that overstates
+> the change; nothing proved here is contradicted. The map's ownership
+> structure is unaffected; the *currency* of rows 4 and 5 is. See
+> `docs/SPEC-DRIFT-ASSESSMENT.md` for which sections, by what method, and what it means. This is the 5th wall behaving
+> exactly as this document warns it can: fidelity is to a pinned text, and a pin ages.
+
 ## The six questions
 
 | # | Question | Tool | Layer | Status |

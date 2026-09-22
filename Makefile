@@ -31,7 +31,11 @@ include caps.mk
 MAKE ?= make
 
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
-        check-provers crosscheck clean caps
+        check-provers crosscheck specdrift specdrift-gate clean caps
+
+# Where the live spec lives, for `make specdrift`. Override per-host:
+#   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
+LIVE_SPECS ?= ../entity-core-protocol/specs
 
 help:
 	@echo "entity-core-formalization — make is the door (make + podman only)"
@@ -40,6 +44,7 @@ help:
 	@echo "  make smoke    prove every containerized toolchain runs end-to-end"
 	@echo "  make check    run the GREEN verification matrix (all 4 engines)"
 	@echo "  make test     alias of check — the proof matrix IS this repo's suite"
+	@echo "  make specdrift  has the spec moved under the pin? (host python3 only)"
 	@echo "  make clean    remove generated model-checker artifacts"
 	@echo "  make caps     print the active resource caps"
 	@echo
@@ -107,6 +112,20 @@ check-provers:
 # of the TLA+ track; both are already inside `check`. Exposed as its own name too.
 crosscheck: check-spin
 	$(MAKE) -C tla apalache-green
+
+# --- specdrift: has the pin gone stale? --------------------------------------
+# Every result here is a statement about spec-data/<pin>/, never about the live
+# spec. This makes that distinction checkable instead of asserted: it reports
+# which spec sections THE MODELS CITE have moved since the pin was taken, and
+# which model files depend on them. Host python3 only — no toolchain, no image.
+#
+# `specdrift` REPORTS (always succeeds — drift is information, not a build break).
+# `specdrift-gate` FAILS on drift, for use as a precondition.
+specdrift:
+	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)" || true
+
+specdrift-gate:
+	@python3 tools/spec-drift.py --live "$(LIVE_SPECS)"
 
 clean:
 	$(MAKE) -C tla     clean

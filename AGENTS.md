@@ -79,8 +79,8 @@ Only optional leftovers remain — the capstone `docs/FINAL-ASSURANCE-SUMMARY.md
   lineage; `docs/FINAL-ASSURANCE-SUMMARY.md` is the single live capstone pointer — don't
   rewrite closed reports to look current.
 - **Don't change the spec here.** A model that surfaces a design defect is a **finding
-  routed to the sibling `entity-core-architecture` repo** (a proposal or review note in
-  *their* tree), never a spec edit here. Don't re-model what Lean proved —
+  routed to the sibling `entity-core-protocol` repo** (a proposal in *their*
+  `docs/proposals/`), never a spec edit here. Don't re-model what Lean proved —
   cap-chain-verify is an abstract predicate (TLA+) / function symbol (Tamarin); the
   attenuation logic is Lean's, done.
 
@@ -95,5 +95,5 @@ Only optional leftovers remain — the capstone `docs/FINAL-ASSURANCE-SUMMARY.md
   freeze, not on push.
 - Model fidelity is checked against the pinned `spec-data/` plus the sibling repos
   (`entity-core-go` transport, `entity-core-keystone` Lean report + concurrency gate,
-  `entity-core-architecture` bug taxonomy), present locally as siblings of this repo —
-  read the source, not memory.
+  `entity-core-protocol` live specs + `docs/proposals/`), present locally as siblings of
+  this repo — read the source, not memory.

@@ -23,6 +23,19 @@ extension protocols, gated on vendoring `EXTENSION-*`).
 If you are resuming work, read this capstone first — the optional leftovers are enumerated
 in §5 (Findings and residual risk).
 
+> **Read this before treating the capstone as current.** Everything here certifies models
+> written against the SHA-pinned `spec-data/v0.8.0/` — the protocol at spec version
+> **0.8.0**. As of 2026-08-27 the protocol is at **0.8.2**, and **13 of the 26 spec
+> sections the models cite have moved**, including §6.11, the reentry contract this
+> project spiked on. That count overstates the change: 16 lines of pre-existing text
+> altered against 105 added, and no property proved here is contradicted.
+> The results below are reproducible and remain true of the 0.8.0 design; they are not a
+> current statement about the protocol today. The drift is even across all three tracks
+> (52%/59%/54% of cited sections); what is stable is the *depth* — §5.5 chain verification
+> (33 model files) and §7.3 signatures (22) did not move.
+> Method, per-section detail and the re-check work-list: `docs/SPEC-DRIFT-ASSESSMENT.md`.
+> The §5 leftovers below are no longer all optional — re-vendor-and-re-check now leads.
+
 ---
 
 ## 1. What this project was for (one paragraph)
@@ -123,7 +136,7 @@ design admits no deadlock, store race, resource leak, registration partial-resid
 emit mis-fire, Layer-1 verdict leak, or — under an active attacker — forgery,
 escalation, replay, deep cross-peer frame confusion, threshold bypass, or
 "trusted-forever" fail-open, at the modeled bound. Per repo discipline any defect
-would be a proposal/review-note in `entity-core-architecture`, never a spec edit here.
+would be a proposal/review-note in `entity-core-protocol`, never a spec edit here.
 
 **Residual risk, ranked (carried verbatim from the reports — not papered over):**
 
@@ -180,4 +193,3 @@ the boundaries are.
 `tamarin/{FORMALIZATION-REPORT,PHASE1-FORMALIZATION-REPORT,PHASE2-FORMALIZATION-REPORT}.md`,
 scope: `tamarin/PHASE{1,2}-SCOPE.md`, `tla/PHASE1-SCOPE.md`. Reproduce any run with the
 per-row commands in those reports (`make tlc` / `make proverif` / `make tamarin`).*
-</content>

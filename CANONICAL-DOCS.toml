@@ -4,8 +4,8 @@ slug   = "entity-core-formalization"
 repo   = "entity-core-formalization"
 github = "https://github.com/EntityChurch/entity-core-formalization"
 intro  = """
-Formal design assurance for the Entity Core Protocol (v7). This repo machine-
-checks MODELS of the V7 design on the two layers the Lean proof work structurally
+Formal design assurance for the Entity Core Protocol. This repo machine-checks
+MODELS of the protocol design on the two layers the Lean proof work structurally
 cannot reach: distributed correctness + liveness under concurrency (TLA+, cross-
 checked by an independent Spin re-encoding and unbounded Apalache SMT proofs), and
 active-attacker protocol security (Tamarin + ProVerif, Dolev-Yao). It is a sibling
@@ -18,7 +18,11 @@ Honesty first (this is design assurance, off the release critical path): it is a
 strong DEMONSTRATOR, not a closed proof, and NOT a claim that "the protocol is
 proven correct." What is PROVEN unbounded vs only MODELED at a bound vs symbolic is
 stated exactly in docs/PROPERTIES.md; the deepest assumption — spec↔model fidelity,
-which no tool here closes — is named, not hidden. Build is make + podman only (no
+which no tool here closes — is named, not hidden. Which spec version each result is
+about is a property of the SHA pin in spec-data/, never of prose: the models are
+currently pinned at spec 0.8.0 while the protocol has advanced to 0.8.2, so these are
+reproducible results about the 0.8.0 design and docs/STATUS.md says exactly which
+modeled sections have since moved. Build is make + podman only (no
 native model-checker toolchain on the host): `make build` then `make check` on a
 fresh clone runs the whole green matrix, with per-container resource caps so a
 runaway check dies at the cap instead of taking the host down.
@@ -54,6 +58,12 @@ group = "Assurance"
 path  = "docs/PROPERTIES.md"
 title = "Properties — PROVEN vs MODELED"
 blurb = "The honest scorecard: per property, the strength of result (unbounded proof vs bounded-exhaustive vs symbolic) and where it stops."
+group = "Assurance"
+
+[[doc]]
+path  = "docs/SPEC-DRIFT-ASSESSMENT.md"
+title = "Spec-drift assessment — the pin vs the live spec"
+blurb = "How far the pinned spec snapshot has aged behind the live protocol, by what method, with the detector's negative controls and stated limits. Reproduce with `make specdrift`."
 group = "Assurance"
 
 [[doc]]
