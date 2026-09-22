@@ -17,6 +17,41 @@ moves only as the last step of re-validating the models, never on a file copy.
 
 ## [Unreleased]
 
+### Closed — §5.5a has a theorem per pattern form, and the seam gate caught the movement
+
+The `hframed` finding this repo routed to `entity-core-keystone` was adopted. §5.5a admits
+three pattern forms; the Lean isolation theorem covered one, which is the asymmetry the
+assumption ledger was built to expose. It now covers all three —
+`absolutePattern_names_one_peer` for the absolute named form (the residual we routed), plus
+`canonSegs_absolute_frame_independent` and `wildcardPattern_peer_agnostic`, which keystone
+proved unprompted and witness-checked for non-vacuity. **Three forms, three theorems, matching
+the three canonicalization equations our symbolic theories carry one for one.** Ledger row
+**L7 moves CLOSED-MODULO-H → CLOSED**; **L12** and **L13** are new rows; the ledger is 22 rows
+with **one** Lean-facing residual left (L1).
+
+**Both gates did their job on movement rather than on breakage**, which is the half that is
+easy to get wrong. `leanseam` went red on the two digests and demanded the rows be re-read
+before re-pinning; `leanproof` rejected the three new theorems **by name** as
+`UNDECLARED_GATE`. A gate that asserted "37 declarations, all on the standard axiom set" would
+have passed 40 — the new proofs are unremarkable except that nobody here had read them. A
+proof arriving is a diff exactly as a proof breaking is.
+
+**And the exchange corrected us twice.** We asked keystone to discharge `hframed` from a
+syntactic side-condition, on our own written claim that the relative half was "genuinely
+mechanical." They declined and measured why: the pinned mathlib-free toolchain ships
+`String.splitOn`/`splitOnAux` and *zero theorems about either*, with `splitOnAux`
+`@[irreducible]` over raw byte positions. We had diagnosed their comment as wrong about
+`hframed`'s scope and then reproduced its error about `hframed`'s cost. Separately, re-reading
+**L1** against the current definitions showed **this repo had its mechanism wrong**: `edgeOk`
+derives the §5.5a granter frames from the chain, not from `localPeer`, so the resources
+dimension — the one our row blamed — was never the source of the peer-dependence. It is the
+`localPeer` frame on handlers/operations, plus a `peers` scope that *defaults* to the
+evaluating peer. L1 stays CLOSED-MODULO-H with H correctly located.
+
+The declared `String.dropRight` warning is **deleted** — keystone fixed it, and our note that
+the replacement's `String.Slice` return type might be a blocker was wrong; they measured the
+replacement over 21 inputs including multi-byte prefixes rather than stopping at typechecking.
+
 ### Added — a second gate on the Lean seam, and the reason it was needed
 
 `docs/LEAN-SEAM.md` records which Lean theorem in the keystone peer discharges each
@@ -39,7 +74,8 @@ not reasoned about:
 
 So an exit-status gate would have caught one failure mode in three, missing exactly the two
 a proof check exists for. **`make leanproof`** therefore grades the axiom sets: all 37
-`#print axioms` declarations in the peer's proof track, exact set per declaration in both
+`#print axioms` declarations in the peer's proof track *(40 as of the entry above — keystone
+added three theorems, and the gate rejected them by name rather than absorbing them)*, exact set per declaration in both
 directions against `lean/proof-gate.expect`, every ledger-pinned theorem required to be among
 them, any undeclared warning a failure, and the toolchain required to be the Lean version the
 peer itself pins. Five negative controls (`sorry`, substituted `axiom`, deleted gate line,

@@ -27,12 +27,17 @@
 # Re-deriving this file to make a red run go green defeats it entirely — the failing run is
 # telling you a proof changed, and the ledger rows that cite it need re-reading first.
 #
-# 37 gates. 22 of them are cited by `docs/LEAN-SEAM.md` (21 discharging + 1 pinned as a
+# 40 gates. 25 of them are cited by `docs/LEAN-SEAM.md` (24 discharging + 1 pinned as a
 # rejected correspondence); `tools/lean-proof.py` checks that tie separately and reports
 # LEDGER_UNCOVERED if a pinned theorem is not among the gates that reported. The other 15
 # are the proof track's own — the CBOR float-encoding and canonical-sort proofs, and five
 # CapabilityProofs helper lemmas — graded here because the peer gates them, not because
 # this repo's models rely on them.
+#
+# 37 → 40 on 2026-09-06: keystone adopted the §5.5a packet and added a theorem per pattern
+# form. The three arrived as `UNDECLARED_GATE` failures from this file's own both-directions
+# check, which is the outcome it exists for — three new theorems nobody here had read would
+# otherwise have been absorbed silently by a gate that only counted.
 #
 # Format:
 #   gate|<file, relative to protocol-generator/lean>|<full Lean name>|<axioms, or `-`>
@@ -89,10 +94,20 @@ gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesIdPattern_literal|propext,Classical.choice,Quot.sound
 # [L3] an authority holding no grants covers nothing — deny-by-default at the §5.2 gate.
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.checkPermission_no_grants_deny|propext,Classical.choice,Quot.sound
-# [L7] §5.5a namespace isolation — CLOSED-MODULO-H, and H (`hframed`) scopes it to the
-# peer-relative pattern fragment. The gate proves the theorem holds; it says nothing about
-# the absolute form having no theorem at all. That is the ledger's job and it says so.
+# [L7] §5.5a namespace isolation for the PEER-RELATIVE form; H (`hframed`) is what scopes it
+# there, and is false — not merely unproved — for the absolute form. CLOSED as of 2026-09-06,
+# when the companion theorem below landed. The gate proves each theorem holds; that the three
+# forms between them COVER §5.5a is the ledger's reading, not this file's assertion.
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.grantPattern_namespace_isolation|propext,Classical.choice,Quot.sound
+# [L7] the absolute NAMED form — the residual this repo routed, adopted 2026-09-06.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.absolutePattern_names_one_peer|propext,Classical.choice,Quot.sound
+# [L12] absolute patterns canonicalize identically in any frame — the equation our symbolic
+# theories encode as `canon(awild(p), fr) = awild(p)`.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.canonSegs_absolute_frame_independent|propext,Classical.choice,Quot.sound
+# [L13] the wildcard form is peer-agnostic BY DESIGN. Note the axiom set is `propext` alone,
+# not the three-axiom set of its neighbours: a narrower set is still a set that must not move
+# silently, which is why this file grades the set rather than the count.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.wildcardPattern_peer_agnostic|propext
 # [L3, pinned REJECTED] considered and discharges nothing here — see LEAN-SEAM.md §4.2.
 # Still required to be proved: a stale rejection misleads exactly as a stale citation does.
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.checkResourceScope_no_targets_deny|propext,Classical.choice,Quot.sound
@@ -106,5 +121,20 @@ gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.
 # D13: a tool warning is a build failure. Lean reports `sorry` AS a warning, so this gate
 # cannot be indifferent to them — but it also cannot go red on day one for a warning that
 # belongs to another repo. So: every warning is a failure UNLESS declared here, by exact
-# substring, with an owner. One is declared, and it is routed rather than tolerated.
-warn|`String.dropRight` has been deprecated|keystone's SHIPPING peer, src/EntityCore/Capability.lean — a deprecated stdlib call in the pinned text the seam ledger cites, whose replacement returns a different type (String.Slice). Not ours to fix: routed to entity-core-keystone. Delete this row when they land it, and the gate goes clean.
+# substring, with an owner.
+#
+# NONE ARE DECLARED, and that is a state this file should be checked against rather than
+# assumed. One was: `String.dropRight` deprecated, in keystone's shipping
+# `src/EntityCore/Capability.lean`, routed 2026-08-30 with the instruction "delete this row
+# when they land it." They landed it 2026-09-06 (`dropRight` → `dropEnd`), so the row is gone
+# and the build is warning-clean. Their note is worth keeping because we got it wrong: we
+# flagged the `String.Slice` return type as a possible blocker, and it is not one —
+# `String.startsWith` is generic over `ForwardPattern`, so the slice is taken with no
+# `.toString` copy. They did not stop at typechecking either, since typechecking is not
+# equivalence: 21 inputs including 2- and 3-byte multi-byte prefixes, zero divergence.
+#
+# Keystone disclosed two more of the same class (`String.data`, `String.get` in `Host.lean`)
+# and deliberately did NOT bundle them, so the conformance re-measurement stayed unambiguous
+# about cause. They are outside the two files this ledger pins, so this gate cannot see them
+# — recorded here because "the gate is clean" and "the peer has no deprecations" are
+# different claims, and only the first is ours to make.

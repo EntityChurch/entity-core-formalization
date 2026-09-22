@@ -320,7 +320,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
 
      | Target | Runs | Grades on |
      |---|---|---|
-     | `leanproof` | 1 | the **axiom set** of all 37 `#print axioms` gates against `lean/proof-gate.expect`, in both directions, + every ledger-pinned theorem present + no undeclared warning + the image's Lean == keystone's `lean-toolchain` pin |
+     | `leanproof` | 1 | the **axiom set** of all 40 `#print axioms` gates against `lean/proof-gate.expect`, in both directions, + every ledger-pinned theorem present + no undeclared warning + the image's Lean == keystone's `lean-toolchain` pin |
      | `leanproof-neg` | 5 | the declared reason codes per control **and the declarations each names** — `SORRY_AX`, `UNTRUSTED_AXIOM`, `MISSING_GATE` (declaration-level and file-level), `BUILD_ERROR` pinned to its error kind. Graded on counts alone in its first draft; that is below the standard `TM_NEG_EXPECT` set, and the session audit corrected it |
 
      Why not `lake build`'s exit status, which is what keystone's own documentation calls the

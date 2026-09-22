@@ -2,13 +2,19 @@
 
 This directory holds **no Lean source**, and that is deliberate.
 
-Eleven rows of `docs/LEAN-SEAM.md` say that an abstraction in one of our models — the
+Thirteen rows of `docs/LEAN-SEAM.md` say that an abstraction in one of our models — the
 capability-chain verdict as an opaque predicate in TLA+, `narrow` as a free function symbol
 in Tamarin — is sound because the **Lean authority proof in the `entity-core-keystone`
-peer** discharges the proposition the model assumes. **Ten of the eleven cite a named
-theorem** (nine rows CLOSED, two CLOSED-MODULO-H; the eleventh, L2, is closed by
+peer** discharges the proposition the model assumes. **Twelve of the thirteen cite a named
+theorem** (twelve rows CLOSED, one CLOSED-MODULO-H; the thirteenth, L2, is closed by
 construction — Lean's termination checker, no theorem to run). Those rows are what make the
 division of labour between this repo and the Lean proof more than prose.
+
+*(Was eleven rows / ten citing / nine CLOSED / two CLOSED-MODULO-H until 2026-09-06, when
+keystone adopted the §5.5a packet: L7's residual closed and L12/L13 were added for the two
+theorems they proved unprompted. These counts are derived — `make leanseam` and
+`make leanproof` both report them — but the prose carrying them is not gated, which is the
+`runcount` argument one artifact over. Recorded in `docs/STATUS.md` §Next.)*
 
 They rest on the Lean side being sound. This tier is what checks that it is.
 

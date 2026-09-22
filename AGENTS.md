@@ -93,7 +93,13 @@ assumption ledger — per abstraction in the models, the proposition relied on a
 theorem (or sibling engine, or nothing) that discharges it, cited by content digest and
 gated by **two** targets: `make leanseam` (has the cited *text* moved?) and `make leanproof`
 (do the cited *proofs* still hold? — §7, 6 runs, needs the keystone sibling). It is where
-the complementarity claim stops being prose.
+the complementarity claim stops being prose. **It paid out on 2026-09-06:** the §5.5a
+residual it found was adopted by the keystone peer, §5.5a now has a theorem per pattern form,
+and both gates caught the movement — `leanseam` on the digests, `leanproof` on three new
+theorems **by name**, refusing to accept a re-declare without a re-read. **Do not trust a
+count of the ledger's rows that you did not derive:** it is 22 rows / 13 Class L, and a
+recalled figure has been published wrong here three times. `leanseam` and `leanproof` print
+the live numbers; the prose carrying them is ungated (`docs/STATUS.md` §Next item 4).
 **`make coverage`** checks the coverage *claim* against the models' own `§`-citations,
 because two rows of the grid turned out to be phantoms, and **`make runcount`** derives the
 matrix run total from the gate tables and fails when a published site disagrees, because
@@ -136,9 +142,11 @@ without adding its expected verdict fails the build — the graders reject a the
 declares nothing.
 
 *Fourth instance, 2026-08-30 — a grader another repo CLAIMED, that nobody ran, whose claim
-was also false.* Ten rows of `docs/LEAN-SEAM.md` rest on named Lean theorems in the
-keystone peer (Class L is eleven rows; nine CLOSED, two CLOSED-MODULO-H, and L2 is closed
-by construction with no theorem to run). `lake build EntityCoreProofs` is called "the proof check — a `sorry` or
+was also false.* Ten rows of `docs/LEAN-SEAM.md` rested on named Lean theorems in the
+keystone peer (Class L was eleven rows; nine CLOSED, two CLOSED-MODULO-H, and L2 closed
+by construction with no theorem to run — **the state on 2026-08-30; it is 13 rows and 12
+CLOSED now**, and the counts in this paragraph are deliberately left at what they were when
+the finding was made). `lake build EntityCoreProofs` is called "the proof check — a `sorry` or
 failed proof fails the build" in five places in that peer — the lakefile, the proof-library
 root, `profile.toml`'s testing contract and two status docs — and **is invoked by no
 Makefile, script or workflow in that tree**, which has no CI directory at all. Asked D13's
@@ -146,12 +154,21 @@ question of it and answered by building all three cases: **a `sorry` is a *warni
 so lake prints `Build completed successfully` and exits 0**; a hand-written `axiom`
 replacing a proof exits 0 with no warning at all; only a proof that fails to type-check
 exits non-zero. Exit status catches one failure mode in three, and misses the two a proof
-check exists for. `make leanproof` grades the **axiom set** of all 37 `#print axioms` gates
+check exists for. `make leanproof` grades the **axiom set** of all 40 `#print axioms` gates
 against `lean/proof-gate.expect` in both directions, ties them to the ledger's own pin
 block, and fails on any undeclared warning. Two transferable pieces: **a gate a sibling repo
 says it has is a gate you have not checked**, and *a `sorry` reported as a warning* is the
 same shape as ProVerif exiting 0 on a false query — the tool is telling you, quietly, in a
 channel the grader does not read.
+
+*The both-directions half is what earned its keep, 2026-09-06.* Keystone adopted the routed
+packet and added three theorems. A gate asserting "37 declarations, all on the standard axiom
+set" would have gone **green** on 40 — the new ones are standard-axiom proofs, so nothing
+about them is anomalous except that **nobody here had read them**. Instead they arrived as
+three `UNDECLARED_GATE` failures naming each declaration, and the grader printed its own
+refusal: re-declaring the new axiom set is how this gate would come to assert nothing. **A
+proof arriving is a diff, exactly as a proof breaking is** — the asymmetry is easy to build in
+by accident, because only one of the two feels like a failure.
 
 *Fifth instance, same day, on the fix for the fourth — the new tier's GREEN gate met D13 and
 its own CONTROLS did not.* Each of the four controls declared a reason-code **count**

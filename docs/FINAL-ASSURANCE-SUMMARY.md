@@ -308,7 +308,7 @@ bound.
    its shape are kept on the record in `docs/LEAN-SEAM.md` §4.1 rather than deleted.)*
 
    **The Lean side is now gated; the correspondence is not.** `make leanproof` (2026-08-30)
-   builds the peer's proof track and asserts the axiom set of all 37 `#print axioms` gates,
+   builds the peer's proof track and asserts the axiom set of all 40 `#print axioms` gates,
    so a cited theorem cannot quietly acquire a `sorry` or an extra axiom. It had to be built
    here because nothing ran the proofs anywhere: the keystone peer documents
    `lake build EntityCoreProofs` as its proof check in four places and invokes it from none —

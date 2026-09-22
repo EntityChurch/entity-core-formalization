@@ -84,15 +84,38 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   `verifyChain_time_independent` — `CapabilityProofs.lean`. Lean's result is the *stronger*
   of the pair: the model needs determinism only at equal `t`, Lean proves it across **any**
   two times agreeing on each link's temporal predicate.
-- **H (peer half):** *both peers evaluate within the root granter's frame.*
-  `verifyChain` takes `localPeer` as an argument, and the §5.5a granter-frame
-  canonicalization threads it through `walk → edgeOk → isAttenuated → grantSubset`. The
-  verdict is therefore **not** peer-independent in general — `verifyChain_foreign_root`
-  proves the extreme case, where a non-local single-sig root denies outright. Holding
-  `ChainValid` equal at A and B is sound only for chains where the two peers' frames agree.
-  `Revoke.tla` does not state this restriction, and §5.10's determinism MUST is scoped to
-  "cross-peer-relevant chains", which is exactly the class where it needs saying.
-- **Verdict: CLOSED-MODULO-H.** → work-item, `docs/STATUS.md` §Next.
+- **H (peer half):** `verifyChain` takes `localPeer` as an argument and the verdict is
+  therefore **not** peer-independent in general — `verifyChain_foreign_root` proves the
+  extreme case, where a non-local single-sig root denies outright. Holding `ChainValid` equal
+  at A and B is sound only for a restricted class of chains. `Revoke.tla` does not state the
+  restriction, and §5.10's determinism MUST is scoped to "cross-peer-relevant chains", which
+  is exactly the class where it needs saying.
+- **Where the peer-dependence actually lives — corrected 2026-09-06, and this row had the
+  mechanism wrong.** It said `localPeer` reaches the verdict through *"the §5.5a granter-frame
+  canonicalization"*. **§5.5a granter frames are the one part that is not `localPeer`.**
+  `edgeOk` (`Capability.lean:344`) derives `cf`/`pf` from `child.granterPeer` /
+  `parent.granterPeer` — from the chain — and `grantSubset` passes those to the **resources**
+  dimension only. The resources dimension is therefore already peer-independent. `localPeer`
+  reaches the verdict through the *other three* dimensions:
+  - **handlers and operations** — `scopeSubset localPeer localPeer`, so a **relative** pattern
+    in either is canonicalized in the evaluating peer's own frame and can differ at A and B.
+  - **peers** — `scopeSubset localPeer localPeer`, *and* the scope itself defaults to
+    `{ incl := [localPeer] }` when a grant omits it. That is a peer-dependent **value**, not a
+    frame, so no canonicalization result can repair it: where exactly one of child/parent
+    omits `peers`, the comparison is against a different set at each peer.
+- **A hypothesis we tested and refuted, recorded because forming it was the risk.** L12's
+  frame-independence result looked like it might discharge this H: §5.5a *requires* cross-peer
+  authority to be absolute, absolute patterns canonicalize identically in any frame, so for
+  exactly the class §5.10 cares about the frames need not agree. **Reading the definitions
+  refuted it twice** — the theorem aims at the resources dimension, which was never the source
+  of the peer-dependence, and the three dimensions that are the source are untouched by it
+  (the `peers` default is not a framing question at all). *This is the L7 error's exact shape —
+  a mechanism assembled from a theorem that agreed with a hypothesis already formed — caught
+  this time by reading `grantSubset` before writing the row down.*
+- **Verdict: CLOSED-MODULO-H**, unchanged, with H now correctly located: the restriction is
+  "every handlers/operations pattern in the chain is absolute, **and** `peers` is declared
+  rather than defaulted", not "the two peers' frames agree." → work-item,
+  `docs/STATUS.md` §Next.
 
 ### L2 · The verdict is computable before handler entry
 
@@ -200,15 +223,32 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   = ["Q","*"]` and the head is `Q`, not the granter. That is not a defect — **§5.5a
   (line 2729) says the absolute form is how cross-peer authority MUST be expressed.** So
   `hframed` is a *scope restriction*: it confines the theorem to §5.5a's **peer-relative**
-  pattern fragment and excludes every cross-peer grant. The relative half is genuinely
-  mechanical (`¬p.startsWith "/"` + a `/`-free peer-id frame ⇒ head = frame); the absolute
-  half is a **different theorem, and Lean has none**.
-- **Verdict: CLOSED-MODULO-H, where H is now named precisely** — H is "every pattern in
-  `pats` is peer-relative," not "canonicalization frames patterns." The residual is
-  §5.5a's **absolute named form** (`/{q}/…` reaches exactly `q`), which our symbolic models
-  represent and no Lean theorem covers. **Routed to `entity-core-keystone`** as a proposal:
-  prove the relative half from a syntactic side-condition, and add the companion theorem for
-  the absolute form.
+  pattern fragment and excludes every cross-peer grant.
+- **The residual is discharged — 2026-09-06, `absolutePattern_names_one_peer`.** The ask went
+  to `entity-core-keystone` and was adopted. §5.5a's **absolute named form** (`/{q}/…` reaches
+  exactly `q`) now has its own theorem, with `frame` universally quantified and never
+  constrained — which is the frame-independence of L12 carried into the matcher. Read against
+  the model site: our `canon(awild(p), fr) = awild(p)` equation is exactly this pair of claims,
+  and both halves now have a theorem (L12 for the equation, this row for what it buys).
+  Keystone re-derived our counterexample by evaluation rather than accepting it, and
+  witness-checked the new theorem for non-vacuity — the absolute-form denial denies a foreign
+  namespace **while still covering `q`'s own**, so it is not a deny-everything triviality.
+- **Verdict: CLOSED.** All three §5.5a pattern forms now carry a theorem apiece — relative
+  (`grantPattern_namespace_isolation`, this row), absolute named
+  (`absolutePattern_names_one_peer`, this row), absolute wildcard
+  (`wildcardPattern_peer_agnostic`, **L13**) — matching the three `canon` equations our
+  symbolic models carry, one for one.
+- **A cost claim of ours that was wrong, and measuring it is what showed that.** This row said
+  the relative half was *"genuinely mechanical (`¬p.startsWith "/"` + a `/`-free peer-id frame
+  ⇒ head = frame)"*, and we routed an ask to discharge `hframed` on that basis. **Keystone
+  declined it with a measurement, and the measurement is right:** in the pinned mathlib-free
+  toolchain, core ships `String.splitOn` and `String.splitOnAux` and **zero theorems about
+  either**; `splitOnAux` is `@[irreducible]`, well-founded over raw byte positions, with
+  `extract` cutting a `ByteArray` under a UTF-8 validity proof. Discharging `hframed`
+  syntactically is a from-scratch string theory, not plumbing. **We criticised their comment
+  for being wrong about `hframed`'s scope and then repeated its error about `hframed`'s cost**
+  — a cost estimate published without measuring it, which is D15's shape in prose rather than
+  in a number. The ask stays open only as the mathlib question in `docs/STATUS.md` §Next.
 - **Superseded claim, kept visible rather than deleted.** This row previously read: *"the
   ProVerif/Tamarin side does not independently establish `hframed` either. It assumes the
   same thing by equation — `canon(star, fr) = awild(fr)` is `hframed`, written as a rewrite
@@ -265,6 +305,48 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   walk, plus `walk_allow_head`, `walk_allow_link_facts`, `edgeOk_atten`, `edgeOk_caveats`.
 - **Verdict: CLOSED.** Cited explicitly because it is the row a reader forgets: L5 proves
   the step composes, L11 proves the step is taken.
+
+### L12 · An absolute pattern denotes the same thing in any frame
+
+- **Model site:** the `canon(awild(p), fr) = awild(p)` equation in `tamarin/ChainTopology.pv`,
+  `DeepChain*.pv` and the corresponding `Canon` facts in the `.spthy` theories — the second of
+  the three `canon` equations, and the one whose right-hand side **discards the frame**.
+- **Assumed:** an absolute pattern is frame-independent — it means the same thing at the
+  granter and at the verifier. Our theories encode this as a rewrite and rely on it whenever a
+  chain compares an absolute pattern under two different granter frames, which
+  `ChainTopology`'s three-principal topology does by construction.
+- **Discharged:** `canonSegs_absolute_frame_independent` — `CapabilityProofs.lean` —
+  `canonSegs f1 p = canonSegs f2 p` for any `p` beginning `/`, with both frames universally
+  quantified. Keystone's note that it needs no `splitOn` reasoning at all is worth carrying:
+  both branches reduce to `splitSegs p`, which is why this half was provable while the
+  relative half is not.
+- **Why this is a row and not a footnote to L7:** §5.5a makes the absolute form the **required**
+  way to express cross-peer authority, so frame-independence is what makes a cross-peer grant
+  well-defined at all. It is also live on a real path today — keystone reports `verifyChain`
+  runs before the dispatch address check and `grantSubset` passes per-link granter frames to
+  the resources dimension, so absolute patterns are compared under two different frames on
+  every request presenting a delegated capability.
+- **Verdict: CLOSED.** Added 2026-09-06; keystone proved it unprompted alongside the ask we
+  did make.
+
+### L13 · The wildcard form is peer-agnostic by design, not by omission
+
+- **Model site:** the `canon(allp, fr) = allp` equation — the third `canon` equation in the
+  same theories.
+- **Assumed:** for a pattern whose canonical head is `*`, coverage does not depend on the
+  target's peer segment. Our models encode this as a frame-discarding rewrite exactly as for
+  L12, but the property it buys is the **opposite** one: universality rather than isolation.
+- **Discharged:** `wildcardPattern_peer_agnostic` — `CapabilityProofs.lean` — the two sides
+  agree for any two peer segments. Witness-checked by keystone for the failure mode that
+  matters here: both sides evaluate **true** on a match, so this is agreement on coverage and
+  not vacuous agreement on a universal failure.
+- **Why it earns a row rather than being left implicit.** This is the one §5.5a form where the
+  secure reading is "covers everything", so an absent theorem looks identical to a satisfied
+  one — the shape §C.4 of `docs/PROPERTIES.md` calls vacuity, in the ledger instead of in a
+  model. Stating it as a theorem is what distinguishes *"we checked and it is deliberately
+  universal"* from *"nobody looked at this form."* We had neither a row nor a theorem for it
+  before 2026-09-06, which is the more honest way to say we had not looked.
+- **Verdict: CLOSED.**
 
 ---
 
@@ -355,12 +437,33 @@ by *engine* cannot see this, and neither can a ledger counted by *assumption* if
 assumptions are read one line at a time. §5.5a has two engines, **three** pattern forms, and
 theorem coverage on one of them.
 
-**Disposition:** route to `entity-core-keystone` — but the ask is now (a) discharge the
-relative half from a syntactic side-condition, (b) add the companion theorem for the absolute
-form, and (c) correct the source comment that calls `hframed` "mechanical stdlib plumbing,"
-which is true of the relative branch and cannot be true of the absolute one. Routed to
-`entity-core-keystone` as a proposal. **No ask on the ProVerif/Tamarin
-side; there was never anything wrong with it.**
+**Disposition — closed 2026-09-06, and the asymmetry is gone.** Routed to
+`entity-core-keystone` as three asks: (a) discharge the relative half from a syntactic
+side-condition, (b) add the companion theorem for the absolute form, (c) correct the source
+comment calling `hframed` "mechanical stdlib plumbing." **No ask on the ProVerif/Tamarin side;
+there was never anything wrong with it.** Outcome (`8156792`):
+
+- **(b) and (c) adopted, and (c) sharpened past what we asked.** §5.5a now has a theorem per
+  pattern form — `grantPattern_namespace_isolation` (relative), `absolutePattern_names_one_peer`
+  (absolute named), `wildcardPattern_peer_agnostic` (wildcard) — plus
+  `canonSegs_absolute_frame_independent` for the frame-independence the second form rests on.
+  **Three forms, three theorems, matching our three equations one for one.** The finding that
+  survived the correction was the right one, and it is now closed rather than routed.
+- **(a) declined, with a measurement that corrects us in turn.** We wrote above that the
+  relative half is mechanical. It is not: the pinned mathlib-free toolchain has
+  `String.splitOn`/`splitOnAux` and **zero theorems about either**, `splitOnAux` is
+  `@[irreducible]` over raw byte positions, and `extract` cuts a `ByteArray` under a UTF-8
+  validity proof. **We diagnosed their comment as wrong about scope and then reproduced its
+  error about cost** — the same sentence, failing the same way, one clause over. §4.1 is
+  therefore a section that has now been wrong twice about the same four words, in opposite
+  directions, and the second time it was our own claim rather than theirs.
+
+**What generalizes, and it is not "read three equations instead of one."** Both errors here
+were *confident readings of a text nobody re-derived*. What broke the first was reading the
+other two equations; what broke the second was keystone **running the environment query**
+instead of estimating. The ledger's §5 disclaimer — that every row is a human reading — is not
+boilerplate; this section is two instances of exactly the failure it warns about, and neither
+was caught by a gate.
 
 ### 4.2 A correspondence that does not exist
 
@@ -435,8 +538,8 @@ verdicts, then re-pin the digest. Re-pinning without re-reading defeats the whol
 above; every prose citation must have a line here.
 
 ```leanseam-pins
-file  proofs/EntityCoreProofs/CapabilityProofs.lean  715687f4505e0e7639b47fd34977375b6bf3a652bf5458d9231d507d0f64d029
-file  src/EntityCore/Capability.lean                 c16a2f7c6c3e4351d974d8de57a476a577add9a5f098d788767c80169b6a1a93
+file  proofs/EntityCoreProofs/CapabilityProofs.lean  3a123b2a746f11dd37e39550d8e81b2389dbce6adf9aed31c20cd6236ec12ab4
+file  src/EntityCore/Capability.lean                 c99d1067ca08a44cd9c22c67d6517d38932c3be161443b5fc74f5e957ab4672a
 
 theorem  verifyChain_time_stable          proofs/EntityCoreProofs/CapabilityProofs.lean  L1
 theorem  verifyChain_time_independent     proofs/EntityCoreProofs/CapabilityProofs.lean  L1
@@ -452,6 +555,9 @@ theorem  matchesScope_excl_override       proofs/EntityCoreProofs/CapabilityProo
 theorem  matchesScope_id_excl_override    proofs/EntityCoreProofs/CapabilityProofs.lean  L6
 theorem  matchesIdPattern_literal         proofs/EntityCoreProofs/CapabilityProofs.lean  L6
 theorem  grantPattern_namespace_isolation proofs/EntityCoreProofs/CapabilityProofs.lean  L7
+theorem  absolutePattern_names_one_peer   proofs/EntityCoreProofs/CapabilityProofs.lean  L7
+theorem  canonSegs_absolute_frame_independent proofs/EntityCoreProofs/CapabilityProofs.lean  L12
+theorem  wildcardPattern_peer_agnostic    proofs/EntityCoreProofs/CapabilityProofs.lean  L13
 theorem  multiSigRootOk_quorum            proofs/EntityCoreProofs/CapabilityProofs.lean  L8
 theorem  walk_allow_cons                  proofs/EntityCoreProofs/CapabilityProofs.lean  L11
 theorem  walk_allow_leaf_attenuated       proofs/EntityCoreProofs/CapabilityProofs.lean  L11
@@ -572,7 +678,7 @@ produce exactly that set — no more, no less, both directions:
    axioms (`propext`, `Classical.choice`, `Quot.sound`) *and* exactly its declared set. A
    row of `proof-gate.expect` may not declare an untrusted axiom: the file is rejected at
    parse time if it does, because a hole you can declare away is not a hole that was caught.
-4. **The ledger tie** — all 22 theorems pinned in §5's block (21 discharging + the one
+4. **The ledger tie** — all 25 theorems pinned in §5's block (24 discharging + the one
    pinned as **rejected**) are among the declarations that reported. This is what makes the
    gate about *this ledger* rather than about "some proofs built".
 5. **Warnings** — a Lean warning fails the build unless declared with an owner. One is

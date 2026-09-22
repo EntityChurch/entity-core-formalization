@@ -94,7 +94,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   Worse, the claim is wrong as written: **a `sorry` is a warning in Lean, so `lake build` exits 0 and prints "Build
   completed successfully"**, and so does a hand-written `axiom` standing in for a proof —
   each built and observed, not reasoned about. Exit status catches one failure mode in
-  three. `make leanproof` therefore grades the **axiom sets**: 37 declared `#print axioms`
+  three. `make leanproof` therefore grades the **axiom sets**: 40 declared `#print axioms`
   gates, exact set per declaration in both directions, tied to the ledger's own pin block,
   with five controls (`neg-sorry`, `neg-axiom`, `neg-ungate`, `neg-dropfile`, `neg-broken`)
   each required to fail for its own reason on the declarations it names. **6 runs, separate
@@ -383,7 +383,7 @@ item 4.
      prints `Build completed successfully` and exits **0**. So does a hand-written `axiom`
      replacing a proof, with no warning at all. Only a proof that fails to type-check exits
      non-zero. Demonstrated by building all three, per the D15 corollary.
-   - **So the gate grades axiom sets, not exit status.** 37 declared `#print axioms` gates in
+   - **So the gate grades axiom sets, not exit status.** 40 declared `#print axioms` gates in
      `lean/proof-gate.expect`, exact axiom set per declaration in both directions, every
      ledger-pinned theorem required to be among them, warnings failing unless declared with an
      owner, and the image's Lean version required to equal keystone's own `lean-toolchain`
@@ -400,24 +400,78 @@ item 4.
      make the ledger a statement about our copy, which nothing gates. What moved is only that
      the *checking* of the peer's own honesty gates now happens somewhere.
 
+   **~~Both packets routed to keystone.~~ Answered 2026-09-06 — six of seven asks adopted,
+   one declined with a measurement, and the decline corrects us.** `entity-core-keystone`
+   `8156792`. What came back, and what it did to this repo:
+   - **`hframed`'s residual is discharged.** `absolutePattern_names_one_peer` is the companion
+     theorem for §5.5a's absolute named form, and keystone added **two we did not ask for** —
+     `canonSegs_absolute_frame_independent` (frame-independence, which needs no `splitOn`
+     reasoning at all) and `wildcardPattern_peer_agnostic` (the third pattern form). Each
+     witness-checked for non-vacuity. **All three §5.5a forms now carry a theorem apiece,
+     matching the three `canon` equations our symbolic theories carry one for one.** L7 is
+     CLOSED; L12 and L13 are new rows. They re-derived our counterexample by evaluation rather
+     than accepting it.
+   - **The ask we got wrong, and they measured it.** We asked them to discharge `hframed` from
+     a syntactic side-condition, on our own written claim that the relative half was *"genuinely
+     mechanical"*. **Declined, correctly:** the pinned mathlib-free toolchain ships
+     `String.splitOn`/`splitOnAux` and *zero theorems about either*, and `splitOnAux` is
+     `@[irreducible]` over raw byte positions with `extract` under a UTF-8 validity proof. We
+     criticised their comment for being wrong about `hframed`'s scope and then repeated its
+     error about `hframed`'s cost — an estimate published without measuring it. The ask
+     survives only as the mathlib question below.
+   - **The proof-gate packet is closed** — their ask-1 target landed 2026-09-03 and the
+     remaining claim sites are corrected. `String.dropRight` → `dropEnd` is fixed, so the one
+     declared warning in `proof-gate.expect` is **deleted and the build is warning-clean**; our
+     "the `String.Slice` return type is not a rename" caveat read as a blocker and was not one.
+     They measured the replacement over 21 inputs including multi-byte prefixes rather than
+     stopping at typechecking. Two further deprecations disclosed in `Host.lean`, outside our
+     pinned files and deliberately unbundled so their re-measurement stayed unambiguous.
+   - **Our own gate is what caught the movement**, which is the part worth keeping: the three
+     new theorems arrived as `UNDECLARED_GATE` failures by name, and the grader printed its
+     refusal to accept a re-declare without a re-read. A gate that counted declarations would
+     have absorbed three unread theorems silently.
+
    **Still open, in order:**
-   - **Keystone should run this too, and the packet says so.** Our gate covers our ledger's
-     rows; it does not put a check in the repo where a `sorry` would be *written*. A red run
-     here is a defect that already landed there. The ask is one `make` target in keystone,
-     not a transfer of ownership.
-   - **~~Route `hframed` upstream.~~ Drafted — and the ask changed.** Not "discharge `hframed`"
-     (which would be asking keystone to prove something untrue) but three separable asks:
-     prove the relative half from a syntactic side-condition, add the companion theorem for
-     the absolute form, and correct the source comment calling `hframed` "mechanical stdlib
-     plumbing" — true of the relative branch, impossible for the absolute one. **No ask on the
-     ProVerif/Tamarin side; nothing was wrong with it.** Awaiting hand-off to keystone.
+   - **Answer keystone's three questions.** (a) Is a *set-valued* property — the set of `code`
+     values a peer emits at a given status, which is what `0.8.2.9` makes the unit of
+     conformance — the right shape for the Lean tier to discharge? (b) Is the keystone host
+     contract (H1–H7, about to be authored as `docs/spec/SPEC-KEYSTONE-PEER.md`) in scope for
+     the formal tier, given H3 is a **negative reachability** claim? (c) Do we want the
+     declined ask enough to want **mathlib in `proofs/`** — a dependency decision about a seam
+     we share, which they asked rather than assumed. **(b) is the one with an architecture
+     question inside it:** a sibling authoring a spec-shaped artifact is not ours to rule on
+     alone. They parked our packets for six days; the loop closes faster than that or the
+     complaint is hollow.
+   - **Keystone should run this gate too, and the packet says so.** Our gate covers our
+     ledger's rows; it does not put a check in the repo where a `sorry` would be *written*.
+   - **The ledger's own counts are ungated, and they just moved.** Class L went 11 rows / 9
+     CLOSED / 2 CLOSED-MODULO-H → **13 / 12 / 1**, and the gate table 37 → 40, across seven
+     prose sites. `leanseam` and `leanproof` both *derive* these numbers and print them; no
+     check ties the prose to the derivation. That is exactly the hole `make runcount` was
+     built to close for the matrix total, one artifact over — and the counts were hand-edited
+     this time, which is how the 258 went stale three times.
    - **Differential trace checking** — replay Apalache `.itf.json` counterexamples through the
      Lean executable model (or a reference peer) and assert the abstract predicate's value
      matches. The ledger is a human reading of two texts and `make leanseam` only detects that
      one of them moved; this is the only item that would put a **machine** on the Lean-facing
      half of the 5th wall. The ledger was built first precisely to tell us whether this is
-     worth it — 21 of 23 rows are CLOSED and the two open ones (L1, L7) are both §5.5a
-     granter-framing, so *route the findings first, then reassess* still looks right.
+     worth it, and the answer has moved: **L7 is now closed by a real theorem, so the only
+     Lean-facing residual left is L1** — and L1's H is not a framing question at all (it is
+     the `localPeer` frame on handlers/operations plus the `peers` default; `LEAN-SEAM.md` L1).
+     *Route the findings first, then reassess* has now paid out once, which is the argument
+     for finishing the routing before building the machine.
+
+     *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
+     §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
+     attribution. Derived now: the ledger is **22 rows** — 13 Class L, 5 Class T, 4 Class O —
+     of which **14 CLOSED, 1 CLOSED-MODULO-H (L1), 2 OPEN (T4, O4), 2 N/A-device, 3
+     BY-DESIGN**. The two rows that were genuinely **OPEN** were never L1 and L7 — those were
+     CLOSED-MODULO-H, a different verdict — they were T4, the unproved composition, and O4,
+     the unmodeled `δ`. **This is the third time a recalled ledger count has been published
+     here**, after "eleven CLOSED rows" in five files and the Class-L verdicts in the audit.
+     The counts are derived by `leanseam` and `leanproof` and nothing ties the prose to the
+     derivation — see the ungated-counts item above, which this is now the strongest argument
+     for.)*
      **But note what the L7 correction says about this item's premise:** the ledger's open
      rows were re-read once and one of them was materially wrong. A human reading of two texts
      degrades exactly this way, which is the argument *for* the machine check, not against it.

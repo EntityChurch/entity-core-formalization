@@ -53,7 +53,7 @@ smoke:
 	  echo "keystone pins: $$(cat $$ks/protocol-generator/lean/lean-toolchain 2>/dev/null \
 	    || echo '<no sibling checkout — this tier needs one; see ./README.md>')"
 
-# GREEN — the proofs hold. Graded against lean/proof-gate.expect (37 declared axiom-gated
+# GREEN — the proofs hold. Graded against lean/proof-gate.expect (40 declared axiom-gated
 # declarations, exact axiom set per declaration, in both directions) plus the tie to the
 # ledger's own pin block. NOT graded on lake's exit status: a `sorry` and a hand-written
 # `axiom` both exit 0, which is what `neg-sorry` and `neg-axiom` below demonstrate.

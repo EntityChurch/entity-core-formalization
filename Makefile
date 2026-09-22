@@ -188,9 +188,12 @@ leanseam:
 # "does that text still prove what the ledger says it proves", and until this tier existed
 # nothing did: `lake build EntityCoreProofs` is called "the proof check" in the keystone
 # lakefile and three of its status docs, and is invoked by no Makefile, script or workflow
-# in that tree. Ten rows of our ledger cite a Lean theorem by name and rested on a build
-# nobody ran (Class L is eleven rows — nine CLOSED, two CLOSED-MODULO-H, and L2 closed by
-# construction with no theorem to run; "eleven CLOSED" was a recalled figure, see D15).
+# in that tree. Ten rows of our ledger cited a Lean theorem by name and rested on a build
+# nobody ran (Class L was eleven rows on 2026-08-30 — nine CLOSED, two CLOSED-MODULO-H, and
+# L2 closed by construction with no theorem to run; "eleven CLOSED" was a recalled figure,
+# see D15). Those are the figures AT THE FINDING and are left there deliberately; the tier
+# has since paid out and the live counts are 13 rows / 12 CLOSED / 40 gates. Derive them
+# from `make leanseam` and `make leanproof`, which print them — do not recall them.
 #
 # D13 — what does `leanproof` assert, and what else satisfies it? NOT lake's exit status,
 # which is satisfied by a proof containing `sorry` (a WARNING in Lean; lake prints "Build
