@@ -67,10 +67,12 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   for an `authenticate` arriving before any hello nonce was issued — 401 `invalid_nonce` by
   its row 6 (and §4.6 step 1), 400 `connection_sequence_error` by its row 10, both MUSTs, in
   one table, on the very field §4.7 tells clients to key error handling off. Exhibited
-  independently by TLC, Apalache and Spin — and **already divergent in the wild**: four
+  independently by TLC, Apalache and Spin — and **already divergent in the wild**: **six**
   distinct behaviours across the 46-peer keystone cohort and the three ground-up impls, with
-  no `validate-peer` probe for the input. Routed to `entity-core-protocol`; full statement in
-  `docs/PROPERTIES.md` §D.1.
+  no `validate-peer` probe for the input. **Adopted and ruled 401 `invalid_nonce`** in
+  `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
+  than read, which upheld ours and corrected two things we published. Full statement, both
+  corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
 - **The full matrix is 258 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
@@ -242,17 +244,28 @@ Never spec edits here — proposals in the sibling repo.
    implementations. So "follow §4.7" is not a well-defined position. Exhibited by all three
    TLA+-track engines; reproduce with `ConnCodesSeqReadingBug.cfg`.
 
-   **Impact, and why this is worth an architecture slot now.** The divergence is shipped: a
-   source read of the 46 keystone peers plus `entity-core-{go,rust,py}` (2026-08-30) finds
-   **four** behaviours — 401 `invalid_nonce` (29), 400 `connection_sequence_error` (6),
-   409 `connection_sequence_error` (go — a status in no clause), 400 `handshake_failed`
-   (rust — a code absent from the spec). It survived because `validate-peer` has **no probe
+   **Impact.** The divergence is shipped, across **six** behaviours: 401 `invalid_nonce` (38),
+   400 `connection_sequence_error` (6), 401 `authentication_failed` (1), plus one apiece from
+   `entity-core-go` (409 `connection_sequence_error`, a status in no clause), `entity-core-rust`
+   (400 `handshake_failed`, a code absent from the corpus) and `entity-core-py` (400
+   `bad_request`, a code in no §4.7 row). It survived because `validate-peer` has **no probe
    that sends `authenticate` before `hello`** and cites §4.7 nowhere in `connectivity`: ten
    MUST-emit rows, roughly one gated. No keystone conformance number moves (nothing tests it),
    but the fix touches ~8 trees and is far cheaper **before** the v0.8.2 cohort regeneration
-   than after. Suggested resolution in `docs/PROPERTIES.md` §D.1 (narrow row 10's parenthetical
-   alone — four words). The per-peer census and hand-off checklist are internal working
-   notes; the finding and its evidence are stated in full in `docs/PROPERTIES.md` §D.1.
+   than after — a sequencing ask both siblings have honoured.
+
+   **Disposition, 2026-08-31 — closed on our side, live on theirs, and it corrected us twice.**
+   `entity-core-protocol` adopted the draft and **ruled 401 `invalid_nonce`**, adding four
+   normative sites we had not carried (§4.2, §6.12, §9.1, and a stale copy of the table in
+   `ENTITY-CORE-MACHINE-SPEC` §6.4) and finding that our "four words" remedy was incomplete:
+   §4.2's bare ordering MUST is what leads an implementer into row 10, so narrowing row 10
+   alone would leave §4.2 pointing at no row at all. `entity-core-keystone` built the probe our
+   packet said did not exist and **measured** 45 of 46 peers — upholding our source read with
+   zero disagreements on the 34 we committed to, resolving all 11 we could not, and surfacing
+   both a sixth behaviour and the fact that **39 peers answer identically pre- and post-hello**,
+   which makes the cohort argument we published much weaker than it looked. Both corrections
+   are absorbed in `docs/PROPERTIES.md` §D.1 rather than quietly dropped. The per-peer census
+   and hand-off checklist remain internal working notes.
 2. **§5.9's recommended 8× TTL/`chain_depth` ratio has zero margin at worst-case fan-out.**
    The property needs `ceiling × worst_case_fanout` **strictly less than** the TTL seed; at
    exact equality the last causal level spends the last of the TTL and the backstop fires on

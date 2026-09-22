@@ -97,8 +97,13 @@ the complementarity claim stops being prose.
 **`make coverage`** checks the coverage *claim* against the models' own `§`-citations,
 because two rows of the grid turned out to be phantoms, and **`make runcount`** derives the
 matrix run total from the gate tables and fails when a published site disagrees, because
-that number went stale three times in one week. **One protocol finding is open** —
-§4.6 step 1 vs §4.7's table, `docs/PROPERTIES.md` §D.1 — routed to `entity-core-protocol`.
+that number went stale three times in one week. **The one protocol finding — §4.6 step 1 vs
+§4.7's table, `docs/PROPERTIES.md` §D.1 — has been adopted and ruled** in
+`entity-core-protocol` (401 `invalid_nonce`, the direction we argued). Read §D.1 before citing
+it: the ruling came with two corrections to what we published, one from review of the text and
+one from a wire measurement of the cohort, and **both are things this repo could not have found
+from inside it.** Our source census was upheld exactly; our *remedy* and our *impact argument*
+were not.
 `docs/COVERAGE-MATRIX.md` is the section×engine map and the limits; `docs/STATUS.md` §Next is
 the work-list; `docs/FINAL-ASSURANCE-SUMMARY.md` is the capstone.
 

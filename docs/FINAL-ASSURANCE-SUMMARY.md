@@ -204,10 +204,11 @@ load-bearing ones:
 
 ## 5. Findings and residual risk
 
-**One finding routed to `entity-core-protocol`: §4.7's error-code table gives contradictory
-normative answers for the same input — and so does §4.6 step 1 against one of them.** An
-`authenticate` frame arriving before any hello nonce was issued is named explicitly by four
-normative sites, which disagree on the reason code *and* the status class. §4.6 step 1 says
+**One finding routed to `entity-core-protocol` — since adopted there, and ruled: §4.7's
+error-code table gives contradictory normative answers for the same input, and so does §4.6
+step 1 against one of them.** An `authenticate` frame arriving before any hello nonce was
+issued is named explicitly by **eight** normative sites across two published documents, four of
+which we found and modeled; they disagree on the reason code *and* the status class. §4.6 step 1 says
 **401 `invalid_nonce`**; §4.7 **row 6** restates that verbatim ("Nonce mismatch / absent /
 pre-hello (§4.6 step 1)"); §4.7 **row 10** — four rows later, in the same table — says **400
 `connection_sequence_error`**; §5.2a re-lists the connect-time rows and drops the case
@@ -220,13 +221,23 @@ so two conformant peers can give a client different instructions for the same fa
 Exhibited independently by **all three TLA+-track engines** (`ConnCodesSeqReadingBug.cfg` /
 `ConstInitSeqReading` / `DEFS=-DSEQREADING`) — the only control in this repo whose "defect"
 is a conformant reading of the spec rather than something injected. **And it is not
-hypothetical:** a source read of the 46-peer keystone cohort plus the three ground-up
-implementations finds four distinct wire behaviours for that one frame, two of them outside
-the spec's own answer set, none of them caught — the conformance oracle has no probe that
-sends `authenticate` before `hello`. Full statement and suggested resolution:
-`docs/PROPERTIES.md` §D.1. The per-peer census and hand-off checklist are an internal
-working document, not part of this publication. Per repo discipline it is a
-proposal in the sibling protocol repo, never a spec edit here.
+hypothetical:** the 46-peer keystone cohort plus the three ground-up implementations show
+**six** distinct wire behaviours for that one frame, four of them outside the spec's own answer
+set, none of them caught — the conformance oracle has no probe that sends `authenticate` before
+`hello`.
+
+**The outcome is the more interesting part, and it cuts both ways.** The proposal was adopted
+in the sibling protocol repo and **ruled 401 `invalid_nonce`** — the direction this repo argued
+for. It was also corrected twice on the way there, by the two repos that own what we could only
+read: review found four further normative sites and showed that our minimal remedy would have
+left §4.2's ordering MUST pointing at no error row at all, and the keystone peer **built the
+probe we said did not exist** and measured the cohort instead of reading it. That measurement
+upheld our source census exactly, resolved the eleven peers we could not, and then showed that
+39 of them answer identically whether or not a hello preceded — they never model the case, so
+the majority we cited as impact is largely fall-through rather than agreement. Both corrections
+are absorbed in `docs/PROPERTIES.md` §D.1, which is the full statement. The per-peer census and
+hand-off checklist are an internal working document, not part of this publication. Per repo
+discipline it was a proposal in the sibling protocol repo, never a spec edit here.
 
 **Otherwise none new.** The models *re-derived* the known Class-G reentry deadlock (already
 fixed upstream) and otherwise confirmed the pinned design admits no deadlock, store race,

@@ -154,13 +154,25 @@ pre-hello `authenticate` is a constant, and row 10's reading violates §4.6 step
 transcribed as an invariant. Exhibited independently by TLC, Apalache and Spin — the only
 control in the repo whose "defect" is a conformant reading of the spec.
 
-**And the divergence is already shipped.** A source read of the 46-peer keystone cohort plus
-the three ground-up implementations found **four** distinct behaviours for that one frame:
-401 `invalid_nonce` (29 peers), 400 `connection_sequence_error` (6), 409
-`connection_sequence_error`, and 400 `handshake_failed` — the last a code that appears nowhere
-in the spec. Nothing caught it: the conformance oracle has no probe that sends `authenticate`
-before `hello`, and of §4.7's ten self-declared MUST-emit rows roughly one is gated. Routed to
-`entity-core-protocol` as a proposal, with a suggested resolution; full statement in
+**And the divergence is already shipped** — across **six** distinct behaviours for that one
+frame: 401 `invalid_nonce` (38 peers), 400 `connection_sequence_error` (6), 401
+`authentication_failed` (1), 409 `connection_sequence_error` (`entity-core-go`), 400
+`handshake_failed` (`entity-core-rust` — a code that appears nowhere in the spec) and 400
+`bad_request` (`entity-core-py` — a code in no §4.7 row). Nothing caught any of it: the
+conformance oracle has no probe that sends `authenticate` before `hello`, and of §4.7's ten
+self-declared MUST-emit rows roughly one is gated.
+
+**Adopted and ruled 401 `invalid_nonce`** in `entity-core-protocol` — and corrected twice on
+the way, by the repos that own what this one could only read. *(This entry first reported
+**four** behaviours from a source read: 29 peers at 401, and `entity-core-py` as conformant.
+Review of the draft found py emits 400 `bad_request` — a fifth. `entity-core-keystone` then
+built the wire probe our packet said did not exist, measured 45 of 46 peers, upheld our source
+read with zero disagreements across the 34 we committed to, resolved all 11 we could not, and
+found a sixth behaviour. It also found that 39 of the peers answer identically pre- and
+post-hello — they never model the case — so the cohort majority we cited as impact is mostly
+fall-through, not agreement.)* Review likewise found four normative sites we had not carried
+and showed our four-word remedy incomplete: §4.2's bare ordering MUST is what leads an
+implementer into row 10. Full statement, both corrections and the disposition:
 `docs/PROPERTIES.md` §D.1; the per-peer census and hand-off checklist are internal working
 notes rather than part of this publication.
 

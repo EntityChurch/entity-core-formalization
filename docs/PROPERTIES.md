@@ -401,7 +401,8 @@ Per repo discipline any defect is a proposal/review-note in the sibling protocol
    *This is the first finding here that is a genuine defect in the spec text rather than a
    boundary worth stating, and it is the only one machine-exhibited by all three TLA+-track
    engines.* An `authenticate` frame arriving before any hello nonce has been issued is named
-   explicitly by **four** normative sites, which disagree on the code **and** the status class:
+   explicitly by **eight** normative sites across two published documents, which disagree on
+   the code **and** the status class. The four we found and modeled:
 
    | Site | Says | Code | Status |
    |---|---|---|---|
@@ -409,6 +410,15 @@ Per repo discipline any defect is a proposal/review-note in the sibling protocol
    | §4.7 table **row 6** | "Nonce mismatch / absent / **pre-hello** (§4.6 step 1)" | `invalid_nonce` | **401** |
    | §4.7 table **row 10** | "Out-of-order operation (**e.g., authenticate before hello**)" | `connection_sequence_error` | **400** |
    | §5.2a verdict-to-status enumeration | "Connect-time (§4.6) \| Nonce mismatch" — **drops "absent / pre-hello" entirely** | `invalid_nonce` | **401** |
+
+   **Review in the sibling repo found four more, and one of them changes the remedy.** §6.12
+   names §4.7 as the code-namespace home for connection errors — it delegates to the site that
+   answers twice. §9.1 lists §4.2's ordering enforcement and §4.7's code contract as separate
+   conformance MUSTs without reconciling them. `ENTITY-CORE-MACHINE-SPEC` §6.4 carries a second,
+   **stale** copy of the §4.7 table with no `invalid_nonce` row at all — published, and
+   contradicting row 6 by omission. And **§4.2** says *"the connection handler MUST enforce
+   ordering: `hello` before `authenticate`"* — a normative MUST naming this exact input, with
+   no status and no code.
 
    The two conflicting rows are **in the same table**, so "follow §4.7" is not a well-defined
    position: an implementer reading it top-to-bottom hits row 6, then row 10 four rows later.
@@ -426,16 +436,47 @@ Per repo discipline any defect is a proposal/review-note in the sibling protocol
    a client-correctable structural error. A client that retries on 400 and re-authenticates
    on 401 behaves differently against two conformant peers.
 
-   **This is not hypothetical — the divergence is shipped.** A source read of the 46-peer
-   keystone cohort plus the three ground-up implementations (2026-08-30) finds **four**
-   distinct behaviours for that one frame: `401 invalid_nonce` (29 peers), `400
-   connection_sequence_error` (6), `409 connection_sequence_error` (`entity-core-go` — a
-   status in neither clause), and `400 handshake_failed` (`entity-core-rust` — a code that
-   appears nowhere in the spec). Nothing caught it because `validate-peer` has **no probe
-   that sends `authenticate` before `hello`**, and cites §4.7 nowhere in `connectivity`:
-   §4.7 declares ten MUST-emit rows and roughly one is gated. Full census, per-peer
-   attribution and the hand-off checklist are carried in an internal routing packet; the
-   finding, the evidence and the suggested resolution are stated in full here.
+   **This is not hypothetical — the divergence is shipped, and it is wider than we first
+   reported.** Our contribution was a **source read** of the 46-peer keystone cohort plus the
+   three ground-up implementations (2026-08-30), which found four distinct behaviours. Both
+   siblings then went further, and the current count is **six**:
+
+   | Behaviour | Where | n | Source |
+   |---|---|---|---|
+   | `401 invalid_nonce` — row 6 / §4.6, conformant under the ruling | keystone cohort | **38** | measured |
+   | `400 connection_sequence_error` — row 10 | keystone cohort | **6** | measured |
+   | `401 authentication_failed` | keystone cohort (`prolog`) | 1 | measured |
+   | `409 connection_sequence_error` — a status in no clause | `entity-core-go` | 1 | source read |
+   | `400 handshake_failed` — a code absent from the whole corpus | `entity-core-rust` | 1 | source read |
+   | `400 bad_request` — a code in no §4.7 row | `entity-core-py` | 1 | source read, **corrected** |
+
+   Two corrections to what this document previously published, both from the sibling repos and
+   both recorded rather than silently absorbed:
+
+   - **`entity-core-py` is not conformant.** We reported it emitting `401 invalid_nonce` by
+     fall-through. There *is* a pre-hello branch — `handle_connect_authenticate` raises before
+     any nonce comparison — and that raise carries no `code`, so `ConnectError`'s own
+     `"bad_request"` default reaches the wire. A fifth behaviour, found in review of our draft.
+   - **The cohort split is measured now, not read.** `entity-core-keystone` built the probe our
+     packet said did not exist and ran it against 45 of 46 peers (`csharp` is unbuildable
+     offline). Our source read was **upheld** — zero disagreements across the 34 peers we
+     committed to — and all 11 we could not resolve from source are now resolved, which is
+     where the 29 becomes 38 and where `prolog`'s sixth behaviour appears.
+
+   **And the measurement produced a finding a source read could not, which weakens an argument
+   we made.** Every peer was also asked the same `authenticate` *after* a valid hello. Only the
+   6 in the 400 column answer differently. The other 39 give the same answer either way: they
+   never model the pre-hello case at all, they reach the nonce check and find nothing to match.
+   So the 38–6 split is **not 38 implementations endorsing row 6** — it is 6 that decided
+   something and 38 that got row 6's answer for free because it is the cheaper path. Cohort
+   weight is much weaker than it looks, and this repo cited that census as impact. *(The general
+   form is worth carrying: when a census counts implementations agreeing, check whether the
+   agreeing ones **decided**. An answer reached by fall-through is not a vote.)*
+
+   Nothing caught any of it because `validate-peer` has **no probe that sends `authenticate`
+   before `hello`**, and cites §4.7 nowhere in `connectivity`: §4.7 declares ten MUST-emit rows
+   and roughly one is gated. Per-peer attribution and the hand-off checklist are carried in an
+   internal routing packet; the finding, the evidence and the disposition are stated in full here.
 
    Two conformant readings, so the models check **both** rather than picking one: the row
    assignment for a pre-hello `authenticate` is a constant (`PreHelloAuthRow` /
@@ -445,16 +486,30 @@ Per repo discipline any defect is a proposal/review-note in the sibling protocol
    `tla/ConnCodesSeqReadingBug.cfg` (TLC) · `ConstInitSeqReading` (Apalache) ·
    `make verify MODEL=conncodes DEFS=-DSEQREADING` (Spin).
 
-   **Suggested resolution** (for the sibling repo to decide, not this one): §4.6 step 1 is
-   the more specific and more recently hardened clause, §4.7 row 6 already cites it, and the
-   401 classification matches the other two step-failures (`authentication_failed`,
-   `identity_mismatch`). Narrowing **row 10's parenthetical alone** to an example that is
-   *not* the pre-hello authenticate — a second `hello` after `hello_done`, say — removes the
-   overlap without touching §4.6, row 6, or row 10's code, status or meaning. The alternative
-   direction (make it 400) is the larger edit and lands on the harder text: §4.6 step 1's
-   sentence splits, row 6's `pre-hello` comes out, and §5.2a needs extending — three sites
-   against one. Separately, §5.2a's half-copy and the §3.3/§4.7/§5.2a precedence question are
-   flagged, not proposed, in the routing packet.
+   **Disposition: adopted and ruled — the direction we proposed, by a larger edit than we
+   proposed.** The finding is now a live proposal in `entity-core-protocol`
+   (`PROPOSAL-CONNECT-ERROR-CODE-RECONCILIATION`), which adopts our draft and **rules 401
+   `invalid_nonce`**: §4.6 step 1 is the more specific and more recently hardened clause, §4.7
+   row 6 already cites it, and the 401 classification matches the other two step-failures
+   (`authentication_failed`, `identity_mismatch`).
+
+   **Our suggested remedy — "narrow row 10's parenthetical alone, four words" — was right about
+   row 10 and incomplete about the spec, and the reason is §4.2**, one of the four sites we did
+   not carry. An implementer reads §4.2's *"MUST enforce ordering: `hello` before
+   `authenticate`"*, goes to §4.7 for a code, and finds row 10's *"out-of-order operation"* — a
+   near-verbatim lexical match for the words §4.2 just used. That is a clean derivation from two
+   normative sentences, and it lands on 400. **The six peers in the 400 column did not skip row
+   6; they followed §4.2 into row 10.** So narrowing row 10 alone breaks the chain without
+   repairing it: §4.2's ordering MUST would then point at no §4.7 row at all, leaving a
+   normative MUST with no wire consequence a peer can emit. The adopted proposal therefore
+   carries five items, two of them required and new, and also repairs the stale MACHINE-SPEC
+   §6.4 copy. §5.2a's half-copy and the §3.3/§4.7/§5.2a precedence question, which we flagged
+   rather than proposed, are carried there too.
+
+   *This is the useful shape of the outcome, and it is worth keeping: the models exhibited a
+   real contradiction and got the direction right; the sibling that owns the text found the
+   mechanism, and the sibling that owns the cohort measured what we had only read. Neither
+   correction was available from inside this repo.*
 
 2. **§5.9 recommended TTL/`chain_depth` ratio has zero margin at worst-case fan-out.**
    §5.9 requires the ratio be "chosen so the deterministic depth brake engages before the
