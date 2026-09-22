@@ -240,15 +240,15 @@ scope — do not read it as the core grid's is read.
 
 | § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
 |---|---|---|---|---|---|---|---|
-| 3.1 | attestation entity shape | which fields are optional, hence which indexes are conditional | ● | | | | |
-| 3.2 | the `properties.kind` convention | `kind` is a recommended key, not a required field | ● | | | | |
+| 3.1 | attestation entity shape | which fields are optional, hence which indexes are conditional | ● | ● | | | |
+| 3.2 | the `properties.kind` convention | `kind` is a recommended key, not a required field | ● | ● | | | |
 | 3.3 | revocation as attestation | only a matching-`attesting` revocation affects liveness in the primitive | ● | | | | |
-| 4.3 | `is_attestation_live` | transitive supersession; a live attestation has no live descendant; a dead revocation does not kill; **`is_self_revoked` is undefined and its two readings disagree — finding** | ● | | | | |
-| 4.4 | authority-revocation is the consumer's | the substrate does self-revocation only; a third party's revocation does not kill | ● | | | | |
-| 5.1 | `default_find_authorizing` | the head-resolution step is an identity map over the live candidates | ● | | | | |
-| 5.2 | `walk_supersedes_chain` | terminates **iff** the supersedes graph is acyclic — the assumption isolated | ● | | | | |
-| 5.3 | `find_live_head` | the forward walk cannot traverse a chain of three; **finding**, see below | ● | | | | |
-| **5.7** | **index invariants I1–I5** | **write-then-read; all-or-nothing across the eligible index set; no residue on handler failure; retention under revocation; kind-index eligibility** | ● | | | | |
+| 4.3 | `is_attestation_live` | transitive supersession; a live attestation has no live descendant; a dead revocation does not kill; **`is_self_revoked` is undefined and its two readings disagree — finding** | ● | ● | | | |
+| 4.4 | authority-revocation is the consumer's | the substrate does self-revocation only; a third party's revocation does not kill | ● | ● | | | |
+| 5.1 | `default_find_authorizing` | the head-resolution step is an identity map over the live candidates | ● | ● | | | |
+| 5.2 | `walk_supersedes_chain` | terminates **iff** the supersedes graph is acyclic — the assumption isolated | ● | ● | | | |
+| 5.3 | `find_live_head` | the forward walk cannot traverse a chain of three; **finding**, see below | ● | ● | | | |
+| **5.7** | **index invariants I1–I5** | **write-then-read; all-or-nothing across the eligible index set; no residue on handler failure; retention under revocation; kind-index eligibility** | ● | ● | | | |
 
 ### Four rows carry FINDINGS, not coverage — read them that way
 
@@ -282,14 +282,70 @@ one implementation computes (any *fully live* descendant, walking past dead link
 a checked invariant rather than a paragraph of reasoning deliberately: §D.1 is the record of
 this repo reasoning its way to an impact claim about an implementation cohort and being wrong.
 
-**One engine.** All three modules are checked by TLC only. The core track's standard is all three
-engines of the concurrency family, and this track does not meet it yet — an Apalache unbounded
-proof of `IndexExactOnBound` and an independent Spin re-encoding are the next two pieces, and
-until they exist the corroboration argument in §1 does **not** cover these rows. Disclosed
-here rather than left for a reader to infer from Matrix B's absence. `AttestLive` in
-particular is an exhaustive enumeration over every graph on **three** nodes, `AttestRevoke` over
-every graph on **four** — small enough to be complete, small enough that a defect needing one
-more node is invisible.
+**Two engines on all three modules, as of 2026-09-08 — and the arithmetic is still the point.**
+`AttestIndex`, `AttestLive` and `AttestRevoke` are each checked by TLC *and* Apalache
+(`tla/AttestIndexApalache.tla`, `tla/AttestLiveApalache.tla`, `tla/AttestRevokeApalache.tla`).
+**This is the only extension track where that is true** — all six quorum and identity modules
+are TLC-only. There is still no Spin re-encoding on any of the three and **no prover model at
+all** (`docs/LEAN-SEAM.md` O5), so the Dolev-Yao gap is untouched and §1's corroboration
+argument, which is written about a three-engine family, still does not cover these rows.
+
+What the second engine bought, stated narrowly: `IndexExactOnBound` and the rest of §5.7's
+contract are now proved **inductive** — true for runs of any length, not only within TLC's
+bound — **F1 is confirmed by a second, structurally different method** (TLC enumerates the
+graph space; Apalache answers one SMT query over it), and **F5 stopped being a reading**
+(below). What it did **not** buy is independence from the transcription: these files are the
+same author's reading of the same spec text, so a shared misreading survives both. Adding
+engines does not move the 5th wall.
+
+**F5 IS NOW MACHINE-CHECKED, AND THE PORT REFUTED THE READING-STAGE VERSION OF IT.** F5 was
+filed as *"§4.3 defends one of its two recursions against cycles"*, with the inference that
+termination therefore rests on the **revocation graph** being acyclic — the unstated assumption
+`LEAN-SEAM.md` O6 records for the supersedes side, one relation over. `AttestRevoke.tla` could
+not check it, because its `Init` restricts **both** pointers to lower-numbered indices; its
+header says so, and that restriction is what makes its recursion terminate.
+`AttestRevokeApalache.tla` makes the two restrictions separate constants and lifts them one at
+a time, and the first row run said something stronger and different: **per-relation acyclicity
+is not enough.** With the supersedes order lifted and the revocation order kept,
+`FixedPointUniqueRec` is violated on a configuration where **both graphs are acyclic** —
+supersedes `2 → 3 → 4 → 1`, revocations `3 ⊣ 1` and `4 ⊣ 1` — because the dependency
+`4 --supersedes-reach--> 1 --revoked-by--> 4` closes a loop across the *composition* of the two
+relations. §4.3's `visited` set lives inside `has_live_transitive_descendant` and the recursion
+alternates (`is_attestation_live → has_live_transitive_descendant → is_self_revoked →
+is_attestation_live`), so the one stated defence does not span the hop that closes it. What
+§4.3 actually needs is a **common order over both relations** — which content addressing
+supplies in a deployed system and which no sentence of the document states. Eight
+`APALACHE_ENUM_FINDING` rows carry this and the two F4 rows; the routing note's §F5 is
+rewritten around the counterexample.
+
+**And one green is part of that finding.** `ConstInitSupUnordered / FixedPointUniqueStruct`
+**holds** where its `Rec` sibling does not: under the *structural* reading of the undefined
+`is_self_revoked`, liveness stays well defined on the same configuration. So F4's undefined
+helper does not only change §4.3's **answer** (which is what `LiveReadingsAgree` says) — one
+reading **has** an answer there and the other does not. Read that row with F5.
+
+Scope, so the rows are not read as more than they are: each Apalache module runs at **parity
+with its TLC twin and no further** — N = 3 for `AttestLive`, N = 4 for `AttestRevoke`. Larger N
+is the one thing the symbolic engine could give that the enumerator cannot, and the unrolling
+ladders are cut to what those bounds need because the deeper ones exceed the 2 GB cap.
+`ConstInitLadderShort` is the control that makes each bound fail loudly one node past it rather
+than silently truncating; on `AttestRevokeApalache` it guards **two** ladders, reachability and
+liveness. `AttestLive` remains an enumeration over every graph on **three** nodes and
+`AttestRevoke` over every graph on **four** — small enough to be complete, small enough that a
+defect needing one more node is invisible.
+
+**The Apalache port of `AttestRevoke` has an obligation its TLC twin does not, and it is in the
+green table for a reason.** Apalache has no `RECURSIVE`, and §4.3's four mutually recursive
+operators expand to |Nodes|^(2k) leaf copies if written as nested operator definitions — that
+draft OOM-killed the 2 GB cap on every invariant using the recursive reading, while the
+structural reading (where the descendant path does not recurse) ran in 22 seconds in the same
+file. So the ladder is built as a chain of **state variables**, one application of §4.3's
+equation each. That trades a depth claim for a well-definedness claim: `LadderIsFixedPointRec` /
+`…Struct` assert the ladder's top **satisfies** the equation (deep enough, and a solution
+exists), and `FixedPointUniqueRec` / `…Struct` assert there is only one (so the solver was not
+free to pick). Neither failure would have produced an error message — a short ladder computes a
+wrong Boolean silently, and a second solution is chosen silently. That is why they are rows and
+not a paragraph.
 
 **Not modeled at all:** the §4 validation helpers and their signature checks (a prover-track
 question, and this track has no prover — `docs/LEAN-SEAM.md` O5), `§5.1`'s `walk_attesting_chain`
@@ -324,14 +380,14 @@ uncited half is uncited because nobody has modeled it, not because it was judged
 
 | § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
 |---|---|---|---|---|---|---|---|
-| 3.1 | `system/quorum` entity shape | `threshold` is typed `primitive/uint` and constrained nowhere — the input to the finding below | ● | | | | |
+| 3.1 | `system/quorum` entity shape | `threshold` is typed `primitive/uint` and constrained nowhere — the input to the finding below | ● | ● | | | |
 | 3.2 | the `quorum-update` convention | the per-quorum supersedes chain, and that its single-chain shape is a convention no operation enforces | ● | | | | |
-| 4.1 | `verify_k_of_n_signatures` | the defensive dedupe (one key cannot fill two slots); the `resolve_peer` null check; **threshold 0 authorizes with no signature — finding** | ● | | | | |
+| 4.1 | `verify_k_of_n_signatures` | the defensive dedupe (one key cannot fill two slots); the `resolve_peer` null check; **threshold 0 authorizes with no signature — finding** | ● | ● | | | |
 | **4.2** | **`current_signer_set` + the §4.2.1 cache contract** | **the invalidation trigger/non-trigger set is exactly sufficient *given* validated-only reads; per-quorum scoping; and four findings — see below** | ● | | | | |
-| 5.1 | built-in `concrete` mode | resolution as the identity map — the case in which the dedupe and soundness greens are unconditional | ● | | | | |
-| 5.2 | resolver registration | a non-injective resolution collapses the effective N below the validated bound | ● | | | | |
-| 6.1 | `system/quorum:create` | states no structural validation — the other half of the threshold finding | ● | | | | |
-| 6.2 | `system/quorum:update` | validates `new_threshold >= 1` and `<= |new_signers|`, against the pre-resolution array length | ● | | | | |
+| 5.1 | built-in `concrete` mode | resolution as the identity map — the case in which the dedupe and soundness greens are unconditional | ● | ● | | | |
+| 5.2 | resolver registration | a non-injective resolution collapses the effective N below the validated bound | ● | ● | | | |
+| 6.1 | `system/quorum:create` | states no structural validation — the other half of the threshold finding | ● | ● | | | |
+| 6.2 | `system/quorum:update` | validates `new_threshold >= 1` and `<= |new_signers|`, against the pre-resolution array length | ● | ● | | | |
 
 ### Six rows carry FINDINGS, not coverage — read them that way
 
@@ -372,9 +428,17 @@ because a green whose constants are not the spec's would otherwise be read as on
 
 ### What is not covered
 
-**One engine, again.** TLC only — no Apalache, no Spin, no prover. §4.1 is a K-of-N *signature*
-validator and its unforgeability is a Dolev–Yao question this track does not touch at all
-(`docs/LEAN-SEAM.md` O5, now spanning two extension tracks). `MultisigKN.{pv,spthy}` proves
+**Two engines on ONE of three modules, as of 2026-09-08.** `tla/QuorumKofNApalache.tla` carries
+§4.1 to Apalache — chosen first because §4.1 has no recursion and is therefore the cheapest port
+on this track, and because it is the validator §2 calls "the only mechanism that distinguishes
+quorum from a regular peer node". **`QuorumSignerSet` and `QuorumTrust` remain TLC-only**, no
+module here has a Spin encoding, and **there is no prover** on this track.
+
+That last gap is the one to weigh, because it is exactly where §4.1 lives: it is a K-of-N
+*signature* validator and its unforgeability is a Dolev–Yao question **neither** engine touches
+(`docs/LEAN-SEAM.md` O14). Cryptography is a per-peer boolean in both transcriptions. A second
+engine on a structural model is a second engine on a structural model, and this row is the one
+most likely to be misread as more. `MultisigKN.{pv,spthy}` proves
 K-of-N for the **core capability** surface, which is a different validator over different
 inputs.
 
@@ -410,26 +474,26 @@ quorum grid.
 | § | Topic | Property class verified | TLC | Apalache | Spin | ProVerif | Tamarin |
 |---|---|---|---|---|---|---|---|
 | 2.2 | three entity-validation classes | identity does not dispatch side effects for a kind it does not own | ● | | | | |
-| 2.3 | function correspondence | who signs each cert kind — the input to the §9.2 finding | ● | | | | |
-| 3.3 | identity attestation conventions | the four owned kinds, and that `revocation` / `quorum-*` are not among them | ● | | | | |
-| **3.6** | **the validators** | **`identity_verify_cert` step 1's gate, `identity_topology_for` arm by arm; three findings — see below** | ● | | | | |
-| 4.1 | kind table | the signature topology column, per kind | ● | | | | |
-| 4.2 | `identity-cert` + valid-modes table | the per-function admissible (function, mode) set — one cell of it contradicts §9.2 | ● | | | | |
-| 4.2a | publication modes | mode as the storage-path selector; `agent` + `public` is the contested cell | ● | | | | |
-| 4.2b | sub-controller chains | a sub-controller cert dispatches single-sig, not a second K-of-N | ● | | | | |
-| 4.3 | `identity-rotation-handoff` | dual-sig; and the unenforced `attesting = target.attested` — **finding** | ● | | | | |
-| 4.4 | `identity-rotation-recovery` | K-of-N from quorum, always; the §9.4 antecedent | ● | | | | |
-| 4.5 | `identity-retirement` | K-of-N from quorum, always | ● | | | | |
-| 4.6 | `revocation` | identity's authority-revocation rules — and that the kind cannot arrive — **finding** | ● | | | | |
-| 5.1 | path layout + cache lifetime | where each kind is stored; the retention floor that ends at accept — **finding** | ● | | | | |
-| 5.2 | audience and sync | *(cited for the tier separation only; no ordering property is verified)* | ● | | | | |
-| 5.3 | canonical storage path | the `public/` question only — whether a cert's mode puts it there | ● | | | | |
+| 2.3 | function correspondence | who signs each cert kind — the input to the §9.2 finding | ● | ● | | | |
+| 3.3 | identity attestation conventions | the four owned kinds, and that `revocation` / `quorum-*` are not among them | ● | ● | | | |
+| **3.6** | **the validators** | **`identity_verify_cert` step 1's gate, `identity_topology_for` arm by arm; three findings — see below** | ● | ● | | | |
+| 4.1 | kind table | the signature topology column, per kind | ● | ● | | | |
+| 4.2 | `identity-cert` + valid-modes table | the per-function admissible (function, mode) set — one cell of it contradicts §9.2 | ● | ● | | | |
+| 4.2a | publication modes | mode as the storage-path selector; `agent` + `public` is the contested cell | ● | ● | | | |
+| 4.2b | sub-controller chains | a sub-controller cert dispatches single-sig, not a second K-of-N | ● | ● | | | |
+| 4.3 | `identity-rotation-handoff` | dual-sig; and the unenforced `attesting = target.attested` — **finding** | ● | ● | | | |
+| 4.4 | `identity-rotation-recovery` | K-of-N from quorum, always; the §9.4 antecedent | ● | ● | | | |
+| 4.5 | `identity-retirement` | K-of-N from quorum, always | ● | ● | | | |
+| 4.6 | `revocation` | identity's authority-revocation rules — and that the kind cannot arrive — **finding** | ● | ● | | | |
+| 5.1 | path layout + cache lifetime | where each kind is stored; the retention floor that ends at accept — **finding** | ● | ● | | | |
+| 5.2 | audience and sync | *(cited for the tier separation only; no ordering property is verified)* | ● | ● | | | |
+| 5.3 | canonical storage path | the `public/` question only — whether a cert's mode puts it there | ● | ● | | | |
 | 6.0b | `:supersede_attestation` | the REBIND_KINDS split, as the other half of "nothing validates the handoff identity" | ● | | | | |
-| 6.0c | `:create_attestation` | validates (kind, function, mode) and the required properties fields — and not that identity | ● | | | | |
+| 6.0c | `:create_attestation` | validates (kind, function, mode) and the required properties fields — and not that identity | ● | ● | | | |
 | **6.3** | **`process_attestation`** | **phase 1 / phase 2a / phase 2 dispatch / phase 3 emission; three findings — see below** | ● | | | | |
-| 9.2 | operational-key confinement | the MUST, over exactly the cert shapes §4.2 admits — **finding** | ● | | | | |
+| 9.2 | operational-key confinement | the MUST, over exactly the cert shapes §4.2 admits — **finding** | ● | ● | | | |
 | **9.4** | **compromise-recovery validation** | **fail-closed holds; and it holds vacuously — two findings** | ● | | | | |
-| 10.1 | MUST-implement list | topology-first dispatch; dual-sig handoff; the phase-2a scope rule | ● | | | | |
+| 10.1 | MUST-implement list | topology-first dispatch; dual-sig handoff; the phase-2a scope rule | ● | ● | | | |
 | 12.3 | three algorithms, one direction | the no-shared-validator wall at the arrival path | ● | | | | |
 
 ### Seven rows carry FINDINGS, not coverage — read them that way
@@ -479,8 +543,14 @@ be a double-count. `docs/LEAN-SEAM.md` O16 is the row.
 
 ### What is not covered
 
-**One engine, for the third time.** TLC only — no Apalache, no Spin, no prover.
-`docs/LEAN-SEAM.md` O5's gap now spans **three** extension tracks. Identity's authority-logic
+**Two engines on ONE of three modules, as of 2026-09-08.** `tla/IdentityCertChainApalache.tla`
+carries §3.6 topology dispatch and §9.2 confinement to Apalache — chosen first because it is
+where every K-of-N verdict in this extension is dispatched, so the other two modules lean on it.
+**`IdentityProcess` and `IdentityRecovery` remain TLC-only** — and note that `IdentityRecovery`
+is the module carrying I2, this track's headline, which therefore still rests on one engine.
+No Spin encoding, and **no prover**: `docs/LEAN-SEAM.md` O19's gap is untouched, so every
+finding on this track — including I5's "an unsigned revocation is honoured" — is a statement
+about which code path is reached and not a Dolev-Yao result. Identity's authority-logic
 predicates (`identity_confers_function`, `identity_is_authorized_revoker`) are *not* discharged by
 the keystone sibling's Lean and deliberately so — §2.2 and §12.3 make identity attestations a
 structurally distinct validation class from capability tokens, so routing them to the layer that
@@ -501,8 +571,28 @@ checks the checker". **Every `core` module is covered by all three engines of it
 
 **Read the word `core` in that sentence — it was not there until 2026-09-07 and its absence was
 a false claim.** This section said *"Every module is covered by all three engines of its
-family"*, unqualified, and it was written when `core` was the only track. Since 2026-09-07 there
-are **nine extension modules on three tracks and every one of them is TLC-only** — no Apalache,
+family"*, unqualified, and it was written when `core` was the only track.
+
+**THE APALACHE COLUMNS ON THE THREE EXTENSION GRIDS WERE RE-DERIVED FROM THE MODELS' OWN
+CITATIONS ON 2026-09-08, AND SOME OF THEM WERE ALREADY STALE.** `make coverage` asserts the
+section SET and the counts and says in its own output that it does **not** assert the engine
+columns — those are hand-maintained. When the first two Apalache modules landed earlier the same
+day, several rows they cite (`ATTEST §3.1`, `§3.2`, `§5.1`, `§5.2`) kept a blank Apalache cell,
+because a hand-maintained column is updated by whoever remembers to. The columns are now set by
+comparing each grid's `§` rows against the `§` citations in that track's Apalache modules.
+**That is a derivation, not a gate** — nothing re-runs it, and it will go stale again the next
+time a module lands. Recorded here rather than left to be re-discovered, and it is the obvious
+next thing for `coverage-check.py` to take over.
+
+*Live count, 2026-09-08:* there are **nine extension modules on three tracks**, of which **five
+have a second engine** (all three `attestation` modules, plus `QuorumKofN` and
+`IdentityCertChain` — Apalache) and **four remain TLC-only** (`QuorumSignerSet`, `QuorumTrust`,
+`IdentityProcess`, `IdentityRecovery`).
+None has a third engine, and none has a prover model. The quantifier is stated as a count here,
+deliberately: the last time this sentence carried a bare universal it went false the day someone
+else grew the set, and a number goes stale visibly where "every" does not.
+
+Since 2026-09-07 the position was that **every extension module was TLC-only** — no Apalache,
 no Spin, no prover. Each track's own grid (§3c, §3d, §3e) said "one engine" plainly; this
 headline did not, and a reader arriving here first would have taken the strongest corroboration
 claim in the repo as covering modules it does not.

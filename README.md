@@ -15,14 +15,16 @@ exactly one **track**, declared in [`TRACKS.toml`](TRACKS.toml) and gated by `ma
 
 | Track | Subject | Spec owner | Status |
 |---|---|---|---|
-| **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 95 model files, 277 runs, pinned at `spec-data/v0.8.2` |
-| **attestation** | The signed-edge substrate: `attesting → attested`, four mandatory indexes, the supersedes chain | `entity-system-architecture` | **modeled** — 3 modules (§5.7 index invariants; §4.3/§5.1–5.3 liveness and the chain walks; §4.3's revocation recursion), 23 runs, TLC only, pinned at `spec-data/ext-attestation-v1.3` |
-| **quorum** | K-of-N signer rosters; `quorum-update` / `quorum-publish`; `current_signer_set(as_of)` | `entity-system-architecture` | **modeled** — 3 modules (§4.2 the signer-set resolver and its clock; §4.2/§4.2.1 the arrival-time trust model; §4.1 K-of-N), 28 runs, TLC only, pinned at `spec-data/ext-quorum-v1.2` |
-| **identity** | Cert chains, rotation by handoff, rotation by recovery, retirement | `entity-system-architecture` | **modeled** — 3 modules (§6.3 the arrival convergence point; §9.4 compromise-recovery validation; §3.6 topology dispatch and §9.2 key confinement), 33 runs, TLC only, pinned at `spec-data/ext-identity-v3.10` |
+| **core** | Entity Core Protocol — connection, store, revocation, dispatch, registration, reentry | `entity-core-protocol` | **modeled** — 95 model files, 302 runs, pinned at `spec-data/v0.8.2` |
+| **attestation** | The signed-edge substrate: `attesting → attested`, four mandatory indexes, the supersedes chain | `entity-system-architecture` | **modeled** — 3 modules (§5.7 index invariants; §4.3/§5.1–5.3 liveness and the chain walks; §4.3's revocation recursion), 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
+| **quorum** | K-of-N signer rosters; `quorum-update` / `quorum-publish`; `current_signer_set(as_of)` | `entity-system-architecture` | **modeled** — 3 modules (§4.2 the signer-set resolver and its clock; §4.2/§4.2.1 the arrival-time trust model; §4.1 K-of-N), 39 runs, **TLC on all three; Apalache on §4.1 only**, pinned at `spec-data/ext-quorum-v1.2` |
+| **identity** | Cert chains, rotation by handoff, rotation by recovery, retirement | `entity-system-architecture` | **modeled** — 3 modules (§6.3 the arrival convergence point; §9.4 compromise-recovery validation; §3.6 topology dispatch and §9.2 key confinement), 52 runs, **TLC on all three; Apalache on §3.6/§9.2 only**, pinned at `spec-data/ext-identity-v3.10` |
 
 **Everything else in this README is about the `core` track** unless it says otherwise. The
-three extension tracks are days old and **TLC-only — no second engine and no
-prover** — and their coverage is stated separately in `docs/COVERAGE-MATRIX.md` §3c, §3d and
+three extension tracks are days old. **Five of their nine modules have a second engine** — all
+three `attestation` modules, plus `QuorumKofN` (§4.1) and `IdentityCertChain` (§3.6), Apalache,
+added 2026-09-08; **the other four are TLC-only, no module on any of the three has a third
+engine, and none has a prover** — and their coverage is stated separately in `docs/COVERAGE-MATRIX.md` §3c, §3d and
 §3e, where a substantial share of the rows are **findings against the spec** rather than coverage
 of it. Read those three tracks as a defect report, not as assurance; the routed findings are
 indexed in `docs/status/FINDINGS-INDEX.md`. `scoped` is a gated state rather than a label:
@@ -174,7 +176,7 @@ ProVerif toolchain) runs everything; the model checkers are all containerized.
 ```
 make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
-make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (361 runs)
+make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (461 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
 make specdrift # has the spec moved out from under the pin?
 make trackcheck # which proof track is each model file on? (TRACKS.toml)
@@ -207,7 +209,7 @@ AGENTS.md                 ← repo-specific agent guidance (build/test, layout, 
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
   COVERAGE-MATRIX.md      ← section x engine, the limits, what is NOT covered (start here)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 361-run matrix
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 461-run matrix
   STATUS.md               ← rolling status: where it is, what is next
   SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls

@@ -136,6 +136,70 @@ a declared abstraction is a to-do list, not an absolution** — O9 exists becaus
 D11 inventory-boundary note back as work rather than as disclosure, and that was cheaper than
 finding a new section to model.
 
+**SECOND ENGINE ON THIS TRACK, 2026-09-08 — ALL THREE modules, and read the arithmetic.**
+`tla/AttestIndexApalache.tla`, `tla/AttestLiveApalache.tla` and `tla/AttestRevokeApalache.tla`.
+**Both other tracks have a second engine on ONE of three modules** — `tla/QuorumKofNApalache.tla`
+(§4.1, the K-of-N validator) and `tla/IdentityCertChainApalache.tla` (§3.6 topology dispatch,
+where every identity K-of-N verdict is decided). So **five of the nine** extension modules rest
+on two engines and **four still rest on one**; **no** extension module has a third engine, and
+none of the nine has a prover. Do not let "the attestation track has two engines" become "the extension tracks are
+corroborated."
+
+**F1 is now confirmed by two structurally different methods** — TLC enumerates the graph space,
+Apalache answers one SMT query over it — and §5.7's index contract is now proved *inductive*
+rather than bounded. **What a second engine does NOT buy is independence from the
+transcription:** these files are the same author's reading of the same spec text, so a shared
+misreading survives both. Engines do not move the 5th wall, and the routed findings still rest
+on a human reading of the pinned text.
+
+**WHAT IT DID BUY, ON THE THIRD MODULE, WAS A FINDING THE FIRST ENGINE COULD NOT SEE — AND IT
+REFUTED THE READING IT WAS PORTED TO CONFIRM.** F5 said §4.3 defends one of its two recursions
+against cycles, and inferred that termination rests on the **revocation** graph being acyclic.
+`AttestRevoke.tla` could not check that: its `Init` restricts *both* pointers to lower indices,
+so the assumption it needed was hard-coded in the only file that could have measured it.
+`AttestRevokeApalache.tla` splits the restriction into two constants and lifts them one at a
+time. Result: **per-relation acyclicity is not the assumption.** With the supersedes order
+lifted and the revocation order kept, §4.3's equation has no unique solution on a configuration
+where **both graphs are acyclic** — the dependency `4 --supersedes-reach--> 1 --revoked-by--> 4`
+closes a loop across the *composition*, and §4.3's `visited` set is scoped to one hop of a
+recursion that alternates between the two relations. What the section needs is a **common order
+over both**, which content addressing supplies and no sentence states.
+**The transferable piece: an assumption hard-coded into a model is invisible to that model, and
+a second engine is worth most where you point it at the first one's `Init` rather than at its
+invariants.** O6's shape again, and the third time a written-down pre-model hypothesis has been
+right about *where* to look and wrong about *what is there*.
+
+**A FOURTH ENCODER FACT, AND IT REPLACES THE FIRST ONE'S REMEDY.** Unrolling into a ladder of
+nested operator definitions is the obvious port and it does not survive a *mutual* recursion:
+`~HasLiveDesc` and `~SelfRevFull` are negated existentials, so they become universals, and
+Apalache expands a universal over a fixed range into a conjunction — branching |Nodes|^2 per
+level, |Nodes|^(2k) leaves at depth k. Four levels at N = 4 is 65536 copies of the base and the
+cap dies. **Build the ladder as a chain of STATE VARIABLES instead**, one application of the
+equation each (`lT1 = StepFrom(Base, TRUE)`, `lT2 = StepFrom(lT1, TRUE)`, …): linear, and the
+whole module then checks in three seconds. Three sharp edges come with it — write the level as
+a *function constructor* (`v = [x \in Nodes |-> …]`), because Apalache's assignment solver does
+not recognise the equivalent pointwise `\A x : v[x] = …` and fails with *"v' is used before it
+is assigned"*; `\E f \in [S -> BOOLEAN]` inside an invariant is rejected outright (*"Trying to
+expand a set of functions"*) while the universal form is accepted, because the negation is
+skolemized; and **the obligation changes shape**. A ladder must justify its DEPTH; a fixed point
+must justify its EXISTENCE AND UNIQUENESS, and neither failure prints anything — a short ladder
+computes a wrong Boolean silently and a second solution is chosen silently. Hence
+`LadderIsFixedPoint*` (deep enough *and* a solution exists, in one query) and `FixedPointUnique*`
+(so the ladder's answer is *the* answer), both in the green table.
+
+Three encoder facts worth having before writing the next one, all learned by OOM-killing the
+2 GB cap rather than by reading documentation. **Apalache does not support `RECURSIVE`**, so
+fuel-bounded recursion has to be unrolled into a ladder — and *every ladder depth is then a
+claim*, so `UnrollDeep`, `MaxOfExact` and `SpecWalkNeverExhausts` exist to check the depths
+rather than assert them in a comment. **`InlinePass` expands the whole module before the
+"leaving only relevant operators" pruning takes effect on term size**, so one expensive operator
+kills *every* invariant in the file, including ones already measured green — which is exactly
+how the `IF`-ladder `MaxOf` was found. And **the natural TLA+ is often the wrong encoding**:
+`CHOOSE` compiles to an oracle per occurrence, `S \cup UNION {f(p) : p \in S}` nested is a
+combinatorial blow-up, `<=>` duplicates both sides, and `SUBSET S` over a symbolically-sized `S`
+is unbounded. Each has a cheap equivalent; each rewrite is a place a transcription can drift, so
+each one is commented at its site with what it replaced and why.
+
 **Quorum track, 2026-09-07 — promoted `scoped`→`modeled`, three modules, 28 runs, SEVEN
 findings.** `tla/QuorumSignerSet.tla` (§4.2 the resolver, with the clock), `tla/QuorumTrust.tla`
 (§4.2/§4.2.1 the arrival-time trust model), `tla/QuorumKofN.tla` (§4.1 the validator). Routed
@@ -266,7 +330,7 @@ contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 40
 (keystone has not upgraded yet); `docs/SPEC-DRIFT-ASSESSMENT.md` is the live measurement and
 `make driftclaim` gates every prose site that states the status. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**361-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+**461-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
 (15 ProVerif / 14 Tamarin lemmas), 100 negative controls and 13 non-vacuity witnesses.
 No inductive invariant is deferred; no control is known-weak.
@@ -280,7 +344,7 @@ the complementarity claim stops being prose. **It paid out on 2026-09-06:** the 
 residual it found was adopted by the keystone peer, §5.5a now has a theorem per pattern form,
 and both gates caught the movement — `leanseam` on the digests, `leanproof` on three new
 theorems **by name**, refusing to accept a re-declare without a re-read. **Do not trust a
-count of the ledger's rows that you did not derive:** it is 37 rows / 13 Class L, **14 OPEN**,
+count of the ledger's rows that you did not derive:** it is 38 rows / 13 Class L, **14 OPEN**,
 and a recalled figure has been published wrong here **four** times. Run **`make ledgercount`**
 — it parses the ledger and fails when a declared prose site disagrees. *Note what this line
 used to say and why it was wrong: "`leanseam` and `leanproof` print the live numbers." They do
@@ -410,6 +474,23 @@ that would pin it were written and stranded rather than never designed.
 The transferable piece, and it is why this is D13 rather than a bug report: **a test vector is a
 grader, and every question this discipline asks of our own graders applies to someone else's.**
 We had been reading TV rows as ground truth for three tracks.
+
+*Eighth instance, 2026-09-08 — asked of THE INDUCTIVE PROOF ITSELF, and the answer was "less
+than it says".* `apalache-green` checks two things per row: `Init => Inv`, and
+`IndInit /\ Next => Inv'`. Where `IndInit` is just `Inv` those two ARE the inductive proof.
+Where `IndInit` is `TypeOK /\ <strengthening> /\ Inv` — **20 of 26 rows** — they are not:
+preservation of `Inv` *from strengthened states* establishes nothing unless the strengthening is
+itself preserved, and **nothing checked that.** `docs/PROPERTIES.md` names the strengthenings
+(`RefcountSound`, `DecisionSound`) and never asserts their closure. The published claim was
+"proved **inductive**"; what was checked was weaker.
+
+Answered it by RUNNING rather than reasoning — the D15 corollary, sixth consecutive session —
+and **all 26 rows CLOSE.** Nothing was wrong. That is the point worth keeping: *this is the
+cheaper half of D13 and the half that goes unnoticed, because the result of checking is that
+nothing changes.* A gate that under-asserts produces no failure to investigate, so only asking
+the question finds it. `make apalache-closure` (`APALACHE_CLOSURE`, 26 rows, in `green` and
+`matrix`) now checks `IndInit /\ Next => IndInit'`, and its failure message says exactly what a
+break would mean rather than "assertion failed".
 
 *Sixth instance, 2026-09-07 — and it is about a gate table meaning TWO things.* The
 attestation chain-walk model produces rows that **must be violated on a model where nothing is
@@ -690,6 +771,51 @@ own `docs/status/` and `reviews/` have been searched for a prior ruling, and a *
 term** has been run against every tree searched. Not numbered: this is D15's mechanism — *what is
 the input set, and what else produces this result* — in a ninth medium, and the standing rule
 holds. Full correction and the reframed ask: `docs/status/ROUTING-2026-09-08-VALIDATION-SURFACE.md`.
+
+*Tenth shape, 2026-09-08 — **A MODEL'S OWN `Init` IS AN INPUT SET**, and this is the one that
+has actually cost a published claim.* Every prior shape was a tool's input set: a glob, a regex,
+a denominator, a gate whose state went empty. This one is the domain a model checks over, and it
+differs from the others in a way that makes it worse rather than better: **it was disclosed.**
+`tla/AttestRevoke.tla`'s header says, in plain terms, that `Init` restricts both the supersedes
+and the revocation pointer to lower-numbered nodes and that every recursion terminates because
+of that restriction rather than because of the algorithm. Nothing was hidden. And F5 — the
+finding *about* that assumption — was then reasoned out in prose, published as "termination
+rests on the revocation graph being acyclic", and was **wrong**: lifting the two restrictions
+independently in `tla/AttestRevokeApalache.tla` shows §4.3's equation has no unique solution on
+a configuration where *both graphs are acyclic*, because the recursion alternates between the
+two relations and the real requirement is a **joint order over both**. The model that discloses
+an assumption is the model that cannot measure it, and a disclosure reads as a conclusion.
+
+**The candidate rule, and it is a CANDIDATE, not a ratified discipline** (§3's ladder: this has
+bitten once, in one shape, and a rule added on speculation is removed if unearned):
+
+> **A model's domain restriction is a claim. Make it a CONSTANT with a control row — never an
+> unconditional conjunct of `Init` — or book it as an OPEN Class-O row naming what it excludes.**
+
+The remedy was already invented here independently, which is the argument for the rule rather
+than against it: **O16** made identity's substrate assumption a constant (`SignerSetIsSound`)
+with a negative control precisely so the choice would be "visible in the gate table instead of
+invisible afterwards". `AttestRevoke` did the opposite with the same kind of assumption, and
+paid.
+
+*The class, enumerated in the same session (D14), across all nine extension models' `Init`:*
+
+| Site | Shape | Disposition |
+|---|---|---|
+| `AttestRevoke.tla` — `sup[x] < x` **and** `revt[x] < x` | unconditional, disclosed in prose | **FIXED 2026-09-08** — two constants (`SupOrdered`, `RevOrdered`) in the Apalache port, five finding rows, O10 closed and its statement corrected |
+| `QuorumSignerSet.tla` — `sup[x] = NULL \/ sup[x] < x` | unconditional, **no constant, no control** | **OPEN, and now visible.** Same shape as the one that just bit, on the module carrying Q1. `docs/LEAN-SEAM.md` **O20** |
+| `QuorumSignerSet.tla` — `WellFormedChain` as the *antecedent* of both cohort greens | invariant guard rather than `Init` | **OPEN**, already booked as O13 — a second shape of the same mechanism, disclosed and unmeasured |
+| `AttestLive.tla` — `AllowCycles` | constant, with a control | done right |
+| `QuorumKofN.tla` — `CreateValidates => k >= 1` | constant, with a finding row | done right |
+| `IdentityCertChain.tla` — `HandoffIdentityEnforced` | constant, with a finding row | done right |
+| `IdentityCertChain.tla` — `SignerSetIsSound` | constant, with a control | done right (O16, the precedent) |
+| `AttestIndex`, `QuorumTrust`, `IdentityProcess`, `IdentityRecovery` | `Init` is a concrete start state, not a domain restriction | not in the class |
+
+*Enforcement point, per §3's "a discipline with no enforcement point does not count":* the
+`docs/LEAN-SEAM.md` Class-O column is it. An unconditional `Init` restriction with no constant
+must carry a row there naming what it excludes — O20 is the first one added under this rule, and
+the rule is what made anyone look. **The second instance in a different shape promotes this to a
+number; until then apply it and do not claim it generalizes.**
 
 *And the corollary held for a fifth consecutive session, twice in one module.*
 `IdentityRecovery`'s `RecoveryIdempotent` first read "two deliveries, one verdict" and the GREEN

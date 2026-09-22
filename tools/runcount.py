@@ -63,6 +63,15 @@ DERIVATION = [
     ("tlc-finding",           "tla/Makefile",     "TLC_FINDING",       "rows",  1),
     ("apalache-green",        "tla/Makefile",     "APALACHE_GREEN",    "rows",  2),
     ("apalache-neg",          "tla/Makefile",     "APALACHE_NEG",      "rows",  1),
+    # Added 2026-09-08. The closure half of the inductive proof -- the strengthening preserves
+    # itself. One run per row; the base and step runs are counted above under apalache-green.
+    ("apalache-closure",      "tla/Makefile",     "APALACHE_CLOSURE",  "rows",  1),
+    # Added 2026-09-08 with the attestation track's second engine. These models have no
+    # transitions (`Next == UNCHANGED vars`), so each row is ONE run at --length=0 rather than
+    # the base+step pair -- which is why they are a separate table and a separate factor.
+    ("apalache-enum-green",   "tla/Makefile",     "APALACHE_ENUM_GREEN",   "rows", 1),
+    ("apalache-enum-neg",     "tla/Makefile",     "APALACHE_ENUM_NEG",     "rows", 1),
+    ("apalache-enum-finding", "tla/Makefile",     "APALACHE_ENUM_FINDING", "rows", 1),
     ("spin green (safety+LTL)", "spin/Makefile",  "SPIN_GREEN",        "words", 2),
     ("spin green (safety)",   "spin/Makefile",    "SPIN_GREEN_SAFETY", "words", 1),
     ("spin green (N=3)",      "spin/Makefile",    "SPIN_GREEN_N3",     "rows",  2),

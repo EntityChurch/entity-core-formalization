@@ -253,8 +253,11 @@ coverage_doc     = "docs/COVERAGE-MATRIX.md"
 coverage_heading = "Matrix A-ATT — attestation section × property class × engine"
 models       = [
   "tla/AttestIndex.tla",
+  "tla/AttestIndexApalache.tla",
   "tla/AttestLive.tla",
+  "tla/AttestLiveApalache.tla",
   "tla/AttestRevoke.tla",
+  "tla/AttestRevokeApalache.tla",
 ]
 note = """
 The substrate the other two consume: a system/attestation is a signed edge attesting→attested
@@ -271,8 +274,23 @@ algorithm computes its own contract, not whether an interleaving can break it. T
 rows are findings against the spec rather than results about the protocol; they live in the
 TLC_FINDING gate table and are routed in docs/status/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md.
 
-Still TLC only on this track: no Apalache, no Spin, and no prover model at all (LEAN-SEAM O5),
-so the corroboration argument that carries the core track does not reach these results yet.
+SECOND ENGINE, 2026-09-08 — partial, and the partiality is the point. AttestIndexApalache and
+AttestLiveApalache carry two of this track's three modules to Apalache. AttestRevoke has none,
+so the track is NOT corroborated as a whole; there is still no Spin encoding and still no
+prover model at all (LEAN-SEAM O5), so the Dolev-Yao gap is untouched.
+
+What the second engine did buy is worth naming: F1 — §5.3 cannot traverse a chain of three —
+is now confirmed by a SECOND, structurally different method. TLC enumerates the graph space;
+Apalache answers one SMT query over it. Both exhibit the counterexample on the green sweep's
+own constants. What neither buys is independence from the transcription: both files are the
+same author's reading of the same spec text, so a shared misreading survives both. That is the
+5th wall, and adding engines does not move it.
+
+Scope honestly: N = 3 on the Apalache side, parity with TLC and nothing more. Larger N is the
+one thing the symbolic engine could give that the enumerator cannot, and it is future work —
+the unrolling ladders are cut to what N = 3 needs because the deeper ones exceed the 2 GB cap.
+`ConstInitLadderShort` is the control that makes that bound fail loudly at N = 4 instead of
+silently truncating the graph.
 """
 
 [track.quorum]
@@ -292,6 +310,7 @@ coverage_doc     = "docs/COVERAGE-MATRIX.md"
 coverage_heading = "Matrix A-QRM — quorum section × property class × engine"
 models       = [
   "tla/QuorumKofN.tla",
+  "tla/QuorumKofNApalache.tla",
   "tla/QuorumSignerSet.tla",
   "tla/QuorumTrust.tla",
 ]
@@ -322,10 +341,15 @@ the interesting half).
       a model with no not_before and does not cover this; that is O9 firing again on the
       module written to close it.
 
-Six findings routed: docs/status/ROUTING-2026-09-07-QUORUM.md. Still TLC only, like
-attestation: no Apalache, no Spin, and no prover model, so LEAN-SEAM O5's gap now spans two
-extension tracks rather than one. §4.1 is the K-of-N validator and its unforgeability is a
-Dolev-Yao question nothing here touches.
+Six findings routed: docs/status/ROUTING-2026-09-07-QUORUM.md.
+
+SECOND ENGINE, 2026-09-08 — ONE of three modules. tla/QuorumKofNApalache.tla carries §4.1 to
+Apalache. It went first because §4.1 has no recursion (the cheapest port on this track) and
+because it is the validator §2 calls "the only mechanism that distinguishes quorum from a
+regular peer node". QuorumSignerSet and QuorumTrust are still TLC-only; there is no Spin
+encoding here and NO PROVER, so LEAN-SEAM O14 is untouched. Note where that lands: the module
+that now has two engines is precisely the one whose real property -- unforgeability -- neither
+engine can express. Cryptography is a per-peer boolean in both transcriptions.
 """
 
 [track.identity]
@@ -345,6 +369,7 @@ coverage_doc     = "docs/COVERAGE-MATRIX.md"
 coverage_heading = "Matrix A-IDN — identity section × property class × engine"
 models       = [
   "tla/IdentityCertChain.tla",
+  "tla/IdentityCertChainApalache.tla",
   "tla/IdentityProcess.tla",
   "tla/IdentityRecovery.tla",
 ]
@@ -392,12 +417,18 @@ negative control whose whole job is to exhibit what identity's greens rest on. T
 therefore visible in the gate table rather than invisible afterwards, and Q1 is not re-routed
 wearing an identity section number. LEAN-SEAM O16.
 
+SECOND ENGINE, 2026-09-08 — ONE of three modules. tla/IdentityCertChainApalache.tla carries
+§3.6 topology dispatch and §9.2 confinement to Apalache, chosen first because it is where every
+K-of-N verdict in this extension is dispatched and the other two modules lean on it.
+IdentityProcess and IdentityRecovery are still TLC-only -- INCLUDING the module that carries
+I2, this track's headline -- and there is no Spin encoding and no prover (LEAN-SEAM O19).
+
 Seven findings routed: docs/status/ROUTING-2026-09-07-IDENTITY.md. Two of them are CROSS-SPEC
 and one of those exists only in a PAIR of documents — §ATTEST:TV-A8 delegates the rejection of
 an invalid-signature revocation to "identity's `identity_verify_cert` ... at topology-dispatch
 step", and §3.6 rejects every `kind="revocation"` before topology dispatch is reached. Neither
-document is wrong read alone. Still TLC only, like the other two extension tracks: no Apalache,
-no Spin, no prover, so LEAN-SEAM O5's gap now spans three tracks rather than two.
+document is wrong read alone. On the two modules that still have one engine, no Apalache;
+no Spin anywhere; no prover, so LEAN-SEAM O19's gap is untouched.
 
 THE COHORT ON THIS TRACK DOES NOT AGREE WITH ITSELF, which is new. On quorum, three independent
 authors derived the same unwritten rule three times and that unanimity was the argument for

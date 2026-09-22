@@ -22,10 +22,10 @@ otherwise**; the `attestation` and `quorum` tracks are days old and are reported
 
 | Track | Subject | Status |
 |---|---|---|
-| `core` | Entity Core Protocol | **modeled** — 95 model files, 277 runs, pinned at `spec-data/v0.8.2` |
-| `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 23 runs, TLC only, pinned at `spec-data/ext-attestation-v1.3` |
-| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 28 runs, TLC only, pinned at `spec-data/ext-quorum-v1.2` |
-| `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 33 runs, TLC only, pinned at `spec-data/ext-identity-v3.10` |
+| `core` | Entity Core Protocol | **modeled** — 95 model files, 302 runs, pinned at `spec-data/v0.8.2` |
+| `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
+| `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 39 runs, **TLC on all three; Apalache on §4.1 only**, pinned at `spec-data/ext-quorum-v1.2` |
+| `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 52 runs, **TLC on all three; Apalache on §3.6/§9.2 only**, pinned at `spec-data/ext-identity-v3.10` |
 
 Added 2026-09-06, **before** any extension model exists, and that order is the point. The
 coverage number is derived from a *document-blind* `§N.M` pattern, so an
@@ -76,6 +76,36 @@ it. See §Next item 4 and `docs/LEAN-SEAM.md` §7.
 
 ## Where we left off
 
+**2026-09-08, second pass — the corroboration gap went from 2 of 9 to 5 of 9, and closing the
+last attestation module produced a finding neither engine could have produced alone.** Three
+new Apalache modules: `AttestRevokeApalache` (completing the attestation track),
+`QuorumKofNApalache` (§4.1) and `IdentityCertChainApalache` (§3.6 / §9.2). Matrix 431 → 461.
+Three things to carry:
+
+- **F5 stopped being a reading and the reading was wrong.** `AttestRevoke.tla` restricts *both*
+  the supersedes and revocation pointers to lower indices, so the assumption F5 was about was
+  hard-coded in the only model that could have measured it. The Apalache port makes the two
+  restrictions separate constants and encodes §4.3 as its defining equation. Result: **§4.3's
+  liveness predicate has no unique value on a configuration where BOTH graphs are acyclic** —
+  the dependency runs supersedes-reach then revoked-by, and §4.3's `visited` set guards one hop
+  of a recursion that alternates. What the section needs is a **joint order over both
+  relations**, which content addressing supplies and no sentence states. `LEAN-SEAM.md` **O10
+  is CLOSED and its assumption was rewritten to close it.** The transferable line is in
+  `AGENTS.md`: *an assumption hard-coded into a model is invisible to that model, and a second
+  engine is worth most where you point it at the first one's `Init`.*
+- **The port cost is in the recursion, not the model.** The obvious unrolled-ladder encoding
+  OOM-killed the 2 GB cap because negated existentials become universals and Apalache expands
+  those — |Nodes|^(2k) leaves at depth k. Building the ladder as a chain of **state variables**
+  is linear and runs in three seconds, but it swaps a depth obligation for an
+  existence-and-uniqueness one, and neither failure prints anything. `LadderIsFixedPoint*` and
+  `FixedPointUnique*` are green rows for that reason. `AGENTS.md` carries it as a fourth
+  encoder fact.
+- **`docs/status/SEVERITY-2026-09-08-FINDINGS-TRIAGE.md` is new** and grades all 21 spec
+  findings: **6 structural (in 4 clusters), 6 high, 7 moderate, 2 editorial.** Its §4 is the part worth reading
+  — **nine of the twenty-one share one shape**, a normative obligation stated in one place whose
+  enforcement is assumed to happen somewhere that does not do it. One of the four structural
+  findings is live in shipped code rather than latent in a document.
+
 The 0.8.2 re-target is **complete**: the models were re-read against the new snapshot, the
 normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` moved to
 `v0.8.2` as the **last** step of that work. What is proved, at demonstrator altitude:
@@ -108,7 +138,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 361 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 461 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -153,23 +183,34 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 | TLC negative controls | 65 |
 | TLC non-vacuity witnesses | 42 |
 | TLC findings (must be violated; `tla/Makefile:TLC_FINDING`, whose header states which rows weaken nothing, which read toward the spec, and which read toward an implementation because the spec is silent) | 25 |
-| Apalache inductive (24 invariants × base+step, + 2 at N=3) | 52 |
-| Apalache negative controls | 24 |
+| Apalache inductive (26 invariants × base+step, + 2 at N=3) | 54 |
+| Apalache strengthening closure (`apalache-closure`) | 26 |
+| Apalache enumeration green (extension tracks) | 31 |
+| Apalache negative controls | 27 |
+| Apalache enumeration controls + witnesses | 24 |
+| Apalache finding rows (must be violated) | 14 |
 | Spin green (7 × safety+LTL, 4 safety-only, 3 × safety+LTL variant rows) | 24 |
 | Spin negative controls | 39 |
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
-| **total** | **361** |
+| **total** | **461** |
 
-Split by proof track, derived by `make runcount` rather than stated by hand: **277 runs** on
-`core`, **23** on `attestation`, **28** on `quorum` and **33** on `identity`. Attestation:
+Split by proof track, derived by `make runcount` rather than stated by hand: **302 runs** on
+`core`, **68** on `attestation`, **39** on `quorum` and **52** on `identity`. Attestation:
 `AttestIndex` — 1 green, 3 controls, 3 witnesses; `AttestLive` — 1 green, 2 controls,
-3 witnesses, 2 findings; `AttestRevoke` — 1 green, 2 controls, 3 witnesses, 2 findings. Quorum:
+3 witnesses, 2 findings; `AttestRevoke` — 1 green, 2 controls, 3 witnesses, 2 findings; plus
+the three Apalache modules' 24 rows (`AttestIndexApalache`, `AttestLiveApalache`,
+`AttestRevokeApalache`). Quorum:
 `QuorumSignerSet` — 1 green, 2 controls, 3 witnesses, 5 findings; `QuorumTrust` — 1 green,
-3 controls, 3 witnesses, 2 findings; `QuorumKofN` — 1 green, 2 controls, 3 witnesses, 2 findings.
+3 controls, 3 witnesses, 2 findings; `QuorumKofN` — 1 green, 2 controls, 3 witnesses, 2 findings;
+plus `QuorumKofNApalache`'s 11 rows.
 Identity: `IdentityProcess` — 1 green, 4 controls, 3 witnesses, 3 findings; `IdentityRecovery` —
 1 green, 2 controls, 3 witnesses, 5 findings; `IdentityCertChain` — 1 green, 3 controls,
-3 witnesses, 4 findings.
+3 witnesses, 4 findings; plus `IdentityCertChainApalache`'s 19 rows.
+**Read the per-track engine coverage with the per-track count, not from it:** quorum's second
+engine reaches **one of three modules** (§4.1) and identity's reaches **one of three** (§3.6),
+so five of the nine extension modules still rest on TLC alone and none of the nine has a third
+engine or a prover. `docs/COVERAGE-MATRIX.md` §3c–§3e carry the per-module grids.
 The four are different protocols against different spec pins, so the total is a fact about the
 gate rather than about any one subject; the per-track figures are the ones to quote. The
 derivation also fails if any gate-table row names a module no track declares — a run whose
@@ -603,14 +644,19 @@ item 4.
      *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
      §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
      attribution. Derived now, **by `make ledgercount` rather than by hand**: the ledger is
-     **37 rows** — 13 Class L, 5 Class T, 19 Class O — of which **15 CLOSED**, 1 CLOSED —
-     ASSUMPTION FALSE (T4), 1 CLOSED — ASSUMPTION ISOLATED (O6), 1 CLOSED-MODULO-H (L1),
-     2 N/A-device, 3 BY-DESIGN, and **14 OPEN** (O5, O7–O10 from the attestation track,
-     O11–O15 from quorum and O16–O19 from identity, all added 2026-09-07 with those tracks'
-     first nine modules).
-     All three extension tracks are entirely TLC, so O5, O14 and O19 — the three Dolev-Yao rows
-     — are the same undischarged gap counted three times, and every green on any of them assumes
-     signatures work. **O16 is a shape none of the others has**: it is not "no tool reaches
+     **38 rows** — 13 Class L, 5 Class T, 20 Class O — of which **15 CLOSED**, 1 CLOSED —
+     ASSUMPTION FALSE (T4), 1 CLOSED — ASSUMPTION ISOLATED (O6), 1 CLOSED — ASSUMPTION
+     ISOLATED AND CORRECTED (O10, 2026-09-08), 1 CLOSED-MODULO-H (L1),
+     2 N/A-device, 3 BY-DESIGN, and **14 OPEN** (O5, O7–O9 from the attestation track,
+     O11–O15 and O20 from quorum, O16–O19 from identity — all but O20 added 2026-09-07 with
+     those tracks' first nine modules; **O20 was added 2026-09-08 by a rule rather than by a
+     model**, `AGENTS.md` D15 tenth shape). **O10 closed by being measured and its assumption was WRONG as
+     written** — it said revocation-graph acyclicity and the answer is a joint order over both
+     relations; see the row.
+     **No extension track has a prover**, so O5, O14 and O19 — the three Dolev-Yao rows — are
+     the same undischarged gap counted three times, and every green on any of them assumes
+     signatures work. Adding Apalache to five of the nine modules on 2026-09-08 did not move
+     any of the three: a second *model checker* answers the same question a second way. **O16 is a shape none of the others has**: it is not "no tool reaches
      this" but "this repo already measured this input and found it defective (Q1), and the
      identity models assume it works anyway" — held visible as a constant with its own negative
      control rather than as a fidelity note. *(This same sentence has now been wrong twice more than the bullet it
@@ -920,8 +966,10 @@ item 4.
     with the index publishes collapsed into one assignment the state space drops 1485 → 216,
     the sequencing witness goes silent, and `IndexAllOrNothing` goes green as a tautology.
 
-    **Honest scope: TLC only.** No Apalache, no Spin, no prover model — so the corroboration
-    argument this repo rests on does **not** cover these rows, and `docs/COVERAGE-MATRIX.md`
+    **Honest scope: TLC only.** *(Accurate on 2026-09-07 and superseded on 2026-09-08, when
+    all three attestation modules gained Apalache; the "no Spin, no prover" half still holds.
+    Left as written — this is a dated entry.)* No Apalache, no Spin, no prover model — so the
+    corroboration argument this repo rests on does **not** cover these rows, and `docs/COVERAGE-MATRIX.md`
     §3c says so rather than leaving it to be inferred. Three new ledger rows, all **OPEN**: O5
     (no prover model exists on this track at all, so attestation signature validity is
     discharged by nobody), O6 (below), O7 (the model encodes a *reading* of I2, and nothing in
@@ -1138,7 +1186,9 @@ item 4.
     differently from the canonical one, since every search for the staleness searches for the
     canonical phrasing.
 
-    **Still TLC only, and this now spans two tracks.** No Apalache, no Spin, no prover. §4.1 is
+    **Still TLC only, and this now spans two tracks.** *(Accurate on 2026-09-07; on 2026-09-08
+    `QuorumKofN` gained Apalache and the other two modules did not. The prover half is unchanged
+    and is the half that matters for the next sentence.)* No Apalache, no Spin, no prover. §4.1 is
     a K-of-N *signature* validator — §2 calls it "the only mechanism that distinguishes quorum
     from a regular peer node" — and its unforgeability is discharged by nothing here (O5, O14).
     Read both extension tracks as defect reports, not as assurance.
@@ -1211,8 +1261,11 @@ item 4.
     verdict rests on. **When a track consumes another track's known-defective output, make the
     assumption a constant, control it, and open the row.**
 
-    **Still TLC only, and this now spans three tracks.** O5, O14 and O19 are one undischarged
-    Dolev-Yao gap counted once per track — deliberately not merged, so its growth is visible.
+    **Still TLC only, and this now spans three tracks.** *(Accurate on 2026-09-07; on
+    2026-09-08 `IdentityCertChain` gained Apalache and the other two modules did not — including
+    `IdentityRecovery`, which carries this track's headline finding. The Dolev-Yao sentence
+    below is unaffected: a second model checker does not touch it.)* O5, O14 and O19 are one
+    undischarged Dolev-Yao gap counted once per track — deliberately not merged, so its growth is visible.
     Read all three extension tracks as defect reports, not as assurance.
 
     **CONSOLIDATION PASS 2026-09-08 — and it found three defects in the VALIDATION machinery

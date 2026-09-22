@@ -18,6 +18,31 @@ copy, so between a spec release and a re-validation this repository is *behind o
 
 ## [Unreleased]
 
+### Added — a second engine on the attestation track, and the closure half of the inductive proof
+
+**`tla/AttestIndexApalache.tla` and `tla/AttestLiveApalache.tla`** carry two of the attestation
+track's three modules to Apalache. §5.7's index contract is now proved **inductive** — true for
+runs of any length rather than within a bound — and **the `find_live_head` finding is confirmed
+by a second, structurally different method**: TLC enumerates the supersedes-graph space, Apalache
+answers one SMT query over it, and both exhibit the counterexample on constants where nothing is
+weakened.
+
+**Read the arithmetic, not the headline. Seven of the nine extension modules still rest on one
+engine**, none of the nine has a third, and none has a prover model, so the Dolev-Yao gap is
+untouched. A second engine also buys no independence from the transcription: both files are one
+author's reading of one spec text, and a shared misreading survives both.
+
+### Fixed — the inductive proof asserted less than it claimed
+
+`apalache-green` checks `Init => Inv` and `IndInit /\ Next => Inv'`. Where `IndInit` carries a
+strengthening — 20 of 26 rows — those two do not establish that the invariant is inductive,
+because nothing showed the *strengthening* survives a step. **`make apalache-closure` now checks
+it, and all 26 rows pass**: nothing was wrong, the claim was simply weaker than the words. That
+is the quiet half of this repo's grading discipline — a gate that under-asserts produces no
+failure to investigate, so only asking the question finds it.
+
+The full matrix is **407 runs** (was 361).
+
 ### Added — the identity track, and with it the last extension protocol is modeled
 
 **`tla/IdentityProcess.tla`, `tla/IdentityRecovery.tla`, `tla/IdentityCertChain.tla`** model

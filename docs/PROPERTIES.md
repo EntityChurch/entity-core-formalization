@@ -10,9 +10,11 @@ exactly — the *strength* of each result and where it stops.
 > tracks** (`make trackcheck`); **all four are modeled** — `core`, `attestation`, `quorum` and
 > `identity` — and every property below is a statement about **`core`**. The three extension
 > tracks have their own grids in `docs/COVERAGE-MATRIX.md` §3c, §3d and §3e and are
-> **deliberately not on this scorecard**: it is a PROVEN/MODELED scorecard, all three extension
-> tracks are TLC-only with no prover and no second engine, and listing them here would put
-> results of a different strength in the same table. Their findings are indexed in
+> **deliberately not on this scorecard**: it is a PROVEN/MODELED scorecard, and of the nine
+> extension modules **five have a second engine** (all three `attestation` modules, plus
+> `QuorumKofN` and `IdentityCertChain` — Apalache) while **four are TLC-only**, none has a third
+> engine and none has a prover. Listing them here would
+> put results of a different strength in the same table. Their findings are indexed in
 > `docs/status/FINDINGS-INDEX.md`. **No track is `scoped` any more**, so the gate that refuses
 > a model file on a scoped track has no subject in the live registry — which is worth knowing
 > before anyone relies on it to keep an unpinned track off this page.
@@ -341,7 +343,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Twelve targets decide the 361 runs.
+     the finding is what made that discipline necessary). Sixteen targets decide the 461 runs.
 
      **This table carries no run counts, deliberately — corrected 2026-09-07.** It used to,
      and they were stale: `tlc-neg` sat at 40 against a real 45, `tlc-green` at 15 against 24,

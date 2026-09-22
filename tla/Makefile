@@ -522,7 +522,202 @@ APALACHE_GREEN := \
   "ConnCodesApalache ConstInitOK StatusMatchesCode IndInit" \
   "BootstrapApalache ConstInitOK InvAllOrNothing IndInitAllOrNothing" \
   "BootstrapApalache ConstInitOK InvRegGate IndInitRegGate" \
-  "BootstrapApalache ConstInitOK InvConnect IndInitConnect"
+  "BootstrapApalache ConstInitOK InvConnect IndInitConnect" \
+  "AttestIndexApalache ConstInitOK Inv IndInitIx"
+
+# THE STRENGTHENING MUST PRESERVE ITSELF, AND UNTIL 2026-09-08 NOTHING CHECKED THAT.
+#
+# `apalache-green` checks two things per row: Init => Inv, and IndInit /\ Next => Inv'. Where
+# IndInit is just Inv (ConnCodes, Bootstrap) those two ARE the inductive proof. Where IndInit
+# is `TypeOK /\ <strengthening> /\ Inv` — 20 of the 27 rows above — they are not. Preservation
+# of Inv FROM strengthened states says nothing unless the strengthening is itself preserved,
+# and `docs/PROPERTIES.md` names the strengthenings ("RefcountSound", "DecisionSound") without
+# ever asserting that closure. The published claim was "proved INDUCTIVE"; what was checked was
+# weaker.
+#
+# Asked D13's question of our own gate — what does this assert, and what else satisfies it? —
+# and then answered it by RUNNING it rather than reasoning: every row below was measured, and
+# all 27 CLOSE. Nothing was wrong. The claim was under-asserted, which is the cheaper half of
+# D13 and the half that goes unnoticed, because the result of checking is that nothing changes.
+#
+# Format: MODULE CINIT IND. Each row checks IND /\ Next => IND', i.e. the strengthening is
+# preserved. Together with the base and step rows above, THIS is the inductive proof.
+APALACHE_CLOSURE := \
+  "RevokeApalache ConstInitOK IndInitDet" \
+  "RevokeApalache ConstInitOK IndInitRev" \
+  "StoreApalache ConstInitOK IndInitRace" \
+  "StoreApalache ConstInitOK IndInitBound" \
+  "StoreApalache ConstInitOK IndInitUAF" \
+  "ConnApalache ConstInitOK IndInit" \
+  "EmitApalache ConstInitOK IndInitIff" \
+  "EmitApalache ConstInitOK IndInitType" \
+  "RegisterApalache ConstInitOK IndInit" \
+  "RegisterApalache ConstInitOK IndInitAoN" \
+  "ReentryApalache ConstInitOK IndInitFrame" \
+  "ReentryApalache ConstInitOK3 IndInitFrame" \
+  "AuthorityApalache ConstInitOK IndInitGrantless" \
+  "AuthorityApalache ConstInitOK IndInitEntry" \
+  "AuthorityApalache ConstInitOK IndInitResource" \
+  "AuthorityApalache ConstInitOK IndInitTarget" \
+  "BoundsApalache ConstInitOK IndInitBrake" \
+  "BoundsApalache ConstInitOK IndInitCount" \
+  "BoundsApalache ConstInitOK IndInitCodes" \
+  "CoreApalache ConstInitOK IndInitComposed" \
+  "CoreApalache ConstInitOK3 IndInitComposed" \
+  "ConnCodesApalache ConstInitOK IndInit" \
+  "BootstrapApalache ConstInitOK IndInitAllOrNothing" \
+  "BootstrapApalache ConstInitOK IndInitRegGate" \
+  "BootstrapApalache ConstInitOK IndInitConnect" \
+  "AttestIndexApalache ConstInitOK IndInitIx"
+
+# ----------------------------------------------------------------------------------
+# EXTENSION-TRACK ENUMERATION MODELS — a second engine for models with no transitions.
+#
+# AttestLiveApalache is not a transition system: `Next` is `UNCHANGED vars` and the state space
+# IS the graph space, so every claim is settled at --length=0 and the base/inductive-step shape
+# above does not apply. Hence a separate table rather than a flag on the existing one: two
+# meanings behind one table is the failure `TLC_FINDING` was split out to avoid (D13, sixth
+# instance).
+#
+# Format: MODULE CINIT INV. Every row MUST report OK.
+#
+# AttestRevokeApalache's first five rows are the ENCODING'S OWN OBLIGATIONS, not results about
+# §4.3, and they are in the green table because every other row in this module is false without
+# them. Apalache has no `RECURSIVE`, so §4.3's four mutually recursive operators are built as a
+# ladder of state variables (see that module's header for why the nested-operator form OOMs).
+# That trades one obligation for two: a ladder must justify its DEPTH, and the equation it
+# solves must have EXACTLY ONE SOLUTION.
+#   UnrollDeep                — the reachability ladder saturated (R3 = R4)
+#   LadderIsFixedPointRec     — the liveness ladder's top satisfies §4.3's equation, which is
+#   LadderIsFixedPointStruct    simultaneously "deep enough" and "a solution exists"
+#   FixedPointUnique{Rec,Struct} — ...and it is the only one, so the ladder's answer is THE
+#                               answer rather than one the solver was free to pick
+# Neither failure would produce an error message, which is the D13 reason they are rows.
+#
+# THE TENTH ROW IS THE OTHER HALF OF AN ASYMMETRY AND ITS GREEN IS PART OF A FINDING.
+# `AttestRevokeApalache ConstInitSupUnordered FixedPointUniqueStruct` holds where its `Rec`
+# sibling (in APALACHE_ENUM_FINDING) does not: with the supersedes order lifted, §4.3's liveness
+# is still well defined under the STRUCTURAL reading of `is_self_revoked` and is NOT well
+# defined under the recursive one. The undefined helper does not merely change the answer — one
+# reading has an answer and the other does not. Read this row with F5, not as a result.
+APALACHE_ENUM_GREEN := \
+  "AttestLiveApalache ConstInitOK UnrollDeep" \
+  "AttestLiveApalache ConstInitOK MaxOfExact" \
+  "AttestLiveApalache ConstInitOK NoLiveAncestorOfLive" \
+  "AttestLiveApalache ConstInitOK DagHeadIsLive" \
+  "AttestLiveApalache ConstInitOK DagHeadFindsLiveHead" \
+  "AttestLiveApalache ConstInitOK HeadResolutionIsIdentity" \
+  "AttestLiveApalache ConstInitOK SpecWalkNeverExhausts" \
+  "AttestLiveApalache ConstInitOK BackWalkBoundedWhenAcyclic" \
+  "AttestRevokeApalache ConstInitOK UnrollDeep" \
+  "AttestRevokeApalache ConstInitOK LadderIsFixedPointRec" \
+  "AttestRevokeApalache ConstInitOK LadderIsFixedPointStruct" \
+  "AttestRevokeApalache ConstInitOK FixedPointUniqueRec" \
+  "AttestRevokeApalache ConstInitOK FixedPointUniqueStruct" \
+  "AttestRevokeApalache ConstInitOK OnlySelfRevocationKills" \
+  "AttestRevokeApalache ConstInitOK DeadRevocationSpares" \
+  "AttestRevokeApalache ConstInitOK DescReadingsCoincide" \
+  "AttestRevokeApalache ConstInitOK NoLiveAncestorOfLive" \
+  "AttestRevokeApalache ConstInitSupUnordered FixedPointUniqueStruct" \
+  "QuorumKofNApalache ConstInitOK CountAgreesWithCardinality" \
+  "QuorumKofNApalache ConstInitOK KofNRequiresASignature" \
+  "QuorumKofNApalache ConstInitOK DedupeCountsPeersOnce" \
+  "QuorumKofNApalache ConstInitOK UnresolvableNeverCounts" \
+  "IdentityCertChainApalache ConstInitOK PublicPathNeverControllerSigned" \
+  "IdentityCertChainApalache ConstInitOK RevocationReachesTopology" \
+  "IdentityCertChainApalache ConstInitOK HandoffReadingsCoincide" \
+  "IdentityCertChainApalache ConstInitOK HandoffTargetGuarded" \
+  "IdentityCertChainApalache ConstInitOK TopLevelControllerIsKofN" \
+  "IdentityCertChainApalache ConstInitOK SubControllerIsSingle" \
+  "IdentityCertChainApalache ConstInitOK HandoffIsDual" \
+  "IdentityCertChainApalache ConstInitOK LifecycleIsQuorumDriven" \
+  "IdentityCertChainApalache ConstInitOK KofNAnswerIsTrustworthy"
+
+# Enumeration-model rows that MUST produce a counterexample. Three kinds share this table and
+# the cfg-less rows make the kind invisible, so each is named here:
+#   NEGATIVE CONTROLS   — a deliberately weakened model. BugDirect (pre-ratification §4.3),
+#                         BugDagFilter (the forward enumeration without its liveness filter).
+#   NON-VACUITY WITNESSES — asserted in order to be violated; the violation IS the pass.
+#                         WitnessThreeChain, WitnessDagHeadMoves, and AttestRevokeApalache's
+#                         three. The last three carry an EXTRA job their TLC twins do not:
+#                         that module's `Init` constrains six ladder variables by equations, and
+#                         an over-constrained `Init` admits no state at all, in which case every
+#                         green in the file holds VACUOUSLY and Apalache reports OK. A violated
+#                         witness is the proof that `Init` is satisfiable.
+#   MEASUREMENTS        — BackWalkBoundedAlways exhibits a graph on which §5.2 as written does
+#                         not terminate; ConstInitLadderShort proves each module's own unrolling
+#                         bound fails LOUDLY one node past it instead of silently truncating
+#                         (AttestLive: N = 4 vs its N = 3; AttestRevoke: N = 5 vs its N = 4, on
+#                         BOTH of its ladders — reachability and liveness).
+# Format: MODULE CINIT INV.
+APALACHE_ENUM_NEG := \
+  "AttestLiveApalache ConstInitBugDirect NoLiveAncestorOfLive" \
+  "AttestLiveApalache ConstInitBugDagFilter DagHeadIsLive" \
+  "AttestLiveApalache ConstInitOK WitnessThreeChain" \
+  "AttestLiveApalache ConstInitOK WitnessDagHeadMoves" \
+  "AttestLiveApalache ConstInitOK BackWalkBoundedAlways" \
+  "AttestLiveApalache ConstInitLadderShort UnrollDeep" \
+  "AttestRevokeApalache ConstInitBugAuthority OnlySelfRevocationKills" \
+  "AttestRevokeApalache ConstInitBugFlat DeadRevocationSpares" \
+  "AttestRevokeApalache ConstInitOK WitnessRevokedRevocation" \
+  "AttestRevokeApalache ConstInitOK WitnessRevocationKills" \
+  "AttestRevokeApalache ConstInitOK WitnessSupersededByLive" \
+  "AttestRevokeApalache ConstInitLadderShort UnrollDeep" \
+  "AttestRevokeApalache ConstInitLadderShort LadderIsFixedPointRec" \
+  "QuorumKofNApalache ConstInitBugDedupe DedupeCountsPeersOnce" \
+  "QuorumKofNApalache ConstInitBugResolve UnresolvableNeverCounts" \
+  "QuorumKofNApalache ConstInitOK WitnessKofNPasses" \
+  "QuorumKofNApalache ConstInitOK WitnessResolutionCollapses" \
+  "QuorumKofNApalache ConstInitOK WitnessUnresolvableSigner" \
+  "IdentityCertChainApalache ConstInitBugUpfront TopLevelControllerIsKofN" \
+  "IdentityCertChainApalache ConstInitBugDual HandoffIsDual" \
+  "IdentityCertChainApalache ConstInitBugSubstrate KofNAnswerIsTrustworthy" \
+  "IdentityCertChainApalache ConstInitWitnessPublic WitnessPublicAgentCert" \
+  "IdentityCertChainApalache ConstInitOK WitnessKofNDispatched" \
+  "IdentityCertChainApalache ConstInitOK WitnessDualDispatched"
+
+# THE FINDING ROWS — same two-meanings problem `TLC_FINDING` exists for, one engine over.
+# Each row must be VIOLATED. A green here does NOT mean the model regressed — it means the
+# section was amended upstream and the row must be RETIRED, with the claim moved into
+# APALACHE_ENUM_GREEN. Do not repair the model to make it fail again.
+#
+# TWO OF `TLC_FINDING`'s THREE SHAPES APPEAR HERE, and the second one arrived 2026-09-08.
+#   Shape 1 — NOTHING IS WEAKENED, the constants are the green sweep's. `ConstInitFinding` is
+#     `ConstInitOK` verbatim: AttestLive's F1 row, and AttestRevoke's two F4 rows.
+#   Shape 2 — THE CONSTANT FLIPS *TOWARD* THE SPEC. `ConstInitSupUnordered` and
+#     `ConstInitRevUnordered` LIFT the index-ordering restriction that `AttestRevoke.tla`
+#     hard-codes. That looks like weakening the model and is the opposite: the spec states no
+#     ordering assumption anywhere, so removing it moves the model toward the pinned text and
+#     the restriction was ours. Same shape as the quorum track's four rows; see TLC_FINDING's
+#     header, which is the canonical statement of it.
+#
+# THE FIVE F5 ROWS ARE ONE FINDING AND MUST BE READ AS A SET, WITH ONE GREEN.
+#   SupUnordered / LadderIsFixedPointRec + FixedPointUniqueRec — §4.3's equation has no
+#     solution, or several, on a configuration where BOTH GRAPHS ARE ACYCLIC. The dependency
+#     cycle runs supersedes-reach then revoked-by, and §4.3's only stated cycle defence (the
+#     `visited` set inside has_live_transitive_descendant) is scoped to one of the two hops.
+#   RevUnordered / the same two, plus FixedPointUniqueStruct — the revocation side, where even
+#     the structural reading breaks.
+#   SupUnordered / FixedPointUniqueStruct is GREEN and is in APALACHE_ENUM_GREEN: the structural
+#     reading survives the composed cycle. That asymmetry is the finding's sharpest edge and it
+#     is why the green row is listed there with a pointer back here.
+# Retiring these needs §4.3 to state the assumption, not merely to define the helpers.
+# Format: MODULE CINIT INV.
+APALACHE_ENUM_FINDING := \
+  "AttestLiveApalache ConstInitFinding SpecHeadFindsLiveHead" \
+  "AttestRevokeApalache ConstInitFinding SelfRevReadingsAgree" \
+  "AttestRevokeApalache ConstInitFinding LiveReadingsAgree" \
+  "AttestRevokeApalache ConstInitSupUnordered LadderIsFixedPointRec" \
+  "AttestRevokeApalache ConstInitSupUnordered FixedPointUniqueRec" \
+  "AttestRevokeApalache ConstInitRevUnordered LadderIsFixedPointRec" \
+  "AttestRevokeApalache ConstInitRevUnordered FixedPointUniqueRec" \
+  "AttestRevokeApalache ConstInitRevUnordered FixedPointUniqueStruct" \
+  "QuorumKofNApalache ConstInitFindingThreshold KofNRequiresASignature" \
+  "QuorumKofNApalache ConstInitFindingAttainable ThresholdAttainable" \
+  "IdentityCertChainApalache ConstInitFindingPublicSig PublicPathNeverControllerSigned" \
+  "IdentityCertChainApalache ConstInitFindingRevocation RevocationReachesTopology" \
+  "IdentityCertChainApalache ConstInitFindingHandoffSigner HandoffReadingsCoincide" \
+  "IdentityCertChainApalache ConstInitFindingHandoffNull HandoffTargetGuarded"
 
 # Apalache NEGATIVE CONTROLS. Format: MODULE CINIT INV INIT LENGTH. Every row MUST report an
 # error. NOTE the §4.8 refcount control (ConstInitBugRefs) runs BOUNDED FROM Init against the
@@ -538,6 +733,9 @@ APALACHE_GREEN := \
 # the 0.8.2 audit. Lengths here carry margin over the shortest witness. Same failure family as
 # vacuity: a green that means nothing.
 APALACHE_NEG := \
+  "AttestIndexApalache ConstInitBugAtomic NoResidueOnFailure    Init 8" \
+  "AttestIndexApalache ConstInitBugKind   KindIndexEligibleOnly Init 8" \
+  "AttestIndexApalache ConstInitBugRetain IndexRetainedOnRevoke Init 8" \
   "StoreApalache ConstInitBugRace  InvRace      IndInitRace 1" \
   "StoreApalache ConstInitBugAdmit ResourceBounded Init     8" \
   "StoreApalache ConstInitBugRefs  InvUAFPlain  Init        8" \
@@ -609,13 +807,86 @@ apalache-green:
 	  $(APRUN) check --cinit=$$ci --init=$$ind --next=Next --inv=$$inv --length=1 $$mod.tla || exit 1; \
 	done
 
+# The closure half of the inductive proof: the strengthening preserves ITSELF. Without this the
+# base and step rows prove Inv is preserved from strengthened states and nothing more. See the
+# APALACHE_CLOSURE header.
+.PHONY: apalache-closure
+apalache-closure:
+	@for row in $(APALACHE_CLOSURE); do \
+	  set -- $$row; mod=$$1; ci=$$2; ind=$$3; \
+	  echo "== Apalache $$mod $$ind (strengthening closure: $$ind /\\ Next => $$ind') =="; \
+	  out=$$($(APRUN) check --cinit=$$ci --init=$$ind --next=Next --inv=$$ind --length=1 $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -ne 0 ] || ! echo "$$out" | grep -qF "EXITCODE: OK"; then \
+	    echo "FAIL: $$mod/$$ind is NOT preserved by Next."; \
+	    echo "      The base and step rows for this module therefore do NOT establish that its"; \
+	    echo "      invariant is inductive -- they establish preservation from states the"; \
+	    echo "      strengthening describes, and nothing shows a run stays in those states."; \
+	    echo "$$out" | grep -E "EXITCODE|error" | tail -3 | sed 's/^/      /'; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (strengthening preserved)"; \
+	done
+
+.PHONY: apalache-enum-green apalache-enum-neg apalache-enum-finding
+apalache-enum-green:
+	@for row in $(APALACHE_ENUM_GREEN); do \
+	  set -- $$row; mod=$$1; ci=$$2; inv=$$3; \
+	  echo "== Apalache $$mod $$ci/$$inv (enumeration, length 0) =="; \
+	  out=$$($(APRUN) check --cinit=$$ci --init=Init --next=Next --inv=$$inv --length=0 $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -ne 0 ] || ! echo "$$out" | grep -qF "EXITCODE: OK"; then \
+	    echo "FAIL: $$mod $$ci/$$inv did not report OK."; \
+	    echo "$$out" | grep -E "EXITCODE|Configuration error|error" | tail -3 | sed 's/^/      /'; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok"; \
+	done
+
+apalache-enum-neg:
+	@for row in $(APALACHE_ENUM_NEG); do \
+	  set -- $$row; mod=$$1; ci=$$2; inv=$$3; \
+	  echo "== Apalache enum control $$mod $$ci/$$inv (MUST find a counterexample) =="; \
+	  out=$$($(APRUN) check --cinit=$$ci --init=Init --next=Next --inv=$$inv --length=0 $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -eq 0 ]; then \
+	    echo "FAIL: $$ci/$$inv reported NoError -- this row has no teeth."; exit 1; \
+	  fi; \
+	  if ! echo "$$out" | grep -qF "EXITCODE: ERROR (12)"; then \
+	    echo "FAIL: $$ci/$$inv failed WITHOUT finding a counterexample -- the run errored out"; \
+	    echo "      before verifying anything, so it is not evidence of teeth."; \
+	    echo "$$out" | grep -E "Configuration error|EXITCODE" | tail -3 | sed 's/^/      /'; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (counterexample found as required)"; \
+	done
+
+apalache-enum-finding:
+	@for row in $(APALACHE_ENUM_FINDING); do \
+	  set -- $$row; mod=$$1; ci=$$2; inv=$$3; \
+	  echo "== Apalache FINDING $$mod $$ci/$$inv (MUST be violated -- nothing is weakened) =="; \
+	  out=$$($(APRUN) check --cinit=$$ci --init=Init --next=Next --inv=$$inv --length=0 $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -eq 0 ]; then \
+	    echo "GREEN ON A FINDING ROW: $$mod $$ci/$$inv now HOLDS."; \
+	    echo "      This is NOT a model regression and MUST NOT be repaired by editing the"; \
+	    echo "      model. It means the spec defect was fixed upstream. RETIRE the row: delete"; \
+	    echo "      it here, move the claim into APALACHE_ENUM_GREEN, and strike the finding in"; \
+	    echo "      docs/status/FINDINGS-INDEX.md."; \
+	    exit 1; \
+	  fi; \
+	  if ! echo "$$out" | grep -qF "EXITCODE: ERROR (12)"; then \
+	    echo "FAIL: $$ci/$$inv failed WITHOUT a counterexample -- not evidence of the finding."; \
+	    echo "$$out" | grep -E "Configuration error|EXITCODE" | tail -3 | sed 's/^/      /'; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (counterexample found as required -- the finding still stands)"; \
+	done
+
 # Full TLA+ green slice: bounded-exhaustive (TLC) + unbounded inductive (Apalache).
-green: tlc-green apalache-green
+green: tlc-green apalache-green apalache-closure apalache-enum-green
 
 # The FULL matrix: green + every negative control + every non-vacuity witness. `green` alone
 # proves the properties hold; it does NOT prove they could have failed or that the model does
 # anything. This target proves all three.
-matrix: tlc-green apalache-green tlc-neg apalache-neg tlc-witness tlc-finding
+matrix: tlc-green apalache-green apalache-closure apalache-enum-green \
+        tlc-neg apalache-neg apalache-enum-neg tlc-witness tlc-finding apalache-enum-finding
 
 # ----------------------------------------------------------------------------------
 # Apalache — the SYMBOLIC (SMT) cross-check engine (cross-check #A). Same .tla models,
@@ -649,8 +920,13 @@ apalache-typecheck:
 	$(APRUN) typecheck $(SPEC).tla
 
 # Generic symbolic check. e.g. make apalache SPEC=Store INV=StoreRaceFree INIT=Init NEXT=Next LEN=1
+# CINIT is optional and passed only when set: every module whose Init quantifies over `1..N`
+# REQUIRES one (Apalache: "Expected a constant integer range in [ .. ], found 1..N"), so without
+# this knob the generic target could not reproduce a single row of the gate tables by hand —
+# which is what it exists for. Added 2026-09-08 while porting AttestRevokeApalache.
+#   make apalache SPEC=AttestRevokeApalache CINIT=ConstInitOK INV=UnrollDeep LEN=0
 apalache:
-	$(APRUN) check --init=$(INIT) --next=$(NEXT) --inv=$(INV) --length=$(LEN) $(SPEC).tla
+	$(APRUN) check $(if $(CINIT),--cinit=$(CINIT)) --init=$(INIT) --next=$(NEXT) --inv=$(INV) --length=$(LEN) $(SPEC).tla
 
 clean:
 	rm -f *.old *_TTrace_*.tla *_TTrace_*.bin 2>/dev/null || true
