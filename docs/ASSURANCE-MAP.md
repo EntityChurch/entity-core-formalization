@@ -4,13 +4,17 @@ The point of this map: **nothing double-owned, nothing assumed without a named
 owner.** Each formal question about the Entity Core Protocol is answered by exactly
 one tool, on the layer it can actually reach.
 
-> **Pinned at spec 0.8.0; the protocol is at 0.8.2.** Rows 4 and 5 below — the two this
-> repo owns — are answered against the SHA-pinned `spec-data/v0.8.0/` snapshot. Measured
-> 2026-08-27, 13 of the 26 spec sections the models cite have since moved — a count that overstates
-> the change; nothing proved here is contradicted. The map's ownership
-> structure is unaffected; the *currency* of rows 4 and 5 is. See
-> `docs/SPEC-DRIFT-ASSESSMENT.md` for which sections, by what method, and what it means. This is the 5th wall behaving
-> exactly as this document warns it can: fidelity is to a pinned text, and a pin ages.
+> **Pinned at spec 0.8.2 — the current published line.** Rows 4 and 5 below — the two this
+> repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and
+> `make specdrift` reports **no drift** against the live spec.
+>
+> Worth keeping in view: for part of the 0.8.x cycle this note read *"pinned at 0.8.0; the
+> protocol is at 0.8.2"*, which was the 5th wall behaving exactly as this document warns it
+> can — fidelity is to a pinned text, and a pin ages. The gap was measured
+> (`docs/SPEC-DRIFT-ASSESSMENT.md`), the models were re-targeted, and the pin moved as the
+> last step of that work. The mechanism that made it visible rather than silent is the
+> separation between "which snapshots are vendored" and "which snapshot the models
+> transcribe" — that is what `spec-data/MODELING-PIN` is for.
 
 ## The six questions
 
@@ -61,7 +65,7 @@ its honest boundary.
    (which asks whether the attacker can *cause* a wrong resolution).
 5. **The 5th wall — spec↔model fidelity (the deepest assumption).** Every model
    here certifies a *model of V7*, not V7's prose and not the code. The whole effort
-   is relative to the model being a faithful transcription of `spec-data/v0.8.0/`.
+   is relative to the model being a faithful transcription of `spec-data/v0.8.2/`.
    There is no tool that closes this — it is owned by **careful modeling + review
    against the vendored spec**, and by keeping models at spec altitude. State it in
    every report; never let it hide. Chain of trust:

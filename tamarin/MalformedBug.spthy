@@ -1,0 +1,132 @@
+theory MalformedBug
+/*
+ * NEGATIVE CONTROL for Malformed.spthy — §5.6 CAP-6a FAIL-OPEN. Tamarin (lockstep
+ * cross-check of MalformedBug.pv).
+ *
+ * The defect CAP-6a names, encoded literally: the verifier has an additional rule that reads
+ * an UNREPRESENTABLE temporal field as the absent marker. Since "absent means no expiry", the
+ * attacker who supplies the malformed value walks away with an immortal capability — "one
+ * peer refuses the token and another honors it forever, from the same bytes."
+ *
+ * EXPECTED VERDICT: cap6a_no_fail_open FALSIFIED; every other lemma still verified. That the
+ * §5.5 temporal lemma (expiry_still_enforced) survives is the point of the control — the
+ * fail-open is invisible to every property the v0.8.0 models checked, because the expiry
+ * logic is untouched and still correct. The token simply never reaches it.
+ *
+ * Original header follows.
+ * ---------------------------------------------------------------------------------------
+ * §5.6 CAP-6a: an unrepresentable temporal field makes the token MALFORMED, and the
+ * verifier MUST NOT read it as absent.
+ *
+ * Transcribed from spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md §5.6:
+ *
+ *     "A capability token whose `expires_at`, `not_before`, or `created_at` is not
+ *      representable as `primitive/uint` — a bignum, a negative integer, or any value
+ *      outside the range — is malformed. A verifier MUST refuse it and MUST NOT treat the
+ *      unrepresentable field as absent, because absent means *no expiry* and the fail-open
+ *      reading grants an immortal capability to whoever sent the malformed value."
+ *
+ * Encoding: !Repr(x) is seeded for every readable temporal value INCLUDING the absent marker
+ * ('tabsent'), and NOT for 'tbad'. A rule that needs to interpret a temporal field must
+ * consume !Repr(exp), so an unrepresentable field simply has no rule that can fire on it —
+ * which is the "MUST refuse". The absent-vs-finite decision is split across two verifier
+ * rules so that reading 'tbad' as absent requires an ADDITIONAL rule, present only in
+ * MalformedBug.spthy.
+ *
+ * Time is a finite order {t0 < t1 < t2} seeded as persistent !Le facts (the seed-the-order
+ * idiom, as in Expiry.spthy). 'tabsent' and 'tbad' participate in NO !Le fact: "no expiry" is
+ * not a late expiry, and an unrepresentable value is not comparable at all.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+
+// Finite time order: all valid a <= b pairs over {t0,t1,t2}. (No !Le('t1','t0') — that is
+// the boundary the §5.5 temporal check enforces.)
+rule Setup_Time:
+    [ ] --[ Time() ]->
+    [ !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'),
+      !Le('t1','t1'), !Le('t1','t2'),
+      !Le('t2','t2') ]
+
+// §5.6 CAP-6a representability. Seeded for every value a verifier can actually read,
+// INCLUDING the absent marker (a missing field is well-formed). DELIBERATELY NOT seeded for
+// 'tbad' — that absence IS the property under test.
+rule Setup_Repr:
+    [ ] --[ Repr() ]->
+    [ !Repr('t0'), !Repr('t1'), !Repr('t2'), !Repr('tabsent') ]
+
+rule Setup_P:
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+
+rule Setup_A:
+    [ Fr(~skA) ] --> [ !PkA(pk(~skA)), Out(pk(~skA)) ]
+
+// P issues a cap to A with expires_at = exp. The NETWORK picks exp, so the attacker can
+// choose the malformed value — that is the threat CAP-6a addresses.
+rule Issue:
+    let m = <pk(~skA), exp>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !PkA(pk(~skA)), In(exp) ]
+  --[ Issued(pk(~skA), exp) ]->
+    [ Out(<pk(~skA), exp, sig>) ]
+
+// Verifier, TIMED branch (§5.5): the field is representable AND orderable, so the temporal
+// check applies at the single sampled t = 't1'. Accept iff t <= expires_at.
+rule Verify_Timed:
+    let m = <gA, exp> in
+    [ !PkP(pkP), !Repr(exp), !Le('t1', exp), In(<gA, exp, sig>) ]
+  --[ Eq(verify(sig, m, pkP), true), Accepted(gA, exp) ]->
+    [ ]
+
+// Verifier, NO-EXPIRY branch (§5.6): the field is representable and IS the absent marker, so
+// it legitimately means no expiry. Note the !Repr premise — this is the rule the fail-open
+// would have to reach with 'tbad', and it cannot.
+rule Verify_NoExpiry:
+    let m = <gA, 'tabsent'> in
+    [ !PkP(pkP), !Repr('tabsent'), In(<gA, 'tabsent', sig>) ]
+  --[ Eq(verify(sig, m, pkP), true), AcceptedNoExpiry(gA, 'tabsent') ]->
+    [ ]
+
+// ***** THE DEFECT *****
+// The verifier cannot read the field, so it treats it as absent — and absent means NO
+// EXPIRY. Note there is no !Repr premise: that missing premise IS the dropped ingest gate.
+rule Verify_NoExpiry_FailOpen:
+    let m = <gA, 'tbad'> in
+    [ !PkP(pkP), In(<gA, 'tbad', sig>) ]
+  --[ Eq(verify(sig, m, pkP), true), AcceptedNoExpiry(gA, 'tbad') ]->
+    [ ]
+
+/* ================= THE CAP-6a LEMMAS ================= */
+
+// (1) THE FAIL-OPEN LEMMA — a verifier MUST NOT treat an unrepresentable temporal field as
+// absent, because "absent means no expiry" and that grants an immortal capability to whoever
+// sent the malformed value.
+// NEG CONTROL expect: FALSIFIED — the fail-open grants an immortal capability.
+lemma cap6a_no_fail_open:
+  "not (Ex g #i. AcceptedNoExpiry(g, 'tbad') @ i)"
+
+// (2) THE REFUSAL LEMMA — refusal is total: the malformed token is not accepted on the timed
+// path either. "A verifier MUST refuse it."
+lemma cap6a_malformed_refused:
+  "not (Ex g #i. Accepted(g, 'tbad') @ i)"
+
+// (3) COMPOSITION with §5.5 — a genuinely expired cap is still rejected; adding the
+// representability gate must not weaken the temporal check.
+lemma expiry_still_enforced:
+  "not (Ex g #i. Accepted(g, 't0') @ i)"
+
+// (4) NON-VACUITY — a genuinely ABSENT expiry IS honored as no-expiry. Without this, lemma
+// (1) could hold simply because nothing is ever accepted as immortal.
+lemma noexpiry_reachable:
+  exists-trace
+  "Ex g #i. AcceptedNoExpiry(g, 'tabsent') @ i"
+
+// (5) NON-VACUITY — a live cap is still accepted under the temporal check.
+lemma accepted_reachable:
+  exists-trace
+  "Ex g #i. Accepted(g, 't2') @ i"
+
+end

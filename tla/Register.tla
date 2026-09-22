@@ -192,4 +192,13 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 \* progress; no registrar wedges. Each handler reaches a terminal outcome (torn down, or
 \* rejected by the system-path guard) rather than hanging mid-lifecycle.
 RegisterSettles == \A h \in Handlers : <>(rphase[h] \in {"gone", "rejected"})
+
+\* NON-VACUITY WITNESS (PROPERTIES.md §C.4 / RegisterWitness.cfg). TLC has no ProVerif-style
+\* reachability query, so a witness is expressed as an invariant that MUST BE VIOLATED. A
+\* violation is the PASS condition: it exhibits a reachable state in which
+\* a handler was actually REGISTERED and is live in the tree — so the §6.1 atomicity and
+\* index-coherence results are not vacuously true of a peer with no handlers.
+\* Checking it GREEN would mean the interesting state is unreachable — i.e. the results above
+\* hold of an inert model. Expected verdict: VIOLATION.
+WitnessHandlerLive == ~(\E h \in Handlers : Live(tree[h]))
 ====

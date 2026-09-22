@@ -2,37 +2,91 @@
 \* Spike A — V7 §6.11 Transport Reentry Contract, modeled as a small message-passing
 \* state machine over 2 peers sharing pooled connections. See DESIGN-REENTRY-MODEL.md.
 \*
+\* 0.8.2 RE-TARGET (spec-data/v0.8.2/). §6.11 gained sub-clause (a′) FRAME-WRITE ATOMICITY
+\* (0.8.1, RT-13b) — the one structural addition in the whole 0.8.0 -> 0.8.2 delta:
+\*
+\*   "While outbound dispatch on a shared/pooled connection proceeds concurrently (a), each
+\*    wire frame (§3.3) MUST be written to the connection atomically with respect to other
+\*    frames — the bytes of two distinct frames MUST NOT interleave on the connection.
+\*    Concurrency lives at the dispatch/await layer; the byte-level write of a single frame
+\*    is serialized... This does not reintroduce the (a) prohibition on holding serialization
+\*    across the send+recv cycle — the write serialization is held only for the duration of
+\*    one frame's bytes, never across the await."
+\*
+\* THE THEOREM THIS MODEL EXISTS TO CHECK is that last sentence. (a) and (a′) pull in
+\* opposite directions — (a) forbids holding the connection lock, (a′) requires holding it —
+\* and the spec asserts they are jointly satisfiable by a lock whose HOLD DURATION is exactly
+\* one frame. So the model has ONE lock (`wlock`) and the two constants below select its hold
+\* discipline; the green config must satisfy BOTH properties at once, and each negative
+\* control must break exactly one of them:
+\*
+\*   AtomicFrame=TRUE,  Serialized=FALSE  (green)  -> no deadlock AND no interleaving
+\*   AtomicFrame=TRUE,  Serialized=TRUE   (ReentryBug)      -> Class-G DEADLOCK (a violated)
+\*   AtomicFrame=FALSE, Serialized=FALSE  (ReentryFrameBug) -> INTERLEAVED frames (a′ violated)
+\*
 \* Fidelity (5th wall, ../docs/ASSURANCE-MAP.md): the cap-chain VERDICT is abstracted
 \* (Gate, below) — Lean owns it; this model verifies the protocol AROUND the verdict.
-\* Every state element cites the V7 §ref it transcribes from spec-data/v0.8.0/.
+\*
+\* ABSTRACTION BOUNDARY for (a′) (D11 — state what is NOT in the model): a wire frame is
+\* modeled as exactly TWO chunks, which is the minimum granularity at which "these two
+\* frames' bytes interleaved" is expressible. Real frames are many bytes; the property is
+\* not byte-count-sensitive, so two chunks is the faithful abstraction and not a weakening.
+\* What is NOT modeled: the receiver's decode. §6.11(a′) says an interleaved write "corrupts
+\* the receiver's decode" — this model proves the writes do not interleave; it does not
+\* model the decoder that would then fail.
+\*
+\* Every state element cites the V7 §ref it transcribes from spec-data/v0.8.2/.
 EXTENDS Naturals, FiniteSets
 
-CONSTANT Serialized   \* TRUE  = pre-F-WB28 defect: hold the per-connection write mutex
+CONSTANT Serialized   \* TRUE  = pre-F-WB28 defect: hold the per-connection write lock
                       \*         across the send+recv cycle (V7 §6.11(a) VIOLATED).
-                      \* FALSE = fix: reader-task demux by request_id; mutex spans the
+                      \* FALSE = fix: reader-task demux by request_id; the lock spans the
                       \*         write only, recv does not hold it (V7 §6.11(a)+(b)).
+
+CONSTANT AtomicFrame  \* TRUE  = V7 §6.11(a′): the per-connection write lock is held for the
+                      \*         duration of ONE FRAME's bytes, so frames serialize against
+                      \*         each other at the byte level.
+                      \* FALSE = negative control: a yielding write primitive with no
+                      \*         per-frame serialization — another writer can begin a frame
+                      \*         between this frame's chunks (§6.11(a′) VIOLATED).
 
 Peers       == {"A", "B"}
 Other(p)    == IF p = "A" THEN "B" ELSE "A"
 MaxLiveKeys == 2      \* V7 §4.8/§4.9(b): store bounded by live keys
 
 \* Each peer runs a CLIENT activity and a SERVER activity CONCURRENTLY (the deadlock needs
-\* the client to hold the mutex while the server contends for it). They must be distinct
+\* the client to hold the lock while the server contends for it). They must be distinct
 \* PlusCal processes, so servers get disjoint ids mapped back to their peer by Pof.
+\* Both write on the SAME pooled connection — peer p's connection to Other(p) — which is
+\* what makes them two concurrent writers and puts §6.11(a′) in scope.
 Servers     == {"sA", "sB"}
 Pof(s)      == IF s = "sA" THEN "A" ELSE "B"   \* server-id -> its peer
 
 \* Abstract dispatch gate (V7 §6.5). The real verdict (§5.2/§5.5/§5.6) is Lean's and is
 \* deliberately NOT modeled; here it is an opaque predicate that gates handler entry, so
 \* NoDispatchWithoutGate is a real structural check (a handler never runs pre-gate).
+\*
+\* DECLARED LIMIT: Gate is the CONSTANT TRUE, so the DENIAL case is inexpressible in this
+\* module and NoDispatchWithoutGate cannot fail here. That is a known thin positive, and the
+\* §5.2 three-valued dispatch-authority rule new at 0.8.2 (SELF / GRANT / ABSENT-must-deny)
+\* is modeled where it can be load-bearing instead: tla/Authority.tla, which makes denial a
+\* reachable outcome and proves the grantless sub-dispatch is refused.
 Gate(p) == TRUE
 
 (*--algorithm reentry
 variables
-  \* Per-peer pooled-connection write mutex — THE contended resource (V7 §6.11(a)).
-  \* mtx[p] guards peer p's writes (its outbound requests AND its server responses /
-  \* handler reentries) on its pooled connection to Other(p).
-  mtx    = [p \in Peers |-> "free"];
+  \* Per-peer pooled-connection WRITE LOCK — THE contended resource (V7 §6.11(a)/(a′)).
+  \* wlock[p] guards writes on peer p's pooled connection to Other(p): p's outbound requests
+  \* AND p's server responses / handler reentries. Its HOLD DURATION is the whole design
+  \* question — see the header.
+  wlock  = [p \in Peers |-> "free"];
+  \* V7 §6.11(a′): who currently has a PARTIALLY WRITTEN frame on peer p's connection.
+  \* A frame is two chunks; a writer is in this set between its first and last chunk.
+  midframe = [p \in Peers |-> {}];
+  \* V7 §6.11(a′) violation flag: set when one writer's frame chunks are separated by
+  \* another writer's chunk on the same connection ("the bytes of two distinct frames
+  \* interleaved"). Latched, because the corruption is not undone by finishing the frame.
+  interleaved = FALSE;
   inReq  = [p \in Peers |-> FALSE];   \* an inbound request awaits p's server (from Other(p))
   resp   = [p \in Peers |-> FALSE];   \* a response has been delivered back to p's client
   store  = [p \in Peers |-> {}];      \* V7 §4.8 store: set of live keys a handler has written
@@ -42,24 +96,41 @@ variables
 \* ---- Client(p): originate an outbound EXECUTE to Other(p) and await the response ----
 fair process client \in Peers
 begin
-  CSend:
-    await mtx[self] = "free";          \* acquire the connection write mutex to send
-    \* Serialized DEFECT: keep holding the mutex across the upcoming recv (mtx stays
-    \* "client"). FIX (§6.11(a)+(b)): release right after the WRITE — recv is correlated
-    \* by request_id on the reader task and does not hold the mutex. (CSend is one atomic
-    \* step, so the fix's brief write-hold collapses to "free" with no observable loss.)
-    mtx[self]  := IF Serialized THEN "client" ELSE "free";
-    inReq[Other(self)] := TRUE;        \* deliver the request to the peer's server
-    cstate[self] := "sent";
+  CFrame1:
+    \* V7 §6.11(a′): write the FIRST chunk of the request frame. Under (a′) this takes the
+    \* per-connection write lock, which is what stops another writer's bytes getting in
+    \* between. The negative control has no lock — a yielding write primitive.
+    if AtomicFrame then
+      await wlock[self] = "free";
+    end if;
+    \* beginning a frame while another writer is mid-frame IS an interleave
+    if midframe[self] # {} then
+      interleaved := TRUE;
+    end if;
+    midframe[self] := midframe[self] \cup {"client"} ||
+    wlock[self]    := IF AtomicFrame THEN "client" ELSE "free";
+  CFrame2:
+    \* Write the LAST chunk of the same frame. If another writer began a frame since our
+    \* first chunk, our two chunks are no longer contiguous on the wire — §6.11(a′) violated.
+    if midframe[self] # {"client"} then
+      interleaved := TRUE;
+    end if;
+    midframe[self] := midframe[self] \ {"client"} ||
+    inReq[Other(self)] := TRUE ||        \* the complete frame is delivered to the peer's server
+    cstate[self] := "sent" ||
+    \* END OF FRAME — release the write lock HERE. This is the (a′)-conformant hold duration:
+    \* "held only for the duration of one frame's bytes, never across the await."
+    \* Serialized DEFECT (§6.11(a) violated): keep holding it across the upcoming recv.
+    wlock[self] := IF Serialized THEN "client" ELSE "free";
   CRecv:
-    await resp[self];                  \* await response (DEFECT: still holding mtx if Serialized)
-    mtx[self]  := "free";              \* release (no-op in the fix; client->free in the defect)
+    await resp[self];                  \* await response (DEFECT: still holding wlock if Serialized)
+    wlock[self]  := "free";            \* release (no-op in the fix; client->free in the defect)
     cstate[self] := "done";
 end process;
 
 \* ---- Server(p): serve the inbound request; the handler reenters / writes the response,
-\* which needs the connection write mutex (V7 §6.11 reentry). In the serialized defect this
-\* blocks because the client holds mtx[self] across recv — the Class G deadlock surface. ----
+\* which needs the connection write lock (V7 §6.11 reentry). In the serialized defect this
+\* blocks because the client holds wlock[self] across recv — the Class G deadlock surface. ----
 fair process server \in Servers
 begin
   SWait:
@@ -67,72 +138,128 @@ begin
   SGate:
     await Gate(Pof(self));             \* V7 §6.5: gate runs before handler invocation
     sstate[Pof(self)] := "serving";
-  SHandle:
-    \* The handler reenters / writes the response, which needs the write mutex. Modeled as
-    \* a guard (SHandle is atomic — acquire+use+release has no observable interleaving): the
-    \* server can only proceed when the mutex is free. In the serialized defect the client
-    \* holds it across recv, so this guard never enables — the Class G deadlock.
-    await mtx[Pof(self)] = "free";
-    store[Pof(self)] := store[Pof(self)] \cup {"k"};  \* V7 §4.8 bounded store write
-    resp[Other(Pof(self))] := TRUE;    \* respond to the requesting client
-    sstate[Pof(self)] := "done";
+  SFrame1:
+    \* The handler reenters and writes the FIRST chunk of the response frame on the SAME
+    \* pooled connection. Under (a′) it must take the write lock; in the serialized defect
+    \* the client holds that lock across its recv, so this guard never enables — Class G.
+    if AtomicFrame then
+      await wlock[Pof(self)] = "free";
+    end if;
+    if midframe[Pof(self)] # {} then
+      interleaved := TRUE;
+    end if;
+    midframe[Pof(self)] := midframe[Pof(self)] \cup {"server"} ||
+    wlock[Pof(self)]    := IF AtomicFrame THEN "server" ELSE "free" ||
+    store[Pof(self)]    := store[Pof(self)] \cup {"k"};  \* V7 §4.8 bounded store write
+  SFrame2:
+    \* Last chunk of the response frame; then release the lock (end of frame) and deliver.
+    if midframe[Pof(self)] # {"server"} then
+      interleaved := TRUE;
+    end if;
+    midframe[Pof(self)] := midframe[Pof(self)] \ {"server"} ||
+    resp[Other(Pof(self))] := TRUE ||   \* respond to the requesting client
+    sstate[Pof(self)] := "done" ||
+    wlock[Pof(self)] := "free";
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "56b1eb55" /\ chksum(tla) = "e279aa86")
-VARIABLES pc, mtx, inReq, resp, store, cstate, sstate
+\* BEGIN TRANSLATION (chksum(pcal) = "60e3ec9b" /\ chksum(tla) = "3ced781f")
+VARIABLES pc, wlock, midframe, interleaved, inReq, resp, store, cstate, 
+          sstate
 
-vars == << pc, mtx, inReq, resp, store, cstate, sstate >>
+vars == << pc, wlock, midframe, interleaved, inReq, resp, store, cstate, 
+           sstate >>
 
 ProcSet == (Peers) \cup (Servers)
 
 Init == (* Global variables *)
-        /\ mtx = [p \in Peers |-> "free"]
+        /\ wlock = [p \in Peers |-> "free"]
+        /\ midframe = [p \in Peers |-> {}]
+        /\ interleaved = FALSE
         /\ inReq = [p \in Peers |-> FALSE]
         /\ resp = [p \in Peers |-> FALSE]
         /\ store = [p \in Peers |-> {}]
         /\ cstate = [p \in Peers |-> "init"]
         /\ sstate = [p \in Peers |-> "idle"]
-        /\ pc = [self \in ProcSet |-> CASE self \in Peers -> "CSend"
+        /\ pc = [self \in ProcSet |-> CASE self \in Peers -> "CFrame1"
                                         [] self \in Servers -> "SWait"]
 
-CSend(self) == /\ pc[self] = "CSend"
-               /\ mtx[self] = "free"
-               /\ mtx' = [mtx EXCEPT ![self] = IF Serialized THEN "client" ELSE "free"]
-               /\ inReq' = [inReq EXCEPT ![Other(self)] = TRUE]
-               /\ cstate' = [cstate EXCEPT ![self] = "sent"]
-               /\ pc' = [pc EXCEPT ![self] = "CRecv"]
-               /\ UNCHANGED << resp, store, sstate >>
+CFrame1(self) == /\ pc[self] = "CFrame1"
+                 /\ IF AtomicFrame
+                       THEN /\ wlock[self] = "free"
+                       ELSE /\ TRUE
+                 /\ IF midframe[self] # {}
+                       THEN /\ interleaved' = TRUE
+                       ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ /\ midframe' = [midframe EXCEPT ![self] = midframe[self] \cup {"client"}]
+                    /\ wlock' = [wlock EXCEPT ![self] = IF AtomicFrame THEN "client" ELSE "free"]
+                 /\ pc' = [pc EXCEPT ![self] = "CFrame2"]
+                 /\ UNCHANGED << inReq, resp, store, cstate, sstate >>
+
+CFrame2(self) == /\ pc[self] = "CFrame2"
+                 /\ IF midframe[self] # {"client"}
+                       THEN /\ interleaved' = TRUE
+                       ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ /\ cstate' = [cstate EXCEPT ![self] = "sent"]
+                    /\ inReq' = [inReq EXCEPT ![Other(self)] = TRUE]
+                    /\ midframe' = [midframe EXCEPT ![self] = midframe[self] \ {"client"}]
+                    /\ wlock' = [wlock EXCEPT ![self] = IF Serialized THEN "client" ELSE "free"]
+                 /\ pc' = [pc EXCEPT ![self] = "CRecv"]
+                 /\ UNCHANGED << resp, store, sstate >>
 
 CRecv(self) == /\ pc[self] = "CRecv"
                /\ resp[self]
-               /\ mtx' = [mtx EXCEPT ![self] = "free"]
+               /\ wlock' = [wlock EXCEPT ![self] = "free"]
                /\ cstate' = [cstate EXCEPT ![self] = "done"]
                /\ pc' = [pc EXCEPT ![self] = "Done"]
-               /\ UNCHANGED << inReq, resp, store, sstate >>
+               /\ UNCHANGED << midframe, interleaved, inReq, resp, store, 
+                               sstate >>
 
-client(self) == CSend(self) \/ CRecv(self)
+client(self) == CFrame1(self) \/ CFrame2(self) \/ CRecv(self)
 
 SWait(self) == /\ pc[self] = "SWait"
                /\ inReq[Pof(self)]
                /\ pc' = [pc EXCEPT ![self] = "SGate"]
-               /\ UNCHANGED << mtx, inReq, resp, store, cstate, sstate >>
+               /\ UNCHANGED << wlock, midframe, interleaved, inReq, resp, 
+                               store, cstate, sstate >>
 
 SGate(self) == /\ pc[self] = "SGate"
                /\ Gate(Pof(self))
                /\ sstate' = [sstate EXCEPT ![Pof(self)] = "serving"]
-               /\ pc' = [pc EXCEPT ![self] = "SHandle"]
-               /\ UNCHANGED << mtx, inReq, resp, store, cstate >>
+               /\ pc' = [pc EXCEPT ![self] = "SFrame1"]
+               /\ UNCHANGED << wlock, midframe, interleaved, inReq, resp, 
+                               store, cstate >>
 
-SHandle(self) == /\ pc[self] = "SHandle"
-                 /\ mtx[Pof(self)] = "free"
-                 /\ store' = [store EXCEPT ![Pof(self)] = store[Pof(self)] \cup {"k"}]
-                 /\ resp' = [resp EXCEPT ![Other(Pof(self))] = TRUE]
-                 /\ sstate' = [sstate EXCEPT ![Pof(self)] = "done"]
+SFrame1(self) == /\ pc[self] = "SFrame1"
+                 /\ IF AtomicFrame
+                       THEN /\ wlock[Pof(self)] = "free"
+                       ELSE /\ TRUE
+                 /\ IF midframe[Pof(self)] # {}
+                       THEN /\ interleaved' = TRUE
+                       ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ /\ midframe' = [midframe EXCEPT ![Pof(self)] = midframe[Pof(self)] \cup {"server"}]
+                    /\ store' = [store EXCEPT ![Pof(self)] = store[Pof(self)] \cup {"k"}]
+                    /\ wlock' = [wlock EXCEPT ![Pof(self)] = IF AtomicFrame THEN "server" ELSE "free"]
+                 /\ pc' = [pc EXCEPT ![self] = "SFrame2"]
+                 /\ UNCHANGED << inReq, resp, cstate, sstate >>
+
+SFrame2(self) == /\ pc[self] = "SFrame2"
+                 /\ IF midframe[Pof(self)] # {"server"}
+                       THEN /\ interleaved' = TRUE
+                       ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ /\ midframe' = [midframe EXCEPT ![Pof(self)] = midframe[Pof(self)] \ {"server"}]
+                    /\ resp' = [resp EXCEPT ![Other(Pof(self))] = TRUE]
+                    /\ sstate' = [sstate EXCEPT ![Pof(self)] = "done"]
+                    /\ wlock' = [wlock EXCEPT ![Pof(self)] = "free"]
                  /\ pc' = [pc EXCEPT ![self] = "Done"]
-                 /\ UNCHANGED << mtx, inReq, cstate >>
+                 /\ UNCHANGED << inReq, store, cstate >>
 
-server(self) == SWait(self) \/ SGate(self) \/ SHandle(self)
+server(self) == SWait(self) \/ SGate(self) \/ SFrame1(self)
+                   \/ SFrame2(self)
 
 (* Allow infinite stuttering to prevent deadlock on termination. *)
 Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
@@ -150,7 +277,7 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 \* END TRANSLATION 
 
-\* ===== Properties (checked after the translation block below) =====
+\* ===== Properties =====
 
 \* SAFETY — V7 §4.8 / §4.9(b): the store never exceeds its live-key bound (leak/runaway class).
 StoreBounded == \A p \in Peers : Cardinality(store[p]) <= MaxLiveKeys
@@ -158,8 +285,21 @@ StoreBounded == \A p \in Peers : Cardinality(store[p]) <= MaxLiveKeys
 \* SAFETY — V7 §6.5: a handler is only ever invoked after its dispatch gate held.
 NoDispatchWithoutGate == \A p \in Peers : (sstate[p] # "idle") => Gate(p)
 
+\* SAFETY — V7 §6.11(a′) (NEW at 0.8.2, 0.8.1 RT-13b): the bytes of two distinct frames never
+\* interleave on a shared/pooled connection. Holds in the green config SIMULTANEOUSLY with
+\* EventuallyResolved below, which is the joint-satisfiability claim §6.11(a′) makes.
+FramesNotInterleaved == ~interleaved
+
 \* LIVENESS — V7 §4.9(a): every admitted (sent) request eventually resolves (responded →
 \* cstate "done"); no deadlock, no livelock. THE property nothing else proves. Needs the
 \* weak fairness supplied by `fair process`.
 EventuallyResolved == \A p \in Peers : (cstate[p] = "sent") ~> (cstate[p] = "done")
+
+\* NON-VACUITY WITNESS (see PROPERTIES.md §C.4 and ReentryWitness.cfg). TLC has no
+\* ProVerif-style reachability query, so a witness is an invariant that MUST be violated:
+\* if both peers ever actually complete the reentrant exchange, this fails and TLC produces
+\* the trace. Checking it GREEN would mean the exchange never completes — i.e. the liveness
+\* and frame-integrity results above were true of a system that does nothing.
+\* Expected verdict: VIOLATION.
+WitnessBothComplete == ~(\A p \in Peers : cstate[p] = "done" /\ sstate[p] = "done")
 ====

@@ -67,6 +67,6 @@ value. Separate, explicit, post-release GO. Months-scale. Not part of Phase 0.
 - Both tools verify a **model**, not the code — they certify the **design**. Keep
   the model at spec altitude.
 - The **5th wall — spec↔model fidelity** (`ASSURANCE-MAP.md`): the proof is relative
-  to the model faithfully transcribing `spec-data/v0.8.0/`. Owned by careful modeling
+  to the model faithfully transcribing `spec-data/v0.8.2/`. Owned by careful modeling
   + review, not by the tool. State it; don't let it hide.
 - **Off the critical path.** Must not pull effort off the shipping work.

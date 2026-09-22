@@ -11,14 +11,12 @@ security** (Tamarin / ProVerif).
 > which files, and which SHA-256 each result is about. Restating a version number in prose
 > is how a repo ends up publishing three different answers to one question.
 >
-> Today `spec-data/MODELING-PIN` reads `v0.8.0` — spec version **0.8.0**. The 0.8.2
-> snapshot is vendored beside it (`spec-data/v0.8.2/`) but the models have not been
-> re-validated against it yet, so the pin has deliberately not moved. The protocol has
-> since advanced to **0.8.2**, so 13 of the 26 sections the models cite have moved — a count that overstates the change
-> (16 lines of pre-existing text altered against 105 added; nothing proved here is
-> contradicted). Results here
-> are reproducible statements about the 0.8.0 design, not about the protocol as it stands
-> today. See `docs/STATUS.md` for the per-section detail and the re-check work-list.
+> Today `spec-data/MODELING-PIN` reads `v0.8.2` — spec version **0.8.2**, the current
+> published line. `make specdrift` reports **no drift**: the pin matches the live spec
+> byte-for-byte across all three normative files. Results here are reproducible statements
+> about the protocol as it stands today. The pin moves only as the last step of
+> re-validating the models against a new snapshot, never on a file copy, so this sentence
+> and the models cannot come apart silently — `make specdrift` is what keeps it honest.
 
 This is a sibling project to `entity-core-protocol` (the spec authority — it publishes
 the three specifications this repo models), `entity-core-keystone` (per-language peer
@@ -104,18 +102,19 @@ untracked `caps.local.mk` or env vars (see `caps.mk`). What is
 README.md                 ← you are here
 Makefile                  ← the door: build / smoke / check / clean (make+podman only)
 caps.mk                   ← shared podman resource caps (per-container ceilings)
-VERSION                   ← 0.8.0
+VERSION                   ← 0.8.2
 CANONICAL-DOCS.toml        ← declared canonical doc/spec surface (content ingest)
 CLAUDE.md                 ← shim that loads the agent guidance (AGENTS-STANDARD.md + AGENTS.md)
 AGENTS.md                 ← repo-specific agent guidance (build/test, layout, boundaries)
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 76-run matrix
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 156-run matrix
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls
   CROSSCHECK-RESULTS.md   ← Spin + Apalache independent corroboration
   SCOPING-AND-SPIKE-PLAN.md ← arch's calls on scope + Phase 0 gates + Phase 1 trigger
   PRIOR-ART.md            ← TLA+ & Tamarin learning resources + comparable models
-spec-data/v0.8.0/          ← VENDORED specs (byte-for-byte) = the modeling ground truth
+spec-data/v0.8.2/          ← VENDORED specs (byte-for-byte) = the modeling ground truth
+spec-data/MODELING-PIN     ← which snapshot the models transcribe (the answer to "verified what?")
 tla/                      ← TLA+/PlusCal + TLC (concurrency + liveness) + Apalache (unbounded)
 spin/                     ← Spin/Promela independent re-encoding (cross-check)
 tamarin/                  ← Tamarin/ProVerif (active-attacker, Dolev-Yao)
@@ -123,10 +122,11 @@ tamarin/                  ← Tamarin/ProVerif (active-attacker, Dolev-Yao)
 
 ## Where the spec lives
 
-`spec-data/v0.8.0/` is a frozen byte-for-byte copy of the v0.8.0 (V8) normative specs,
+`spec-data/v0.8.2/` is a frozen byte-for-byte copy of the v0.8.2 (V8) normative specs,
 with SHA-256 pins + provenance (`MANIFEST.md`). **Model against this, not against a live
-checkout** — reproducibility per spec-version is the point. Architecture re-vendors
-when the spec advances.
+checkout** — reproducibility per spec-version is the point. Prior snapshots (`v0.8.0/`)
+stay in place as point-in-time pins and are never edited. This repo re-vendors itself when
+the spec advances: the source is public and every step is hash-verifiable.
 
 ---
 

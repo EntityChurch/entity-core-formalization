@@ -1,21 +1,18 @@
 # entity-core-formalization — status
 
-_Updated: 2026-08-27 · public: v0.8.0 (master)_
+_Updated: 2026-08-28 · this line: 0.8.2_
 
-> **The pin has gone stale — read this before taking any result as current.**
-> Every model in this repo is written against the SHA-pinned snapshot in
-> `spec-data/v0.8.0/`, which is the Entity Core Protocol at spec version **0.8.0**.
-> The protocol has since advanced to **0.8.2**, and **13 of the 26 spec sections the
-> models cite have changed** (`docs/SPEC-DRIFT-ASSESSMENT.md`; `make specdrift`). The results below are
-> reproducible and remain true **of the 0.8.0 design**; they are *not* a current
-> statement about the protocol as it stands today. Re-vendoring `spec-data/` and
-> re-validating the affected §-citations is now the first substantive work, not an
-> optional leftover.
+> **The models track the live spec.** Every model in this repo is written against the
+> SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core Protocol at spec
+> version **0.8.2** — the current published line, and what peers are building to.
+> `make specdrift` reports **no drift**: the pin matches the live spec byte-for-byte across
+> all three normative files. The results below are a statement about the protocol as it
+> stands today.
 
 ## Where it is
 
 The **formal design-assurance layer** of the Entity Core Protocol. It machine-checks
-*models of the v0.8.0 (V8) protocol design* on the two layers the Lean authority proof
+*models of the v0.8.2 (V8) protocol design* on the two layers the Lean authority proof
 (in the keystone peer) structurally cannot reach:
 
 - **Distributed correctness + liveness under concurrency** — TLA+/TLC, with **Apalache**
@@ -27,198 +24,164 @@ The **formal design-assurance layer** of the Entity Core Protocol. It machine-ch
 
 It is additive assurance and a research **demonstrator**, deliberately **off the release
 critical path**: it verifies the *design*, not any implementation, never edits the spec,
-and routes any model-surfaced design finding to the sibling architecture repo as a
-proposal/review note. Every model cites the V7 § it transcribes and every secure result
-has a negative control that reproduces a *named, real* bug class.
+and routes any model-surfaced design finding to the sibling `entity-core-protocol` repo as
+a proposal. Every model cites the § it transcribes, every secure result has a negative
+control that reproduces a *named, real* bug class, and — new at 0.8.2 — every TLA+ module
+carries a **non-vacuity witness** proving it reaches an interesting state at all.
 
-Maturity: **complete and paused clean** at a tagged public release (`v0.8.0`). A bare host
-with **only `make` + `podman`** runs everything — all five toolchains (`entity-tla`,
-`entity-apalache`, `entity-spin`, `entity-proverif`, `entity-tamarin`) are containerized,
-each under a hard memory cap so a runaway check is OOM-killed cleanly instead of thrashing
-the host. `make build` → `make smoke` → `make check` (the green-matrix gate) → `make clean`.
+A bare host with **only `make` + `podman`** runs everything — all five toolchains
+(`entity-tla`, `entity-apalache`, `entity-spin`, `entity-proverif`, `entity-tamarin`) are
+containerized, each under a hard memory cap so a runaway check is OOM-killed cleanly
+instead of thrashing the host. `make build` → `make smoke` → `make matrix` → `make clean`.
 
 ## Where we left off
 
-The verification work is fully landed and captured in the capstone
-(`docs/FINAL-ASSURANCE-SUMMARY.md`) and the honesty scorecard (`docs/PROPERTIES.md`).
-What is proved, at demonstrator altitude against the SHA-pinned `spec-data/v0.8.0/`:
+The 0.8.2 re-target is **complete**: the models were re-read against the new snapshot, the
+normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` moved to
+`v0.8.2` as the **last** step of that work. What is proved, at demonstrator altitude:
 
-- **TLA+ track.** All 6 Core-Protocol concurrency modules (reentry, conn, store, revoke,
-  emit, register) plus a composed 2-peer `Core` model — safety **and** liveness. Apalache
-  proves **8 key safety invariants across 5 modules** *inductive (unbounded)*; liveness
+- **TLA+ track.** **9 modules** bounded-exhaustive in TLC — the 6 Core-Protocol concurrency
+  modules (reentry, conn, store, revoke, emit, register), the composed 2-peer `Core` model,
+  and the two added at 0.8.2 (`Authority`, `Bounds`) — safety **and** liveness. Apalache
+  proves **9 key safety invariants across 5 modules** *inductive (unbounded)*; liveness
   stays bounded-exhaustive in TLC + Spin by nature.
-- **Cross-check.** Spin **independently re-encodes all 6 modules** from the spec
-  (reproducing the marquee Class-G reentry deadlock); both Spin and Apalache agree with
-  TLC on every green result and every negative control (`docs/CROSSCHECK-RESULTS.md`).
-- **Prover track.** Tamarin + ProVerif close **12 lemmas in lockstep** (unforgeability,
+- **Cross-check.** Spin **independently re-encodes 6 modules** from the spec (reproducing
+  the marquee Class-G reentry deadlock); both Spin and Apalache agree with TLC on every
+  green result and every negative control (`docs/CROSSCHECK-RESULTS.md`).
+- **Prover track.** Tamarin + ProVerif close **14 lemmas in lockstep** (unforgeability,
   no-escalation, binding/no-replay, caveats, depth-bound, deep-chain frame integrity,
-  expiry, K-of-N multisig, revocation, persistent re-check); ProVerif additionally proves
-  `BindingReplay`.
-- **Re-verification.** The full **76-run model matrix** was re-run from the pinned images
-  and each result graded against its expected verdict (25 TLC + 26 ProVerif + 25 Tamarin),
-  plus **50 cross-check runs** (28 Spin + 22 Apalache). All behave exactly as designed.
+  expiry, malformed-temporal ingest, third-party chain topology, K-of-N multisig,
+  revocation, persistent re-check); ProVerif additionally proves `BindingReplay`.
+- **The full matrix is 156 runs** and `make matrix` is the gate: **green** (does every
+  property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
+  model do anything?). Green alone answers only the first question, which is why `make
+  check` now says so out loud.
 
-The models and their results are stable at the v0.8.0 research-preview line; no model
-changes are in flight. **The condition that kept the verification surface paused has now
-been met** — the spec advanced to 0.8.2 while this repo was paused (see *Waiting on*), so
-the re-vendor-and-re-check cycle, not the Phase 3 extension models, is the next
-substantive work.
+| slice | runs |
+|---|---|
+| TLC green (9 modules + Store liveness slice) | 10 |
+| TLC negative controls | 29 |
+| TLC non-vacuity witnesses | 9 |
+| Apalache inductive (9 invariants × base+step) | 18 |
+| Apalache negative controls | 3 |
+| Spin green (6 modules × safety+LTL) | 12 |
+| Spin negative controls | 17 |
+| ProVerif (15 green + 15 controls) | 30 |
+| Tamarin (14 green + 14 controls) | 28 |
+| **total** | **156** |
 
-## Backlog
+### What 0.8.2 added, and where it now lives
 
-Optional verification leftovers only — **none gate anything**, all stay off the release
-critical path and route findings to architecture, never spec edits. Ranked by value:
+0.8.1/0.8.2 were largely conformance findings written down as normative clarification. The
+structure was completely stable — no section added, removed or renumbered, and all 35 model
+`§`-citations still resolved — so the work was **new territory to model**, not contradicted
+results. Five pieces of new normative surface, each with a negative control that reproduces
+the named defect:
 
-1. **Apalache `Core` conjunction (deferred, lowest value).** The composed whole-protocol
-   inductive invariant — all modules' invariants at once. The Class-G deadlock it would
-   corroborate is already reproduced by Spin and each invariant is already proven
-   separately, so it is the one consciously-deferred cross-check item.
-2. **Phase 3 — extension-protocol attacker models (hard-gated on vendoring).** Phase 2
-   modeled only the §6.8 core re-check property that governs async flows; the protocols
-   themselves (continuation dispatch, INSTALL/installation-grant chains incl. the §5.8
-   three-slot transferred-closure confused deputy, subscription notification flows) are
-   **not in `spec-data/`**. Architecture must vendor them SHA-pinned first — modeling from
-   changelog mentions would violate the model-against-vendored-spec discipline.
-3. **Widen the TLA+ bounds + harden the two thin positives.** Named in
-   `tla/PHASE1-FORMALIZATION-REPORT.md`: 3-peer / churned-store bounds to exercise resource
-   leak + recovery at scale; multi-key `Store` (retire the vacuous store-cardinality
-   conjunct) and sequenced-write `Register` (retire the near-tautological atomicity);
-   model gate *denials* so the dispatch gate is load-bearing; add per-request deadlines
-   (§6.11(c)), the time-domain backstop that makes Class-G a liveness bug, not a crash.
-4. **Tie models to conformance vectors.** Only the Class-G deadlock is currently grounded
-   against a reference impl; where a sibling conformance vector exists for a modeled
-   property, cite it to turn "spec says" into "spec says *and* a passing test exercises it."
-5. **Optional native relational treatment (Alloy) of `Register`'s index↔tree-walk
-   coherence.** Spin already corroborates this via the cache bi-implication; Alloy would
-   model the relation directly. Not prepped (no image).
+| § | requirement | now modeled in |
+|---|---|---|
+| **§6.11 (a′)** | frame-write atomicity (0.8.1 RT-13b) — two frames' bytes MUST NOT interleave on a pooled connection | `Reentry.tla` + `reentry.pml` |
+| **§4.8** | an unsynchronized content-store refcount decrement is a use-after-free (0.8.1 RT-13a) | `Store.tla`, `StoreApalache.tla`, `store.pml` |
+| **§5.6 CAP-6a** | an unrepresentable temporal field is malformed and MUST NOT read as absent | `Malformed.pv` + `Malformed.spthy` |
+| **§5.2** | the dispatch authority is three-valued (SELF/GRANT/ABSENT-must-deny); the resource check binds sub-dispatches; no resource inheritance | `Authority.tla` *(new)* |
+| **§5.9 / §4.10(b)** | TTL and continuation `chain_depth` are distinct magnitudes; TTL decremented once per dispatch; distinct reason strings | `Bounds.tla` *(new)* |
+| **§5.10** | a finite, declared, honored `revocation_propagation_bound` (0.8.1 W7 Knob 2) | `Revoke.tla` |
+| **§5.8** | cross-peer provenance verified by a party that constructed **no link** in the chain | `ChainTopology.pv` + `.spthy` *(new)* |
 
-## Waiting on
+Two of these are sharper than "add a property":
 
-- **The spec advanced; `spec-data/v0.8.2/` is vendored and the models have not caught up
-  yet.** Measured 2026-08-27 against `entity-core-protocol` published `master`:
-  `ENTITY-CORE-PROTOCOL.md` moved from spec version **0.8.0 to 0.8.2** — 197 changed
-  lines, 25 of 93 numbered sections.
+- **§6.11 (a′) and (a) pull in opposite directions** — (a) forbids holding the connection
+  lock across send+recv, (a′) requires holding it for a frame's bytes — and the spec asserts
+  they are jointly satisfiable by a lock whose hold duration is exactly one frame. The green
+  config asserts **both at once**, and the two controls each break exactly one: dropping (a′)
+  costs byte integrity and *not* liveness; dropping (a) costs liveness and *not* byte
+  integrity. That joint satisfiability is the theorem.
+- **§5.2's three-valued rule is a claim that no two-valued encoding is correct.** `Authority`
+  checks it as such: `option-allow` satisfies entry dispatch and authorizes every grantless
+  sub-dispatch; `option-deny` refuses the grantless sub-dispatch and breaks entry dispatch;
+  each was run separately to confirm it holds the property the other breaks. Only the
+  three-valued encoding satisfies both.
 
-  The snapshot is now in the tree, hash-verified byte-for-byte
-  (`spec-data/v0.8.2/MANIFEST.md`). **`spec-data/MODELING-PIN` still reads `v0.8.0`**,
-  because that is the text the models transcribe and every published result is a statement
-  about. It moves only when the models have been re-validated — vendoring is the first
-  step of that work, not the last, and `make specdrift` deliberately keeps reporting the
-  distance until then.
+### Two thin positives addressed, and one still open
 
-  **Structurally the new snapshot is a clean target:** no section added, removed or
-  renumbered; every inline sub-label intact; **all 35 model `§`-citations still resolve**.
-  The only structural addition is §6.11 (a′), which breaks no reference.
+- **Retired.** `Store`'s store-cardinality conjunct was **vacuous** — a single key against a
+  bound of 2, so it could not fail (disclosed in `PROPERTIES.md` since Phase 1, never
+  fixed). The store is now multi-key, the bound is falsifiable, and what discharges it is
+  refcount correctness — the composition §4.8 actually asserts.
+- **Retired.** The TLA+ track had **no non-vacuity assertions at all**, unlike ProVerif's
+  reachability queries: a trivially-inert model would have reported the same green as a
+  working one. Every TLC module now has a witness config that must be violated, and
+  `make -C tla tlc-witness` fails loudly if a witnessed state becomes unreachable.
+- **Still open.** `Register`'s correct-model atomicity remains near-tautological; it has
+  teeth on the control side only. Sequenced-write `Register` is still backlog.
 
-  **Of the 26 core-protocol sections the models actually cite, 13 have moved.** The full
-  per-section table, the method, its negative controls and its limits are in
-  **`docs/SPEC-DRIFT-ASSESSMENT.md`** — one canonical home, not restated here. Reproduce
-  any of it with `make specdrift`.
+## Findings routed to `entity-core-protocol`
 
-  The headline for a returning reader: the drift is **even across all three tracks**
-  (52% / 59% / 54% of each track's cited sections). What is stable is *depth* — the two
-  most-depended-on sections in the repo, §5.5 chain verification (33 model files) and §7.3
-  signatures (22), did not move, nor did §5.4 or §6.8. So the foundations the
-  unforgeability and confused-deputy results rest on are unmoved.
+Never spec edits here — proposals in the sibling repo.
 
-  **And the section count badly overstates it.** Across all 13 moved sections, only **16
-  lines of pre-existing text** changed against **105 lines added** — 0–10% of any section,
-  1–4% for most, and 0% for §5.2, §5.10 and §6.11, which are pure additions. Of those 16
-  lines, most are status-code discrimination (a blanket 403 split into 401-auth vs
-  403-authz — rejected either way, and the models model accept/reject, not status codes) or
-  appended clarification. Exactly two are genuine semantic changes (§3.6 `F40` id-scope
-  literal matching, §6.1 `CAP-1` empty grants) and **neither intersects anything the models
-  encode** — checked, not assumed. **No property this repo proved has been contradicted.**
+1. **§5.9's recommended 8× TTL/`chain_depth` ratio has zero margin at worst-case fan-out.**
+   The property needs `ceiling × worst_case_fanout` **strictly less than** the TTL seed; at
+   exact equality the last causal level spends the last of the TTL and the backstop fires on
+   the step the deterministic brake would have. §5.9 puts the ratio choice on the deployment,
+   so this is a boundary worth stating where operators read it, not a defect in the default.
+   Reproduce: `BoundsRatioBug.cfg`.
+2. **§5.8's conformance topology is load-bearing for this repo's own prior results.** The
+   pre-0.8.2 `DeepChain`/`DeepChainN` models seat the verifier as the root issuer — exactly
+   the same-peer topology §5.8 says cannot witness a cross-peer seam. They remain sound for
+   the §5.5a property they claim, but the new `ChainTopology` control shows a defect that
+   canonicalizes against the root frame leaves their lemma **still true** while falsifying the
+   one only a third-party verifier can state. Recorded as a note on modeling practice.
 
-  The real finding is narrower: there is genuinely new normative surface no model covers —
-  §6.11 frame-write atomicity (the spike-A target), §4.8 the unsynchronized-refcount
-  use-after-free, §5.6 malformed temporal-field ingest. New territory to model, not
-  contradictions of old results.
+## Known, documented non-issues (not bugs)
 
-- **One change questions a modeling choice rather than a modeled fact.** §5.2 at 0.8.2
-  requires the dispatch authority to be three-valued — SELF, GRANT, and an ABSENT case
-  that MUST deny — and says collapsing it to a two-valued optional has no correct default.
-  `tla/Reentry.tla` abstracts the verdict to a constant (`Gate(p) == TRUE`), so the denial
-  case is inexpressible there and `NoDispatchWithoutGate` cannot fail.
-
-  Stated carefully, because an earlier draft of this entry overstated it: 0.8.2 does
-  **not** invalidate the result and does not name our abstraction as a defect. That rule
-  addresses implementations representing an authority value; the model declares the
-  verdict out of scope and Lean-owned. The underlying security property — gate on the
-  handler grant, never on the propagated caller capability — is **§6.8, which did not
-  move**, is cited by 8 model files, and is what 0.8.2's new §5.2 text defers to.
-  `tla/Core.tla` does model denying gates. What survives is narrower and still worth
-  acting on: the backlog item *"model gate denials so the dispatch gate is load-bearing"*
-  is pre-existing, and 0.8.2 raises its value by giving the denial case an explicit
-  normative rule with a named ALLOW-bug lineage.
-
-- **Nothing is blocked on another repo.** An earlier version of this entry said
-  re-vendoring was owned by the spec repo and this one could not do it. That was wrong: it
-  traced to an `AGENTS.md` rule naming "the architecture repo" — `entity-core-architecture`,
-  which no longer exists. The spec is public, the copy is byte-for-byte and every step is
-  hash-verifiable. The rule is corrected and the snapshot is vendored. What remains is
-  re-modeling, which was always this repo's own work.
-- The deepest open assumption is the **5th wall — spec↔model fidelity**: every result is a
-  property of a *model*. The two-paradigm agreement (Spin independent encoding + Apalache
-  unbounded matching TLC; ProVerif + Tamarin lockstep) **narrows** it but cannot close it —
-  the engines could share a misreading. **Human review of the models against
-  `spec-data/v0.8.0/` owns it** (`docs/PROPERTIES.md` §C, `docs/ASSURANCE-MAP.md`).
-
-## Done recently
-
-- **v0.8.0 public research-preview release tagged** (`master @ 0a04dca`). De-versioned V8
-  cutover of the V7 line the proofs were built on — **wire-byte-identical**, so the proofs
-  carry forward unchanged; `spec-data/` migrated to the v0.8.0 snapshot.
-- **Release prep** built the `make` + `podman` door from scratch (this was the one repo
-  with no prior Makefile): the green sweep lives as a `green` target beside each engine's
-  specs so the parameters version with the models; resource caps in `caps.mk` were **sized
-  from measurement** (`CAP_MEM=2g`, zero swap — covers the heaviest build, the ProVerif
-  opam compile at ~0.92 GB, with headroom and a clean OOM kill for a runaway JVM/Z3/Haskell
-  heap) and the full green matrix was re-run under that cap; and `docs/PROPERTIES.md` was
-  written as the PROVEN-vs-MODELED honesty scorecard.
-- **Verification arc completed earlier:** Phase 0 two go/no-go spikes (TLA+ on the §6.11
-  reentry slice, ProVerif+Tamarin on capability unforgeability — both GO); Phase 1 (TLA+
-  all-Core concurrency + the first 5 prover lemmas); Phase 2 (prover surface-closure, 7
-  more lemmas + 1 documented non-closure); then the Spin + Apalache cross-check across
-  every modeled subsystem and the full-matrix close-out re-verification.
-
-### Known, documented non-issues (not bugs)
-
-- **`RevokeMech` (Tamarin) does not terminate** — mechanistic linear-token revocation
-  loops Tamarin's backward search on a regenerated `Valid` fact. It stays ProVerif's lane;
-  Tamarin uses a terminating trace-restriction idiom. An irreducible tool-capability
-  finding, **excluded from `make check`** — run it standalone with a kill switch.
+- **`RevokeMech` (Tamarin) does not terminate** — mechanistic linear-token revocation loops
+  Tamarin's backward search on a regenerated `Valid` fact. It stays ProVerif's lane; Tamarin
+  uses a terminating trace-restriction idiom. An irreducible tool-capability finding,
+  **excluded from `make check`** — run it standalone with a kill switch.
 - Concurrent toolchain runs can hit a transient SELinux `:Z` bind-mount relabel race
   ("file not found"); run the three engines **serially**. Reclaim a hung container with
   `podman kill` (a `timeout`-wrapped `podman run` only kills the client).
+- TLC's liveness graph exhausts the 2 GB cap at `Store`'s safety bound of `NReq = 4`, so
+  `Store` runs safety at 4 and liveness at 3 in two configs rather than one config that
+  silently drops a property. Stated in both cfg headers.
+
+## The deepest open assumption
+
+The **5th wall — spec↔model fidelity**. Every result is a property of a *model*. The
+two-paradigm agreement (Spin independent encoding + Apalache unbounded matching TLC;
+ProVerif + Tamarin lockstep) **narrows** it but cannot close it — the engines could share a
+misreading. **Human review of the models against `spec-data/v0.8.2/` owns it**
+(`docs/PROPERTIES.md` §C, `docs/ASSURANCE-MAP.md`).
+
+This is not hypothetical. During the 0.8.2 work the ProVerif/Tamarin lockstep caught a real
+defect in a hand-written Tamarin lemma — a variable never bound to the verifier it named, so
+the lemma asserted far less than it appeared to. The two provers disagreed, and the
+disagreement was the signal. The cross-check earned its keep on the modeller, which is the
+failure mode it exists for.
 
 ## Next
 
-**Done:** `spec-data/v0.8.2/` vendored and hash-verified; citation structure re-validated
-(0 of 35 broken); green matrix re-confirmed against the `v0.8.0` pin.
-
-1. **Model the new normative surface.** This is the substantive work and the reason the
-   pin has not moved. Enumerated with affected models in `spec-data/v0.8.2/MANIFEST.md`
-   §"What DOES need modeling work":
-   - **§6.11 (a′) frame-write atomicity** — two frames' bytes MUST NOT interleave on a
-     pooled connection. `Reentry.tla` / `reentry.pml` model the mutex discipline around
-     send+recv, not byte-level write atomicity. Closest to the spike-A target; do first.
-   - **§4.8 refcount use-after-free** — an unsynchronized refcount decrement under
-     concurrent dispatch is now named a §4.9 no-crash violation. `Store*` abstracts
-     refcounts away entirely.
-   - **§5.6 `CAP-6a` malformed temporal ingest** — an unrepresentable `expires_at` is
-     malformed and MUST NOT read as absent, because absent means no expiry. A named
-     fail-open, and `Expiry.*` models validity but not malformed ingest.
-   Each needs the standing discipline: a §-citation, a negative control with teeth, and
-   ProVerif/Tamarin lockstep or Spin/Apalache corroboration as appropriate.
-2. **Re-read the 13 moved sections against their transcriptions.** Cheap now the list is
-   known, and it is the only thing that can close the 5th wall for 0.8.2. The two genuine
-   semantic changes (§3.6 `F40`, §6.1 `CAP-1`) were already checked and touch nothing the
-   models encode.
-3. **Promote the "model gate denials" backlog item.** `tla/Reentry.tla`'s `Gate(p) == TRUE`
-   is a constant, so `NoDispatchWithoutGate` cannot fail there. Pre-existing, but §5.2's
-   new three-valued rule gives the denial case explicit normative weight.
-4. **Then move `spec-data/MODELING-PIN` to `v0.8.2`** — last, and only once 1–3 hold. That
-   single line is what converts "we vendored the new spec" into "we verified it."
+1. **Coverage breadth.** Measured by the `§`-citations the models carry, they now reach
+   **28 of the 93 numbered sections** of the core spec. By area that is roughly two-thirds
+   of §4 (connection, dispatch, resilience), §5 (capability and verdict) and §6 (handlers and
+   lifecycle) — the three surfaces this repo owns. Near-zero coverage of §2, §3, §7, §8 and
+   §9 is deliberate scope: registries, encoding, trusted crypto and the conformance profiles
+   belong to other layers of the assurance map. The remaining third of §4/§5/§6 is the real
+   backlog.
+2. **Techniques not yet used.** A **refinement proof** that the composed `Core` model
+   actually refines the individual modules (the standard TLA+ move; today they are checked
+   separately and the composition is asserted, not proved). Alloy for `Register`'s
+   index↔tree-walk coherence. CryptoVerif for computational-model results. §6.11(c)
+   per-request deadlines, which are what would make Class-G a liveness bug rather than a
+   crash.
+3. **Widen the TLA+ bounds** — 3-peer / churned-store, and sequenced-write `Register` to
+   retire the last near-tautological positive.
+4. **Tie models to conformance vectors.** Only the Class-G deadlock is currently grounded
+   against a reference impl; where a sibling conformance vector exists for a modeled
+   property, cite it to turn "spec says" into "spec says *and* a passing test exercises it."
 5. **Phase 3 extension-protocol attacker models** stay gated on vendoring `EXTENSION-*`,
-   which is still not in `spec-data/`.
+   which is still not in `spec-data/`. Note that §5.8's registry rows and §5.9's continuation
+   depth brake are now modeled at the *core* level, so the gate is narrower than it was.
+6. **Apalache `Core` conjunction** — the composed whole-protocol inductive invariant. Still
+   the one consciously-deferred cross-check item (lowest value; Spin already corroborates the
+   deadlock and each invariant is proven separately).

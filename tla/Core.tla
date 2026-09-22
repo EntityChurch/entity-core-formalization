@@ -16,6 +16,23 @@
 \* whose race-freedom teeth are increment 2). The composed NEGATIVE CONTROL is the §6.11
 \* serialization defect (Serialized=TRUE) — the cross-subsystem deadlock; per-subsystem teeth
 \* live in the standalone increments. Every element cites its V7 §ref.
+\*
+\* 0.8.2 RE-TARGET (spec-data/v0.8.2/). Every §-citation in this module resolves unchanged
+\* against the 0.8.2 snapshot (no section was added, removed or renumbered — see
+\* docs/SPEC-DRIFT-ASSESSMENT.md), so the composition itself is unaffected by the version move.
+\*
+\* DECLARED SCOPE BOUNDARY for the new 0.8.2 surface (D11 — say what is NOT here). §6.11 gained
+\* sub-clause (a′) frame-write atomicity at 0.8.1 (RT-13b). It is NOT modeled in this composed
+\* module, deliberately: (a′) is a property of the byte-level write discipline on ONE
+\* connection, and this module's reason to exist is CROSS-SUBSYSTEM interleaving (revoke during
+\* reentry, dispatch before establishment). Adding a second write-lock granularity here would
+\* duplicate tla/Reentry.tla without producing an interleaving Reentry cannot already exhibit.
+\* §6.11(a′) is proved in tla/Reentry.tla (ReentryFrameBug.cfg) and independently re-encoded in
+\* spin/reentry.pml (-DNOATOMICFRAME). What THIS module still owns for §6.11 is clause (a) —
+\* the composed Class-G deadlock — which it continues to reproduce under Serialized = TRUE.
+\* Likewise §4.8's refcount use-after-free (RT-13a) is owned by tla/Store.tla, and the §5.2
+\* three-valued dispatch authority by tla/Authority.tla; the `Honored` gate here stays the
+\* opaque composed abstraction it always was.
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Serialized,     \* FALSE = §6.11 fix (reader-demux: mutex spans the write only);
@@ -278,4 +295,13 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 \* progress and never deadlocks/livelocks. This is the property the §6.11 fix exists to hold;
 \* the Serialized negative control breaks it (the Class-G deadlock, caught even under composition).
 EventuallyResolved == \A p \in Peers : <>(cstate[p] = "done")
+
+\* NON-VACUITY WITNESS (PROPERTIES.md §C.4 / CoreWitness.cfg). TLC has no ProVerif-style
+\* reachability query, so a witness is expressed as an invariant that MUST BE VIOLATED. A
+\* violation is the PASS condition: it exhibits a reachable state in which
+\* both peers actually COMPLETED the composed cross-peer exchange — so the whole-protocol
+\* safety and liveness results are not vacuously true of a system that never exchanges.
+\* Checking it GREEN would mean the interesting state is unreachable — i.e. the results above
+\* hold of an inert model. Expected verdict: VIOLATION.
+WitnessExchangeComplete == ~(\A p \in Peers : cstate[p] = "done")
 ====

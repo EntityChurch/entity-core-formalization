@@ -229,4 +229,13 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 \* LIVENESS — §4.1: every submitted frame is eventually answered (handshake settles; no frame
 \* is silently dropped — "every EXECUTE receives an EXECUTE_RESPONSE"). Needs weak fairness.
 AllAnswered == <>(answered = MaxFrames)
+
+\* NON-VACUITY WITNESS (PROPERTIES.md §C.4 / ConnWitness.cfg). TLC has no ProVerif-style
+\* reachability query, so a witness is expressed as an invariant that MUST BE VIOLATED. A
+\* violation is the PASS condition: it exhibits a reachable state in which
+\* a frame was actually DISPATCHED over an ESTABLISHED connection — so the §4.1/§4.2
+\* handshake and gating results are not vacuously true of a connection that never establishes.
+\* Checking it GREEN would mean the interesting state is unreachable — i.e. the results above
+\* hold of an inert model. Expected verdict: VIOLATION.
+WitnessDispatched == ~(dispatched /\ everEstablished)
 ====

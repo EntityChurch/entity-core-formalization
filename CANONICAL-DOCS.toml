@@ -20,12 +20,12 @@ proven correct." What is PROVEN unbounded vs only MODELED at a bound vs symbolic
 stated exactly in docs/PROPERTIES.md; the deepest assumption — spec↔model fidelity,
 which no tool here closes — is named, not hidden. Which spec version each result is
 about is a property of the SHA pin in spec-data/, never of prose: the models are
-currently pinned at spec 0.8.0 while the protocol has advanced to 0.8.2, so these are
-reproducible results about the 0.8.0 design and docs/STATUS.md says exactly which
-modeled sections have since moved. Build is make + podman only (no
-native model-checker toolchain on the host): `make build` then `make check` on a
-fresh clone runs the whole green matrix, with per-container resource caps so a
-runaway check dies at the cap instead of taking the host down.
+pinned at spec 0.8.2, the current published line, and `make specdrift` reports no
+drift against the live spec. Build is make + podman only (no native model-checker
+toolchain on the host): `make build` then `make matrix` on a fresh clone runs the
+whole gate — every property, every negative control, and a non-vacuity witness per
+module — with per-container resource caps so a runaway check dies at the cap instead
+of taking the host down.
 """
 
 # ── Overview ────────────────────────────────────────────────────────────────

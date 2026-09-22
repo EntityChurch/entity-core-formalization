@@ -55,5 +55,5 @@ the ones that match our fragments; don't read exhaustively.
 
 - Both tools verify a **model**. The art is choosing the altitude: high enough to be
   tractable, faithful enough that the result means something about V7. The vendored
-  `spec-data/v0.8.0/` is the fidelity anchor — cite spec section numbers in the model
+  `spec-data/v0.8.2/` is the fidelity anchor — cite spec section numbers in the model
   comments so a reviewer can check the transcription.

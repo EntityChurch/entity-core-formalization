@@ -11,6 +11,18 @@
  * verdict TLA+ did, so that a shared transcription error is unlikely to survive
  * in both.
  *
+ * 0.8.2 RE-TARGET (spec-data/v0.8.2/). §4.8 "Store-safety under concurrent
+ * dispatch" gained a normative sentence naming the content-store LIFETIME
+ * REFERENCE COUNT as in-scope (0.8.1, RT-13a): "an unsynchronized refcount
+ * decrement from concurrent dispatch is a use-after-free, i.e. the §4.9 no-crash
+ * class -- invisible on a GC/ARC substrate, so easy to miss." The v0.8.0
+ * encoding abstracted refcounts away and could not express it. Added here:
+ *   rc[k]    the IMPLEMENTATION'S counter  — the only racy object
+ *   truth[k] ground truth: how many requests still reference k
+ *   live[k]  is k still in the content store (not yet freed)?
+ * and the store is now MULTI-KEY (3 keys against MaxStore = 2), which also
+ * retires the v0.8.0 single-key vacuity in the live-key bound (PROPERTIES §C.4).
+ *
  * Fidelity (5th wall, ../docs/ASSURANCE-MAP.md): the verdict / attenuation
  * arithmetic and crypto are abstracted (Lean / Tamarin own them). Payload size
  * (§4.10a) and chain depth (§4.10b) are symbolic over/under-limit choices — the
@@ -19,19 +31,25 @@
  * abstraction (same call the TLA+ model makes). The store data-race (§4.8) is
  * modeled as concurrent occupancy of the write critical section (writers > 1);
  * the single-writer discipline is the entry gate `atomic { writers==0; ... }`.
+ * Byte-level memory reuse after a free is NOT modeled — "freed while a referrer
+ * is live" is the use-after-free predicate, not the corrupted read that follows.
  *
  * PROPERTIES checked:
  *   SAFETY   StoreRaceFree   writers <= 1 always (§4.8) — assert in crit section.
- *   SAFETY   ResourceBounded pending <= MaxPending && store <= MaxStore
+ *   SAFETY   NoUseAfterFree  !live[k] => truth[k]==0 (§4.8 RT-13a) — assert on free
+ *                            and on every reference-holding step.
+ *   SAFETY   ResourceBounded pending <= MaxPending && live keys <= MaxStore
  *                            (§4.9b / §4.10) — assert at admission + after write.
  *   LIVENESS Responsive      admitted ~> responded (§4.9a/c) — LTL never claim.
  *
  * VARIANTS (mirror the TLA+ negative controls; select via -D<NAME>):
- *   (default)      fix: all three properties hold.
+ *   (default)      fix: all four properties hold.
  *   -DNOSERIALIZE  drop the single-writer entry gate  -> StoreRaceFree VIOLATED
  *                  (matches TLA+ Serialize = FALSE).
  *   -DNOADMIT      drop the admission bound (always admit) -> ResourceBounded
  *                  VIOLATED (matches TLA+ Admit = FALSE).
+ *   -DNOSYNCREFS   split the refcount read-modify-write -> NoUseAfterFree
+ *                  VIOLATED (matches TLA+ SyncRefs = FALSE / StoreRefcountBug).
  *   -DSILENTDROP   an admitted req in WCommit may leave the crit section without
  *                  responding and leak its pending slot -> Responsive (liveness)
  *                  FAILS (matches TLA+ SilentDrop = TRUE).
@@ -46,14 +64,32 @@
  *   the liveness build runs it with -a -f (weak fairness).
  */
 
-#define NReq        3      /* concurrent per-request dispatch activities (small -> exhaustive) */
+#define NReq        4      /* concurrent per-request dispatch activities (small -> exhaustive) */
+#define NKey        3      /* §4.8 distinct content-store keys */
 #define MaxPending  2      /* §4.9(b)/§4.10: admitted-not-yet-responded bound */
-#define MaxStore    1      /* §4.8/§4.9(b): live-key bound (single shared key "k") */
+#define MaxStore    2      /* §4.8/§4.9(b): LIVE-key bound (3 keys vs bound 2 => falsifiable) */
+
+/* Which key each request touches. Requests 0 and 1 SHARE key 0 — that shared
+ * entity is the refcount contention point (two concurrent referrers to one
+ * entity is the minimum shape that can free an entity under a live referrer).
+ * Requests 2 and 3 hold distinct keys so the live set can grow past MaxStore
+ * when refcounts leak. */
+#define KEY(id)  ((id) <= 1 -> 0 : ((id) == 2 -> 1 : 2))
 
 /* Shared peer state (§4.8 content store + §4.9 in-flight accounting). */
-byte store   = 0;          /* live-key count of the shared store (one key "k") */
 byte writers = 0;          /* requests currently inside the write critical section */
 byte pending = 0;          /* §4.9(c): admitted requests not yet responded */
+
+/* §4.8 (RT-13a) content-store lifetime bookkeeping, per key. */
+byte rc[NKey]    = 0;      /* the IMPLEMENTATION'S refcount — the racy counter */
+byte truth[NKey] = 0;      /* ground truth: live referrers (always updated atomically) */
+bit  live[NKey]  = 0;      /* is the entity still in the store (not yet freed)? */
+
+/* Live-key count, for the §4.9(b) store bound. */
+#define nlive (live[0] + live[1] + live[2])
+
+/* §4.8 RT-13a: an entity that has been freed must have no live referrers. */
+#define uaf_free(k)  assert(!(live[k] == 0 && truth[k] > 0))
 
 /* Per-request lifecycle observable for the liveness claim:
  *   0 new   1 rej413   2 rej400   3 ref503   4 admitted   5 writing
@@ -80,6 +116,10 @@ proctype req(byte id)
 {
   bool payload_over;   /* §4.10(a): wire size exceeds configured max */
   bool depth_over;     /* §4.10(b): chain depth exceeds configured max */
+  byte k;              /* this request's content-store key */
+  byte t;              /* local: value READ from rc during a split RMW (§4.8 neg control) */
+
+  k = KEY(id);
 
   /* Pick: caller offers some payload size and chain depth. */
   if :: payload_over = true :: payload_over = false fi;
@@ -88,7 +128,14 @@ proctype req(byte id)
   /* AdmitStep (§4.10 admission, in order): over-size -> 413; else over-depth ->
    * 400; else back-pressure when in-flight bound reached -> 503; else admit. The
    * admission decision must be a single atomic step so pending++ races cannot
-   * overshoot the bound (the gate is the whole point of §4.9b). */
+   * overshoot the bound (the gate is the whole point of §4.9b).
+   *
+   * On ADMIT this step also ACQUIRES the §4.8 content-store reference.
+   * Acquire-on-admit / release-on-respond ties the reference lifetime to the
+   * ADMITTED lifetime, which is what makes the §4.9(b) live-key bound follow
+   * from the admission bound: a key is live only while an admitted request
+   * references it, so nlive <= pending <= MaxPending. Break the refcount and
+   * that chain of reasoning breaks with it. */
   atomic {
     if
     :: payload_over ->
@@ -102,6 +149,11 @@ proctype req(byte id)
           /* NEG CONTROL (TLA+ Admit=FALSE): no admission bound — always admit. */
           rstate[id] = 4;
           pending++;                              /* unbounded -> ResourceBounded breaks */
+          truth[k]++; live[k] = 1;
+          t = rc[k];
+#ifndef NOSYNCREFS
+          rc[k]++;
+#endif
 #else
           if
           :: pending >= MaxPending ->
@@ -109,13 +161,32 @@ proctype req(byte id)
           :: else ->
                rstate[id] = 4;                    /* §4.9(c): admitted -> owes a response */
                pending++;
+               /* §4.8 ACQUIRE: truth + liveness move atomically here; the
+                * COUNTER is the only thing that may lag (see NOSYNCREFS). */
+               truth[k]++; live[k] = 1;
+               t = rc[k];
+#ifndef NOSYNCREFS
+               rc[k]++;                           /* synchronized: RMW is part of this atomic step */
+#endif
           fi;
 #endif
        fi;
     fi;
     /* §4.9(b): the admission gate is exactly what keeps pending bounded. */
     assert(pending <= MaxPending);
+    /* §4.9(b)/§4.10: the LIVE-key set is bounded — real now that 3 keys exist. */
+    assert(nlive <= MaxStore);
   }
+
+#ifdef NOSYNCREFS
+  /* NEG CONTROL (TLA+ SyncRefs=FALSE): the refcount read-modify-write is SPLIT.
+   * The read happened inside the atomic admit above; the write-back lands HERE,
+   * as a separate step. A concurrent update between the two is LOST. */
+  if
+  :: rstate[id] == 4 -> rc[k] = t + 1;
+  :: else -> skip
+  fi;
+#endif
 
   /* WBegin (§4.8): admitted requests enter the write critical section under the
    * single-writer discipline. The fix gates entry on an empty section; the neg
@@ -133,8 +204,11 @@ proctype req(byte id)
   :: else -> skip
   fi;
 
-  /* WCommit: mutate the bounded store, respond, leave the crit section. §4.9(c):
-   * every admitted request is delivered (responded), never silently dropped. */
+  /* WCommit: respond, leave the crit section, and RELEASE the §4.8 reference.
+   * §4.9(c): every admitted request is delivered (responded), never silently
+   * dropped. Under the synchronized discipline the decrement and the
+   * free-decision are in the same atomic step as the truth update, so "the
+   * counter says zero" and "no referrers remain" cannot disagree. */
   if
   :: rstate[id] == 5 ->
        /* §4.8 store-safety lives here: assert single-writer occupancy while in
@@ -144,30 +218,63 @@ proctype req(byte id)
        /* LIVENESS NEG CONTROL (TLA+ SilentDrop=TRUE): the request may instead be
         * silently dropped — it leaves the crit section but never responds and its
         * pending slot is leaked (the "admit and discard" the spec calls the
-        * sharpest single violation). */
+        * sharpest single violation). The reference is still released: the defect
+        * under test here is the lost RESPONSE, not a lost ref. */
        if
        :: atomic {
-            store = (store < MaxStore -> store + 1 : store);  /* idempotent on key "k" */
             writers--; pending--; rstate[id] = 6;             /* responded */
-            assert(store <= MaxStore);
+            truth[k]--; t = rc[k];
+#ifndef NOSYNCREFS
+            rc[k]--;
+            if :: rc[k] == 0 -> live[k] = 0; :: else -> skip fi;
+            uaf_free(k);
+#endif
           }
        :: atomic {
             writers--; rstate[id] = 7;                        /* dropped: no response, slot leaked */
+            truth[k]--; t = rc[k];
+#ifndef NOSYNCREFS
+            rc[k]--;
+            if :: rc[k] == 0 -> live[k] = 0; :: else -> skip fi;
+            uaf_free(k);
+#endif
           }
        fi;
 #else
        atomic {
-         /* store holds a single shared key "k": writing it is idempotent, so the
-          * count never exceeds MaxStore (§4.9b live-key bound). */
-         store = (store < MaxStore -> store + 1 : store);
          writers--;
          pending--;
          rstate[id] = 6;                                      /* §4.9(c) responded */
-         assert(store <= MaxStore);                           /* §4.9(b) store bound */
+         /* §4.8 RELEASE */
+         truth[k]--;
+         t = rc[k];
+#ifndef NOSYNCREFS
+         rc[k]--;
+         if :: rc[k] == 0 -> live[k] = 0; :: else -> skip fi;
+         uaf_free(k);
+#endif
+         assert(nlive <= MaxStore);                           /* §4.9(b) live-key bound */
        }
 #endif
   :: else -> skip
   fi;
+
+#ifdef NOSYNCREFS
+  /* NEG CONTROL write-back half of the SPLIT release, and the FREE decision —
+   * driven by the COUNTER, exactly as §4.8 describes. Once the counter is
+   * applying a stale read it reaches zero while a referrer is still live, and
+   * the entity is freed under that referrer: use-after-free. */
+  if
+  :: (rstate[id] == 6 || rstate[id] == 7) ->
+       atomic {
+         rc[k] = (t > 0 -> t - 1 : 0);
+         if :: rc[k] == 0 -> live[k] = 0; :: else -> skip fi;
+         uaf_free(k);                                        /* <-- fires here */
+         assert(nlive <= MaxStore);
+       }
+  :: else -> skip
+  fi;
+#endif
 }
 
 init {

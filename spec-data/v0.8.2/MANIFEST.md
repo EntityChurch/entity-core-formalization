@@ -4,10 +4,17 @@
 **Snapshot type:** verbatim copy of the authoritative normative spec files — **byte-for-byte, no paraphrase.**
 **Purpose:** the modeling ground truth for the formal design-assurance project. TLA+ / Tamarin / Spin / Apalache / ProVerif models are written against a *pinned* version so a model and its result are reproducible per spec-version. When the spec moves, vendor a new snapshot and re-check.
 
-> **This snapshot is vendored but NOT yet the modeling pin.** The models still transcribe
-> `spec-data/v0.8.0/`, and `spec-data/MODELING-PIN` says so. Every published result in this
-> repository remains a statement about 0.8.0 until the models have been re-validated against
-> the text below and that file is moved. Vendoring is the first step of that work, not the last.
+> **This snapshot IS the modeling pin.** `spec-data/MODELING-PIN` names `v0.8.2`, and every
+> published result in this repository is a statement about the text below. The pin moved as
+> the **last** step of the re-validation work, per step 5 of the re-vendor discipline: the
+> models were read against this snapshot, the normative surface it added was modeled, and the
+> full matrix — green, negative controls and non-vacuity witnesses — was run before the move.
+> See the *"What DOES need modeling work"* table below for what that surface was and where
+> each item now lives.
+>
+> *Editing note.* Only this status block and the modeling-work table were updated when the
+> pin moved. The three normative `.md` files are byte-frozen and their SHA-256 digests below
+> are unchanged and re-verified — a pin whose bytes can change is not a pin.
 
 ## Files (the three authoritative normative inputs)
 

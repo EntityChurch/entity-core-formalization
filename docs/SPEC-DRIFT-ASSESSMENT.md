@@ -1,5 +1,16 @@
 # Spec-drift assessment — the pin vs the live spec
 
+> **RESOLVED — this document is now a historical record, not a live warning.** It measures
+> the drift that existed while the models were pinned at 0.8.0 and the protocol had advanced
+> to 0.8.2. That gap is closed: the models were re-validated against `spec-data/v0.8.2/`, the
+> normative surface 0.8.1/0.8.2 added was modeled, and `MODELING-PIN` moved to `v0.8.2` as
+> the last step. `make specdrift` now reports **no drift**.
+>
+> The measurement is kept because it is what scoped the re-target — and because the method
+> (derive the dependency set from the `§`-citations the models carry, not from a prose
+> summary) is the reusable part. See `docs/STATUS.md` for what was modeled and where.
+
+
 **Measured 2026-08-27.** Reproduce with `make specdrift`.
 
 Every result in this repository is a statement about the SHA-pinned snapshot in
@@ -15,7 +26,7 @@ about the current protocol — is the exact overclaim this project was built not
 
 | | |
 |---|---|
-| Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.0/` — Entity Core Protocol **0.8.0** |
+| Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** *(moved 2026-08-28; this assessment records the drift that existed before the move)* |
 | Vendored, not yet modeled | `spec-data/v0.8.2/` — hash-verified 2026-08-27 |
 | Live (published `master`) | **0.8.2** |
 | Core spec delta | 197 changed lines; 25 of 93 numbered sections |

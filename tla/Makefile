@@ -30,7 +30,7 @@ RUN          := $(PODMAN) run --rm $(PODMAN_RUN_CAPS) $(MOUNT) $(IMAGE)
 # tla2tools workers: bound for a laptop; raise for bigger state spaces.
 WORKERS      ?= 4
 
-.PHONY: image smoke translate sany tlc check repl clean
+.PHONY: image smoke translate sany tlc check repl clean matrix
 
 image:
 	$(PODMAN) build $(PODMAN_BUILD_CAPS) -t $(IMAGE) -f Containerfile .
@@ -62,29 +62,132 @@ repl:
 # cfgs and ConstInitBug* cinits) are exercised separately; see the reports.
 # ----------------------------------------------------------------------------------
 # TLC: each module's base .cfg against its .tla (safety + the liveness temporal
-# props declared in the cfg). 7 modules = the all-Core concurrency surface.
-TLC_GREEN := Reentry Conn Store Revoke Emit Register Core
+# props declared in the cfg). 9 modules = the all-Core concurrency surface, plus the
+# two modules added at 0.8.2 (Authority = §5.2 dispatch authority; Bounds = §5.9/§4.10
+# TTL-vs-chain_depth). StoreLive is Store's liveness slice at a smaller bound — TLC's
+# liveness graph exhausts the 2g cap at Store's safety bound of NReq = 4, so the two are
+# separate configs rather than one that silently drops a property.
+TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds
 
-.PHONY: tlc-green apalache-green green
+# NON-VACUITY WITNESSES (added 0.8.2). TLC has no ProVerif-style reachability query, so a
+# witness is an invariant asserted in order to be VIOLATED: the violation exhibits the
+# interesting state and proves the green results above are not vacuously true of an inert
+# model. Format: MODULE CFG. EXPECTED VERDICT FOR EVERY ROW: violation (exit 12).
+# This closes the gap disclosed in ../docs/PROPERTIES.md §C.4 since Phase 1.
+TLC_WITNESS := \
+  "Reentry   ReentryWitness" \
+  "Store     StoreWitness" \
+  "Conn      ConnWitness" \
+  "Revoke    RevokeWitness" \
+  "Emit      EmitWitness" \
+  "Register  RegisterWitness" \
+  "Core      CoreWitness" \
+  "Authority AuthorityWitness" \
+  "Bounds    BoundsWitness"
+
+# NEGATIVE CONTROLS. Every row MUST fail — a green here means the property has no teeth.
+# Format: MODULE CFG.
+TLC_NEG := \
+  "Reentry   ReentryBug" \
+  "Reentry   ReentryFrameBug" \
+  "Store     StoreRaceBug" \
+  "Store     StoreAdmitBug" \
+  "Store     StoreRefcountBug" \
+  "Store     StoreDropBug" \
+  "Conn      ConnBug" \
+  "Conn      ConnDropBug" \
+  "Revoke    RevokeIgnoreBug" \
+  "Revoke    RevokeLeakBug" \
+  "Revoke    RevokeNoConvergeBug" \
+  "Revoke    RevokeUnboundedBug" \
+  "Emit      EmitFireBug" \
+  "Emit      EmitMarkerBug" \
+  "Emit      EmitStallBug" \
+  "Register  RegisterAtomicBug" \
+  "Register  RegisterSysGuardBug" \
+  "Register  RegisterWedgeBug" \
+  "Core      CoreBug" \
+  "Core      CoreEstabBug" \
+  "Core      CoreRevokeBug" \
+  "Authority AuthorityOptAllowBug" \
+  "Authority AuthorityOptDenyBug" \
+  "Authority AuthoritySubGateBug" \
+  "Authority AuthorityInheritBug" \
+  "Bounds    BoundsEqualBug" \
+  "Bounds    BoundsRatioBug" \
+  "Bounds    BoundsDoubleCountBug" \
+  "Bounds    BoundsCodeBug"
+
+.PHONY: tlc-green apalache-green green tlc-witness tlc-neg
 tlc-green:
 	@for s in $(TLC_GREEN); do \
 	  echo "== TLC $$s =="; \
 	  $(RUN) tlc2.TLC -workers $(WORKERS) -config $$s.cfg $$s.tla || exit 1; \
 	done
+	@echo "== TLC Store (liveness slice, StoreLive.cfg) =="
+	@$(RUN) tlc2.TLC -workers $(WORKERS) -config StoreLive.cfg Store.tla || exit 1
+
+# Each witness MUST be violated. Inverted exit status: a clean run is the failure.
+tlc-witness:
+	@for row in $(TLC_WITNESS); do \
+	  set -- $$row; mod=$$1; cfg=$$2; \
+	  echo "== TLC witness $$mod/$$cfg (MUST be violated) =="; \
+	  if $(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla >/dev/null 2>&1; then \
+	    echo "FAIL: $$cfg reported NO violation — the witnessed state is unreachable, so"; \
+	    echo "      $$mod's green results may be vacuous. This is a real regression."; \
+	    exit 1; \
+	  else echo "   ok (violated as required)"; fi; \
+	done
+
+# Each negative control MUST fail. Inverted exit status: a clean run is the failure.
+tlc-neg:
+	@for row in $(TLC_NEG); do \
+	  set -- $$row; mod=$$1; cfg=$$2; \
+	  echo "== TLC neg control $$mod/$$cfg (MUST fail) =="; \
+	  if $(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla >/dev/null 2>&1; then \
+	    echo "FAIL: $$cfg reported GREEN — the property it targets has no teeth."; \
+	    exit 1; \
+	  else echo "   ok (failed as required)"; fi; \
+	done
 
 # Apalache: prove each module's key safety invariant INDUCTIVE (unbounded) —
 # base case (Init => Inv, length 0) and inductive step (IndInit /\ Next => Inv',
-# length 1). 8 invariants across 5 modules. Operator names are in each *Apalache.tla
+# length 1). Operator names are in each *Apalache.tla
 # header. Format per line: MODULE CINIT INV INDINIT
+# 9 invariants across 5 modules (was 8 at v0.8.0; StoreApalache InvUAF is the §4.8 RT-13a
+# refcount use-after-free added at 0.8.2).
 APALACHE_GREEN := \
   "RevokeApalache ConstInitOK InvDet IndInitDet" \
   "RevokeApalache ConstInitOK InvRev IndInitRev" \
   "StoreApalache  ConstInitOK InvRace IndInitRace" \
   "StoreApalache  ConstInitOK InvBound IndInitBound" \
+  "StoreApalache  ConstInitOK InvUAF IndInitUAF" \
   "ConnApalache   ConstInitOK Inv IndInit" \
   "EmitApalache   ConstInitOK InvIff IndInitIff" \
   "EmitApalache   ConstInitOK InvType IndInitType" \
   "RegisterApalache ConstInitOK Inv IndInit"
+
+# Apalache NEGATIVE CONTROLS. Format: MODULE CINIT INV INIT LENGTH. Every row MUST report an
+# error. NOTE the §4.8 refcount control (ConstInitBugRefs) runs BOUNDED FROM Init against the
+# UNSTRENGTHENED InvUAFPlain, not inductively: RefcountSound asserts the split RMW states are
+# unreachable, so under SyncRefs = FALSE it is false and any inductive obligation carrying it
+# would be satisfied VACUOUSLY — a green that means nothing. Stated here because the
+# distinction is invisible from the row itself.
+APALACHE_NEG := \
+  "StoreApalache ConstInitBugRace  InvRace      IndInitRace 1" \
+  "StoreApalache ConstInitBugAdmit ResourceBounded Init     8" \
+  "StoreApalache ConstInitBugRefs  InvUAFPlain  Init        8"
+
+.PHONY: apalache-neg
+apalache-neg:
+	@for row in $(APALACHE_NEG); do \
+	  set -- $$row; mod=$$1; ci=$$2; inv=$$3; init=$$4; len=$$5; \
+	  echo "== Apalache neg control $$mod $$ci/$$inv (MUST fail) =="; \
+	  if $(APRUN) check --cinit=$$ci --init=$$init --next=Next --inv=$$inv --length=$$len $$mod.tla >/dev/null 2>&1; then \
+	    echo "FAIL: $$ci/$$inv reported NoError — the invariant has no teeth."; \
+	    exit 1; \
+	  else echo "   ok (counterexample found as required)"; fi; \
+	done
 
 apalache-green:
 	@for row in $(APALACHE_GREEN); do \
@@ -97,6 +200,11 @@ apalache-green:
 
 # Full TLA+ green slice: bounded-exhaustive (TLC) + unbounded inductive (Apalache).
 green: tlc-green apalache-green
+
+# The FULL matrix: green + every negative control + every non-vacuity witness. `green` alone
+# proves the properties hold; it does NOT prove they could have failed or that the model does
+# anything. This target proves all three.
+matrix: tlc-green apalache-green tlc-neg apalache-neg tlc-witness
 
 # ----------------------------------------------------------------------------------
 # Apalache — the SYMBOLIC (SMT) cross-check engine (cross-check #A). Same .tla models,

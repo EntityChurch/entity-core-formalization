@@ -31,7 +31,7 @@ include caps.mk
 MAKE ?= make
 
 .PHONY: help build images smoke test lint fmt check check-tla check-spin \
-        check-provers crosscheck specdrift specdrift-gate clean caps
+        check-provers crosscheck matrix specdrift specdrift-gate clean caps
 
 # Where the live spec lives, for `make specdrift`. Override per-host:
 #   make specdrift LIVE_SPECS=/path/to/entity-core-protocol/specs
@@ -43,6 +43,7 @@ help:
 	@echo "  make build    build all 5 toolchain images (needs network; ~one-time)"
 	@echo "  make smoke    prove every containerized toolchain runs end-to-end"
 	@echo "  make check    run the GREEN verification matrix (all 4 engines)"
+	@echo "  make matrix   green + negative controls + non-vacuity witnesses (full gate)"
 	@echo "  make test     alias of check — the proof matrix IS this repo's suite"
 	@echo "  make specdrift  has the spec moved under the pin? (host python3 only)"
 	@echo "  make clean    remove generated model-checker artifacts"
@@ -86,18 +87,35 @@ smoke:
 	$(MAKE) -C tamarin smoke
 
 # --- check: the GREEN matrix — properties that MUST hold ---------------------
-# TLA+ : 7 modules bounded-exhaustive (TLC, safety+liveness) + 8 invariants
-#        proven inductive/unbounded (Apalache).
+# TLA+ : 9 modules bounded-exhaustive (TLC, safety+liveness; + Store's liveness
+#        slice) + 9 invariants proven inductive/unbounded (Apalache).
 # Spin : the 6 concurrency modules independently re-encoded (safety + LTL) —
 #        the cross-check that the TLA+ transcription is faithful.
-# Provers: 13 ProVerif + 12 Tamarin active-attacker lemmas (lockstep).
-# Negative controls (the *Bug variants that MUST be caught) are NOT in this
-# target — they live next to the specs and in the reports; this gate asserts the
-# secure side. See docs/FINAL-ASSURANCE-SUMMARY.md §3 for the full 76-run matrix.
+# Provers: 15 ProVerif + 14 Tamarin active-attacker lemmas (lockstep).
+# Negative controls and non-vacuity witnesses are NOT in this target — see
+# `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
 check: check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
-	@echo "MODELS of the V7 design (see docs/PROPERTIES.md for proven-vs-modeled)."
+	@echo "MODELS of the V8 design (see docs/PROPERTIES.md for proven-vs-modeled)."
+	@echo "NOTE: green alone does not show the properties COULD have failed, nor"
+	@echo "that the models reach any interesting state. Run 'make matrix' for that."
+
+# --- matrix: green + negative controls + non-vacuity witnesses ---------------
+# The full gate, and the one to trust. Three questions, not one:
+#   green    — does every modeled property hold?
+#   neg      — could it have failed? (every *Bug control MUST be caught)
+#   witness  — does the model do anything at all? (every witness MUST be violated)
+# A green-only run cannot distinguish a correct model from an inert one; the
+# witness slice is what closes that, and it was missing from the TLA+ track
+# entirely before 0.8.2 (docs/PROPERTIES.md §C.4).
+matrix:
+	$(MAKE) -C tla     matrix
+	$(MAKE) -C spin    green
+	$(MAKE) -C spin    neg
+	$(MAKE) -C tamarin matrix
+	@echo
+	@echo "FULL matrix complete — properties held, controls caught, witnesses fired."
 
 check-tla:
 	$(MAKE) -C tla green

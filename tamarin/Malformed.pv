@@ -1,0 +1,151 @@
+(* NEW THEORY at 0.8.2 — §5.6 CAP-6a: an unrepresentable temporal field makes the token
+ * MALFORMED, and the verifier MUST NOT read it as absent. ProVerif.
+ *
+ * Transcribed from spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md §5.6, verbatim:
+ *
+ *     "Ingest: an unrepresentable temporal field makes the token malformed (normative —
+ *      0.8.1, CAP-6a). The rules above bind the MINTER; this one binds the READER, which is
+ *      where the fail-open lives. A capability token whose `expires_at`, `not_before`, or
+ *      `created_at` is not representable as `primitive/uint` — a bignum, a negative integer,
+ *      or any value outside the range — is malformed. A verifier MUST refuse it and MUST NOT
+ *      treat the unrepresentable field as absent, because absent means *no expiry* and the
+ *      fail-open reading grants an immortal capability to whoever sent the malformed value.
+ *      Refusal is the `capability_denied` disposition of §5.2, not a decode-layer silent
+ *      drop. This is a MUST rather than a SHOULD because the two readings are a §5.10
+ *      cross-peer determinism split on a security field: one peer refuses the token and
+ *      another honors it forever, from the same bytes."
+ *
+ * WHY THIS IS A SEPARATE THEORY from Expiry.pv. Expiry.pv proves the §5.5 per-link temporal
+ * check — that an EXPIRED cap is rejected at the sampled t. That is a property of a
+ * well-formed token. CAP-6a is about a token that never gets as far as being comparable: the
+ * attacker's lever is not "my cap expired" but "my cap's expiry field cannot be read, so read
+ * it as nothing." Expiry.pv's model has no way to express an unreadable field — every tstamp
+ * in it participates in the `le` order — so extending it would have meant changing what its
+ * existing green result is ABOUT. This theory adds the reader-side surface beside it.
+ *
+ * THE MODELING CHOICE THAT CARRIES THE PROPERTY. `repr(x)` is a reduction that succeeds for
+ * every representable timestamp and for the ABSENT marker, and has NO rule for `tbad`. That
+ * is the whole encoding of "not representable as primitive/uint": a term you cannot reduce is
+ * a term you cannot compare, order, or default. The correct verifier applies `repr` BEFORE any
+ * temporal reasoning, so a malformed token stops there — which is the "MUST refuse" — and the
+ * fail-open reading is expressible only by removing that gate (MalformedBug.pv).
+ *
+ * ABSTRACTION BOUNDARY (D11): CBOR decoding is NOT modeled. `tbad` is an opaque constant
+ * standing for "the decoder produced a temporal value outside primitive/uint" — bignum,
+ * negative, or out of range are one case here, because §5.6 gives all three the same
+ * disposition. The `capability_denied` vs decode-layer-drop distinction §5.6 draws is a
+ * status-code question, not a reachability one, and is out of this model's scope.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+type tstamp.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* ---- the temporal domain ---- *)
+const t0: tstamp [data].       (* a past expiry — expired at the sampled t *)
+const t1: tstamp [data].       (* the sampled evaluation timestamp t (§5.10: sampled once) *)
+const t2: tstamp [data].       (* a future expiry — still live at t *)
+const tabsent: tstamp [data].  (* the ABSENT/null spelling. §5.6: "absent means no expiry" *)
+const tbad: tstamp [data].     (* UNREPRESENTABLE: bignum / negative / outside primitive/uint *)
+const wit: bitstring [data].
+
+(* ---- §5.6 CAP-6a representability ----
+ * repr(x) reduces for every value a verifier can actually read, INCLUDING the absent
+ * marker (a missing field is well-formed). It has no rule for tbad: an unrepresentable
+ * field is a term that cannot be reduced, hence cannot be compared or defaulted. *)
+fun repr(tstamp): bitstring
+reduc    repr(t0) = wit
+otherwise repr(t1) = wit
+otherwise repr(t2) = wit
+otherwise repr(tabsent) = wit.
+(* NOTE: deliberately no `repr(tbad)` rule. That absence IS the property. *)
+
+(* ---- finite tstamp order (§5.5 temporal): le(a,b) reduces iff a <= b ----
+ * tabsent and tbad participate in NO order relation: "no expiry" is not a late expiry,
+ * and an unrepresentable value is not comparable at all. *)
+fun le(tstamp, tstamp): bitstring
+reduc    le(t0, t0) = wit
+otherwise le(t0, t1) = wit
+otherwise le(t0, t2) = wit
+otherwise le(t1, t1) = wit
+otherwise le(t1, t2) = wit
+otherwise le(t2, t2) = wit.
+
+free skP: skey [private].   (* honest root authority P (verifier's own peer, §5.5) *)
+
+(* ---- events ---- *)
+event Issued(pkey, tstamp).            (* P signed a cap with this expires_at *)
+event Accepted(pkey, tstamp).          (* verifier accepted it under a TEMPORAL check *)
+event AcceptedNoExpiry(pkey, tstamp).  (* verifier accepted it as having NO EXPIRY —
+                                          i.e. an immortal capability — reading this value *)
+
+(* ================= THE CAP-6a LEMMAS ================= *)
+
+(* (1) THE FAIL-OPEN LEMMA — the sentence CAP-6a exists to enforce: a verifier MUST NOT
+ * treat an unrepresentable temporal field as absent. If it did, the attacker who sent the
+ * malformed value would hold a capability with no expiry: "the fail-open reading grants an
+ * immortal capability to whoever sent the malformed value." *)
+query g: pkey; event(AcceptedNoExpiry(g, tbad)).
+   (* expect: NOT reachable (false) — a malformed field is never read as "no expiry". *)
+
+(* (2) THE REFUSAL LEMMA — refusal is total, not merely "not treated as absent": the
+ * malformed token does not get accepted on any path. *)
+query g: pkey; event(Accepted(g, tbad)).
+   (* expect: NOT reachable (false) — "A verifier MUST refuse it". *)
+
+(* (3) COMPOSITION with §5.5 — a genuinely expired cap is still rejected. This theory must
+ * not accidentally weaken the temporal check while adding the representability gate. *)
+query g: pkey; event(Accepted(g, t0)).
+   (* expect: NOT reachable (false). *)
+
+(* (4) NON-VACUITY — a genuinely ABSENT expiry IS honored as no-expiry. Without this the
+ * fail-open lemma could hold simply because nothing is ever accepted as immortal. *)
+query g: pkey; event(AcceptedNoExpiry(g, tabsent)).
+   (* expect: reachable (true) — absent legitimately means no expiry. *)
+
+(* (5) NON-VACUITY — a live cap is still accepted under the temporal check. *)
+query g: pkey; event(Accepted(g, t2)).
+   (* expect: reachable (true) — the model has teeth. *)
+
+(* ---- honest principals ---- *)
+
+(* P issues a cap to A with expires_at = exp. The NETWORK picks exp, so the attacker can
+ * choose the malformed value — that is the threat CAP-6a addresses. *)
+let Pauthority(gA: pkey) =
+  in(net, exp: tstamp);
+  event Issued(gA, exp);
+  out(net, sign((gA, exp), skP)).
+
+(* Verifier. §5.6 CAP-6a binds the READER, and the order of the two checks is the property:
+ * representability is established BEFORE the field is interpreted, so an unrepresentable
+ * value never reaches the absent-vs-finite decision at all. *)
+let Verifier(gA: pkey) =
+  in(net, rc: bitstring);
+  let (=gA, exp: tstamp) = checksign(rc, pk(skP)) in
+  (* §5.6 CAP-6a INGEST GATE. `repr` does not reduce for tbad, so a malformed token stops
+   * here — the "MUST refuse" — before any temporal reasoning happens. *)
+  let okr = repr(exp) in
+  if exp = tabsent then
+    (* §5.6: absent means no expiry. Legitimate, and reachable only for the real absent
+     * marker because the gate above already excluded the unrepresentable one. *)
+    event AcceptedNoExpiry(gA, exp)
+  else
+    (* §5.5 temporal check at the single sampled t = t1: DENY iff expires_at < t. *)
+    let okv = le(t1, exp) in
+    event Accepted(gA, exp).
+
+process
+  out(net, pk(skP));
+  new skA: skey;
+  let gA = pk(skA) in
+  out(net, gA);
+  ( !Pauthority(gA) | !Verifier(gA) )

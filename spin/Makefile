@@ -53,7 +53,47 @@ shell:
 # Defect variants (DEFS=-D<DEFECT>) are the negative controls, run separately.
 SPIN_GREEN := reentry conn store revoke emit register
 
-.PHONY: green
+# NEGATIVE CONTROLS — each row MUST report errors > 0. Format: MODEL DEFS MODE.
+# MODE is `safety` (assertions / invalid-end) or `ltl` (acceptance cycles under -a -f).
+# Added at 0.8.2: store NOSYNCREFS (§4.8 RT-13a refcount use-after-free) and
+# reentry NOATOMICFRAME (§6.11(a') frame-write atomicity).
+SPIN_NEG := \
+  "reentry  -DSERIALIZED     safety" \
+  "reentry  -DNOATOMICFRAME  safety" \
+  "conn     -DNOENFORCE      safety" \
+  "conn     -DDROPFRAME      ltl" \
+  "store    -DNOSERIALIZE    safety" \
+  "store    -DNOADMIT        safety" \
+  "store    -DNOSYNCREFS     safety" \
+  "store    -DSILENTDROP     ltl" \
+  "revoke   -DNOHONOR        safety" \
+  "revoke   -DLEAKL1         safety" \
+  "revoke   -DNOCONVERGE     ltl" \
+  "emit     -DEMITFIRE       safety" \
+  "emit     -DEMITMARKER     safety" \
+  "emit     -DEMITSTALL      ltl" \
+  "register -DNOATOMIC       safety" \
+  "register -DNOSYSGUARD     safety" \
+  "register -DWEDGE          ltl"
+
+.PHONY: green neg
+# Each negative control MUST fail. Inverted exit status: a clean run is the failure.
+neg:
+	@for row in $(SPIN_NEG); do \
+	  set -- $$row; m=$$1; d=$$2; mode=$$3; \
+	  echo "== Spin neg control $$m $$d ($$mode, MUST fail) =="; \
+	  $(RUN) spin -a $$d $$m.pml >/dev/null || exit 1; \
+	  if [ "$$mode" = "safety" ]; then \
+	    out=$$($(RUN) sh -c "gcc -O2 -DNOCLAIM -o pan pan.c && ./pan" 2>&1); \
+	  else \
+	    out=$$($(RUN) sh -c "gcc -O2 -o pan pan.c && ./pan -a -f" 2>&1); \
+	  fi; \
+	  if echo "$$out" | grep -q "errors: 0"; then \
+	    echo "FAIL: $$m $$d reported errors: 0 — the property it targets has no teeth."; \
+	    exit 1; \
+	  else echo "   ok (failed as required)"; fi; \
+	done
+
 green:
 	@for m in $(SPIN_GREEN); do \
 	  echo "== Spin $$m (safety) =="; \

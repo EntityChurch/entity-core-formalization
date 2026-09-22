@@ -57,12 +57,23 @@ tamarin-interactive:
 # no *Bug variants). ProVerif proves all 13; Tamarin proves 12 (RevokeMech is the
 # documented non-terminating tool-asymmetry — EXCLUDED here; run it by hand with a
 # kill switch, see PHASE2-FORMALIZATION-REPORT.md). Bug controls run separately.
-PV_GREEN := Binding BindingReplay Caveats DeepChain DeepChainN DepthBound Expiry \
-            Multisig MultisigKN NoEscalation PersistentRecheck Revoke Unforge
-TM_GREEN := Binding Caveats DeepChain DeepChainN DepthBound Expiry \
-            Multisig MultisigKN NoEscalation PersistentRecheck Revoke Unforge
+# Added at 0.8.2: Malformed (§5.6 CAP-6a unrepresentable-temporal-field ingest) and
+# ChainTopology (§5.8 conformance topology — a NON-ISSUING third-party verifier).
+PV_GREEN := Binding BindingReplay Caveats ChainTopology DeepChain DeepChainN DepthBound \
+            Expiry Malformed Multisig MultisigKN NoEscalation PersistentRecheck Revoke Unforge
+TM_GREEN := Binding Caveats ChainTopology DeepChain DeepChainN DepthBound \
+            Expiry Malformed Multisig MultisigKN NoEscalation PersistentRecheck Revoke Unforge
 
-.PHONY: proverif-green tamarin-green green
+# NEGATIVE CONTROLS — every theory here MUST report at least one false query (ProVerif) or
+# falsified lemma (Tamarin). A clean run means the lemma has no teeth.
+PV_NEG := BindingBug BindingReplayBug CaveatsBug ChainTopologyBug DeepChainBug DeepChainNBug \
+          DepthBoundBug ExpiryBug MalformedBug MultisigBug MultisigKNBug NoEscalationBug \
+          PersistentRecheckBug RevokeBug UnforgeBug
+TM_NEG := BindingBug CaveatsBug ChainTopologyBug DeepChainBug DeepChainNBug DepthBoundBug \
+          ExpiryBug MalformedBug MultisigBug MultisigKNBug NoEscalationBug \
+          PersistentRecheckBug RevokeBug UnforgeBug
+
+.PHONY: proverif-green tamarin-green green proverif-neg tamarin-neg neg
 proverif-green:
 	@for t in $(PV_GREEN); do \
 	  echo "== ProVerif $$t =="; $(PV_RUN) proverif $$t.pv || exit 1; \
@@ -73,8 +84,34 @@ tamarin-green:
 	  echo "== Tamarin $$t =="; $(TM_RUN) tamarin-prover --prove $$t.spthy || exit 1; \
 	done
 
+# Each negative control MUST fail. Inverted exit status: a clean run is the failure.
+# ProVerif exits 0 even when a query is false, so the verdict is read from the RESULT lines:
+# a *secure* theory has every "not event(...)" query true; a bug theory must have at least one
+# false. Tamarin's --prove exits non-zero when a lemma is falsified, but we grep as well so a
+# tool-level error cannot masquerade as a detected defect.
+proverif-neg:
+	@for t in $(PV_NEG); do \
+	  echo "== ProVerif neg control $$t (MUST have a false query) =="; \
+	  out=$$($(PV_RUN) proverif $$t.pv 2>&1) || true; \
+	  if echo "$$out" | grep -q "^RESULT.*is false\.$$"; then echo "   ok (query falsified)"; \
+	  else echo "FAIL: $$t had no false query — the lemma it targets has no teeth."; exit 1; fi; \
+	done
+
+tamarin-neg:
+	@for t in $(TM_NEG); do \
+	  echo "== Tamarin neg control $$t (MUST have a falsified lemma) =="; \
+	  out=$$($(TM_RUN) tamarin-prover --prove $$t.spthy 2>&1) || true; \
+	  if echo "$$out" | grep -q "falsified"; then echo "   ok (lemma falsified)"; \
+	  else echo "FAIL: $$t had no falsified lemma — the lemma it targets has no teeth."; exit 1; fi; \
+	done
+
+neg: proverif-neg tamarin-neg
+
 # Both provers, lockstep — the active-attacker green slice.
 green: proverif-green tamarin-green
+
+# The FULL prover matrix: both provers on both the secure theories and the bug controls.
+matrix: green neg
 
 clean:
 	rm -rf output/ *.proof 2>/dev/null || true

@@ -1,0 +1,171 @@
+(* NEGATIVE CONTROL for ChainTopology.pv — §5.8 CONFORMANCE TOPOLOGY. ProVerif.
+ *
+ * THE DEFECT: the verifier canonicalizes the leaf's peer-relative pattern against the ROOT
+ * AUTHORITY's frame instead of the leaf's own granter frame (§5.5a). A foreign-granted bare
+ * `*` therefore widens into the ROOT's namespace.
+ *
+ * EXPECTED VERDICT — and this is the entire point of the §5.8 topology rule:
+ *     lemma (1) no escalation into the VERIFIER's namespace ... STILL TRUE
+ *     lemma (2) no escalation into the ROOT's namespace ...... FALSIFIED
+ *     lemma (3) A's OWN namespace ........................... ALSO LOST (now unreachable)
+ *
+ * Lemma (3) flipping is worth stating rather than glossing: the defect does not merely WIDEN
+ * the leaf, it MOVES the frame wholesale, so the leaf stops covering the namespace it was
+ * actually granted over and starts covering the root's. Both halves are wrong, and a
+ * same-peer topology sees neither.
+ *
+ * Run this same defect in DeepChain.pv's topology, where the verifier IS the root, and lemma
+ * (2) collapses into lemma (1) — which still passes. The bug would report clean. §5.8: "a
+ * verifier that issued a link... cannot witness the cross-peer seam"; "same-peer/local
+ * validation can pass while the cross-peer provenance is wrong." This control is that
+ * sentence, executed.
+ *
+ * Original header follows.
+ * ---------------------------------------------------------------------------------------
+ * §5.8 CONFORMANCE TOPOLOGY: a non-issuing third-party verifier.
+ *
+ * Transcribed from spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md §5.8, verbatim:
+ *
+ *     "Conformance topology (normative). A registered site's cross-peer provenance is
+ *      conformant only if it is verified by a party that constructed NO LINK in the chain. A
+ *      verifier that issued a link holds the local identity-collapse (§5.2: root == grantee
+ *      == in-chain granter in the same-peer case) and therefore CANNOT WITNESS the cross-peer
+ *      seam; only a non-issuing third-party verifier exercises the property the registry
+ *      exists to guarantee. This is why same-peer/local validation can pass while the
+ *      cross-peer provenance is wrong, and it is the single property that makes the registry
+ *      self-checking rather than an open-ended audit."
+ *
+ * WHY THIS THEORY EXISTS — AND WHAT IT SAYS ABOUT DeepChain.pv.
+ * DeepChain.pv / DeepChainN.pv prove the §5.5a granter-frame property: a foreign-granted bare
+ * `*` does not canonicalize into the VERIFIER's namespace. Both put the verifier in the ROOT
+ * ISSUER's seat (`skV` is simultaneously the root authority and the verifier's own peer).
+ * Those results are sound for the §5.5a property they claim. But in that topology the root
+ * frame and the verifier frame are THE SAME PEER, so "canonicalize against the root" and
+ * "canonicalize against the verifier" are one indistinguishable choice — and a defect that
+ * picks the root frame is invisible. That is precisely the local identity-collapse §5.8
+ * names, and §5.8's topology rule is what forces it open.
+ *
+ * This theory separates all four roles into distinct peers:
+ *     P — the ROOT authority          (issues the root link P -> A)
+ *     A — the in-chain GRANTER        (issues the leaf link A -> B; the leaf's granter frame)
+ *     B — the GRANTEE
+ *     W — the VERIFIER, which constructed NO LINK  <-- the §5.8 requirement
+ *
+ * With P, A and W distinct, three canonicalization frames are distinguishable where DeepChain
+ * could distinguish only two. Lemma (2) below is the one DeepChain structurally CANNOT state.
+ *
+ * ABSTRACTION BOUNDARY (D11): the §5.4 path-segment matcher is Lean's and stays abstract
+ * (canon/covok are symbolic, as in DeepChain.pv). Per-link attenuation ORDER is Lemma 1's
+ * job (Caveats/NoEscalation) and is not re-proved here — the root grants the open `/*/*` so
+ * attenuation is trivially satisfied and all security weight sits on the canonicalization
+ * FRAME. Revocation and temporal validity are other theories'. What is added over DeepChain
+ * is ONLY the topology: same crypto wall, same matcher abstraction, four roles instead of
+ * three.
+ *)
+
+set traceDisplay = long.
+
+type skey.
+type pkey.
+
+free net: channel.
+
+(* ---- symbolic signatures (V7 §7.3) — the crypto wall ---- *)
+fun pk(skey): pkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; checksign(sign(m, k), pk(k)) = m.
+
+(* Four DISTINCT peers — this separation is the whole point of the theory (§5.8). *)
+free skP: skey [private].   (* P — the ROOT authority. NOT the verifier. *)
+free skA: skey [private].   (* A — the in-chain GRANTER of the leaf link *)
+free skW: skey [private].   (* W — the VERIFIER, which constructs NO link in the chain *)
+
+(* ---- resources & patterns (V7 §5.5a) ---- *)
+fun res(pkey, bitstring): bitstring [data].   (* a concrete resource res(peer_ns, path) *)
+const star: bitstring [data].                 (* bare peer-relative wildcard `*` *)
+const allp: bitstring [data].                 (* `/*/*` open cross-peer wildcard *)
+fun awild(pkey): bitstring [data].            (* `/{p}/*` absolute namespace wildcard *)
+
+(* canonicalize a pattern against a frame (§5.5a). The bare `*` resolves to that frame's
+ * namespace; absolute forms are frame-independent. WHICH frame is supplied at the call site
+ * is the entire security question — see the Verifier below. *)
+fun canon(bitstring, pkey): bitstring
+reduc
+    forall fr: pkey;            canon(star, fr)     = awild(fr)
+  otherwise
+    forall p: pkey, fr: pkey;   canon(awild(p), fr) = awild(p)
+  otherwise
+    forall fr: pkey;            canon(allp, fr)     = allp.
+
+(* coverage: does a canonicalized pattern cover a concrete resource? *)
+fun covok(bitstring, bitstring): bitstring
+reduc
+    forall p: pkey, path: bitstring; covok(awild(p), res(p, path)) = res(p, path)
+  otherwise
+    forall r: bitstring;             covok(allp, r)                = r.
+
+(* ---- events ---- *)
+event Delegated(pkey, pkey, bitstring).   (* A delegated to gB the resource pattern *)
+event Authorized(bitstring).              (* the THIRD-PARTY verifier W authorized a target *)
+
+(* ================= THE §5.8 TOPOLOGY LEMMAS ================= *)
+
+(* (1) NO ESCALATION INTO THE VERIFIER'S NAMESPACE.
+ * A's foreign-granted bare `*` must not reach W's namespace. This is the property
+ * DeepChain.pv already proves — restated here so the topology change is visibly a
+ * STRENGTHENING and not a substitution. *)
+query s: bitstring; event(Authorized(res(pk(skW), s))).
+   (* expect: NOT reachable (false). *)
+
+(* (2) NO ESCALATION INTO THE ROOT AUTHORITY'S NAMESPACE.  <-- THE NEW LEMMA
+ * A's bare `*` means A's own namespace, so it must not reach P's namespace either. In
+ * DeepChain.pv this statement is INEXPRESSIBLE: there the root IS the verifier, so this
+ * query and query (1) would be the same query, and a verifier that canonicalized against the
+ * root frame would satisfy both while being wrong. Separating W from P is exactly what §5.8's
+ * conformance topology requires, and this is the seam it exists to expose. *)
+query s: bitstring; event(Authorized(res(pk(skP), s))).
+   (* NEG CONTROL expect: REACHABLE (true) — the leaf widened into the ROOT's namespace. *)
+
+(* (3) NON-VACUITY — the bare-`*` leaf DOES legitimately authorize A's OWN namespace. Without
+ * this, lemmas (1) and (2) could hold merely because nothing is ever authorized. *)
+query s: bitstring; event(Authorized(res(pk(skA), s))).
+   (* expect: reachable (true) — the model has teeth. *)
+
+(* ---- honest principals ---- *)
+
+(* P, the root authority, issues the root link to A granting the broad `/*/*` (so attenuation
+ * is not the gate here — the canonicalization frame is). *)
+let Proot(gA: pkey) =
+  out(net, sign((gA, allp), skP)).
+
+(* A holds the P-rooted cap and delegates to any gB with a bare-`*` (peer-relative) resource.
+ * A's intent is "my own namespace" — A is the in-chain granter and therefore the frame. *)
+let Delegator(gA: pkey) =
+  in(net, rc: bitstring);
+  let (=gA, rres: bitstring) = checksign(rc, pk(skP)) in   (* root link signed by P, grantee A *)
+  in(net, gB: pkey);
+  event Delegated(gA, gB, star);
+  out(net, sign((gB, star, gA), skA)).                     (* leaf: (grantee, pattern, granter A) *)
+
+(* THE THIRD-PARTY VERIFIER W (§5.8). W constructed no link: it holds neither skP nor skA, and
+ * resolves every identity in the chain from what the envelope carries (§5.8 chain inclusion).
+ * §5.5a: canonicalize the leaf's pattern against the LEAF'S OWN GRANTER frame (gA) — not the
+ * root's, not its own. Because P, A and W are three distinct peers here, choosing any of the
+ * three frames yields a different verdict, and the model can tell them apart. *)
+let VerifierW(gP: pkey, gA: pkey) =
+  in(net, (rc: bitstring, lc: bitstring, target: bitstring));
+  let (=gA, rres: bitstring) = checksign(rc, gP) in                (* root link P->A *)
+  let (=allp) = rres in                                            (* root grants /*/* *)
+  let (gB: pkey, lpat: bitstring, =gA) = checksign(lc, gA) in      (* leaf A->B; §5.5 linkage gA *)
+  (* DEFECT (§5.5a violated): canonicalize against the ROOT frame gP, not the leaf's granter
+   * frame gA. A bare `*` granted by A now resolves to P's namespace. Invisible in a
+   * same-peer topology, where gP and the verifier's own identity are the same peer. *)
+  let okwit: bitstring = covok(canon(lpat, gP), target) in
+  event Authorized(target).
+
+process
+  out(net, pk(skP));   (* P identity public — carried in `included` per §5.8 *)
+  out(net, pk(skW));   (* W identity public *)
+  let gA = pk(skA) in
+  out(net, gA);        (* A identity public *)
+  ( !Proot(gA) | !Delegator(gA) | !VerifierW(pk(skP), gA) )

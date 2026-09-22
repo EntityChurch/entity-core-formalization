@@ -5,6 +5,15 @@ cap-chain fragment closes **automatically** or needs heavy hand-holding. This sp
 exists to *price the proof-termination curve* before anyone commits to a full model.
 Expect it to be harder than Spike A — that's the point.
 
+> **This file is the Phase-0 spike brief, kept as written.** It describes the original
+> capability-unforgeability go/no-go gate, not the current state of the track. Today the
+> prover workspace closes **14 lemmas in ProVerif/Tamarin lockstep** (ProVerif 15, incl.
+> `BindingReplay`), each with a falsifying negative control. Added at 0.8.2: `Malformed`
+> (§5.6 CAP-6a — an unrepresentable temporal field is refused, never read as absent) and
+> `ChainTopology` (§5.8 — cross-peer provenance at a verifier that constructed no link in
+> the chain). Start at `../docs/FINAL-ASSURANCE-SUMMARY.md` and `../docs/PROPERTIES.md`.
+
+
 ## Setup — make + podman only (no host installs)
 
 **Build discipline: all toolchains run in podman, driven by `make`.** Neither prover
@@ -29,7 +38,7 @@ lemma automatically and agree, and both find the attack in the negative control 
 
 ## The modeling target — capability unforgeability
 
-Source: `../spec-data/v0.8.0/ENTITY-CORE-PROTOCOL.md` §5 (capability: §5.4 pattern
+Source: `../spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md` §5 (capability: §5.4 pattern
 match, §5.5 chain verification + root-granter-local, §5.5a granter-frame
 canonicalization, §5.6 attenuation) + §7.3/§7.4 (signatures) + §1.5 (peer-id).
 

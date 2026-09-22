@@ -1,0 +1,129 @@
+theory ChainTopologyBug
+/*
+ * NEGATIVE CONTROL for ChainTopology.spthy — §5.8 CONFORMANCE TOPOLOGY. Tamarin (lockstep
+ * cross-check of ChainTopologyBug.pv).
+ *
+ * THE DEFECT: the verifier canonicalizes the leaf's peer-relative pattern against the ROOT
+ * AUTHORITY's frame instead of the leaf's own granter frame (§5.5a).
+ *
+ * EXPECTED VERDICT — the entire point of the §5.8 topology rule:
+ *     no_escalation_to_verifier ....... STILL VERIFIED
+ *     no_escalation_to_root ........... FALSIFIED
+ *
+ * Run this same defect in DeepChain's topology, where the verifier IS the root, and the
+ * second lemma collapses into the first — which still passes. The bug reports clean. §5.8:
+ * "a verifier that issued a link... cannot witness the cross-peer seam."
+ *
+ * Original header follows.
+ * ---------------------------------------------------------------------------------------
+ * §5.8 CONFORMANCE TOPOLOGY: a non-issuing third-party verifier.
+ *
+ * §5.8 (spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md), verbatim:
+ *
+ *     "Conformance topology (normative). A registered site's cross-peer provenance is
+ *      conformant only if it is verified by a party that constructed NO LINK in the chain. A
+ *      verifier that issued a link holds the local identity-collapse (§5.2: root == grantee
+ *      == in-chain granter in the same-peer case) and therefore CANNOT WITNESS the cross-peer
+ *      seam... This is why same-peer/local validation can pass while the cross-peer
+ *      provenance is wrong."
+ *
+ * DeepChain.spthy / DeepChainN.spthy put the verifier in the ROOT ISSUER's seat, so there the
+ * root frame and the verifier frame are one peer and a defect that picks the root frame is
+ * indistinguishable from correct behaviour. This theory separates all four roles:
+ *
+ *     P — ROOT authority        (issues the root link P -> A)
+ *     A — in-chain GRANTER      (issues the leaf link A -> B; the leaf's granter frame)
+ *     B — GRANTEE
+ *     W — VERIFIER, constructs NO LINK   <-- the §5.8 requirement
+ *
+ * Lemma no_escalation_to_root is the one DeepChain structurally cannot state.
+ *
+ * ABSTRACTION BOUNDARY (D11): the §5.4 path matcher stays abstract (the Canon/Cov fact
+ * tables, as in DeepChain.spthy); per-link attenuation order is Caveats'/NoEscalation's job
+ * and is trivial here because the root grants the open cross-peer wildcard 'allp'. What is added over DeepChain
+ * is ONLY the topology.
+ */
+begin
+
+builtins: signing
+
+restriction Equality: "All x y #i. Eq(x,y) @ i ==> x = y"
+restriction OneP:     "All #i #j. OnlyP() @ i & OnlyP() @ j ==> #i = #j"
+restriction OneA:     "All #i #j. OnlyA() @ i & OnlyA() @ j ==> #i = #j"
+restriction OneW:     "All #i #j. OnlyW() @ i & OnlyW() @ j ==> #i = #j"
+
+// Four DISTINCT peers — this separation IS the theory (§5.8 conformance topology).
+rule Setup_P:   // ROOT authority
+    [ Fr(~skP) ] --[ OnlyP() ]-> [ !LtkP(~skP), !PkP(pk(~skP)), Out(pk(~skP)) ]
+rule Setup_A:   // in-chain GRANTER
+    [ Fr(~skA) ] --[ OnlyA() ]-> [ !LtkA(~skA), !PkA(pk(~skA)), Out(pk(~skA)) ]
+rule Setup_W:   // VERIFIER — holds no signing key used in the chain
+    [ Fr(~skW) ] --[ OnlyW(), VerifierIs(pk(~skW)) ]-> [ !PkW(pk(~skW)), Out(pk(~skW)) ]
+
+// P issues the ROOT link to A granting the open cross-peer wildcard 'allp' (so attenuation is not the gate here
+// — the canonicalization FRAME is).
+rule Root_Issue:
+    let m = <pk(~skA), 'allp'>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !PkA(pk(~skA)) ]
+  --[ RootIssued(pk(~skP), pk(~skA)) ]->
+    [ Out(<pk(~skA), 'allp', sig>) ]
+
+// A delegates to any gB with a bare peer-relative '*' — A's intent is "my own namespace".
+// A is the in-chain granter and therefore the correct canonicalization frame.
+rule Leaf_Delegate:
+    let lm = <gB, 'star', pk(~skA)>  lsig = sign(lm, ~skA) in
+    [ !LtkA(~skA), In(gB) ]
+  --[ Delegated(pk(~skA), gB, 'star') ]->
+    [ Out(<gB, 'star', pk(~skA), lsig>) ]
+
+/* §5.5a canonicalization, as a fact table over the three frames the verifier could pick.
+ * Canon(pattern, frame, result): a bare 'star' resolves to that frame's namespace. */
+rule Setup_Canon:
+    [ In(fr) ] --> [ !Canon('star', fr, <'awild', fr>) ]
+
+/* Coverage: an absolute namespace wildcard covers resources in that namespace. */
+rule Setup_Cov:
+    [ In(p), In(path) ] --> [ !Cov(<'awild', p>, <'res', p, path>) ]
+
+// THE THIRD-PARTY VERIFIER W (§5.8). W constructed no link and resolves every identity from
+// what the envelope carries. §5.5a: canonicalize the leaf against the LEAF'S OWN GRANTER
+// frame (gA) — not the root's, not its own. With P, A and W distinct, all three frames give
+// different verdicts and the model can tell them apart.
+rule Verify_W:
+    let rm = <gA, 'allp'>
+        lm = <gB, 'star', gA>
+    in
+    [ !PkP(pkP), !PkA(gA), !PkW(pkW),
+      In(<gA, 'allp', rsig>),            // root link P -> A, from `included` (§5.8)
+      In(<gB, 'star', gA, lsig>),        // leaf link A -> B, granter gA
+      // DEFECT (§5.5a violated): canonicalize against the ROOT frame pkP, not the leaf's
+      // granter frame gA. A bare wildcard granted by A now resolves into P's namespace.
+      // Invisible in a same-peer topology, where pkP and the verifier are one peer.
+      !Canon('star', pkP, cpat),
+      !Cov(cpat, target) ]
+  --[ Eq(verify(rsig, rm, pkP), true),
+      Eq(verify(lsig, lm, gA), true),
+      Authorized(target) ]->
+    [ ]
+
+/* ================= THE §5.8 TOPOLOGY LEMMAS ================= */
+
+// (1) No escalation into the VERIFIER's namespace. This is what DeepChain already proves —
+// restated so the topology change is visibly a STRENGTHENING, not a substitution.
+lemma no_escalation_to_verifier:
+  "not (Ex w s #i #v. Authorized(<'res', w, s>) @ i & VerifierIs(w) @ v)"
+
+// (2) NO ESCALATION INTO THE ROOT AUTHORITY'S NAMESPACE.  <-- THE NEW LEMMA
+// A's bare peer-relative wildcard means A's own namespace and must not reach P's. In DeepChain's topology this
+// statement collapses into lemma (1), so a verifier canonicalizing against the root frame
+// satisfies both while being wrong. Separating W from P is what §5.8 requires.
+// NEG CONTROL expect: FALSIFIED.
+lemma no_escalation_to_root:
+  "not (Ex pkP pkA s #i #r. Authorized(<'res', pkP, s>) @ i & RootIssued(pkP, pkA) @ r)"
+
+// (3) NON-VACUITY — the bare-'*' leaf DOES legitimately authorize A's OWN namespace.
+lemma authorized_own_namespace_reachable:
+  exists-trace
+  "Ex pkA g s #i #d. Authorized(<'res', pkA, s>) @ i & Delegated(pkA, g, 'star') @ d"
+
+end

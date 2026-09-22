@@ -19,6 +19,20 @@ Read with `tla/PHASE1-FORMALIZATION-REPORT.md` (the models being corroborated).
 
 ---
 
+> **0.8.2 update.** The cross-check now spans the 0.8.2 surface: Spin re-encodes §6.11(a′)
+> frame-write atomicity and §4.8's refcount use-after-free alongside the original modules
+> (**17 negative controls**, up from 6 wired into the gate), and Apalache lifts
+> `NoUseAfterFree` to an **inductive (unbounded)** proof — the 9th such invariant.
+>
+> The cross-check also did the thing it exists for, on the modeller rather than the protocol:
+> ProVerif and Tamarin **disagreed** on a negative control for the new §5.8 `ChainTopology`
+> theory. The cause was a hand-written Tamarin lemma whose `pkW` variable was never bound to
+> the verifier it named, so it asserted far less than it appeared to. The disagreement was
+> the signal; the lemma was fixed and both provers then agreed exactly. Recorded here and in
+> `docs/PROPERTIES.md` §C.1 because "the two engines could share a misreading" is the
+> standing caveat, and this is a case where they did not.
+
+
 ## Why this phase existed (the gap it closes)
 
 The Phase-1 TLA+ work was internally rigorous but **one encoding, by one author,
@@ -129,7 +143,7 @@ use `--init=Init --length=0` for the base case and `--cinit=ConstInitBug*` for t
 - **The 5th wall is narrowed, not closed.** Two independent paradigms now agree across the
   whole modeled surface — but they could in principle share a misreading of V7. Independent
   encoding + independent engine *narrow* the fidelity gap substantially; only human review
-  against `spec-data/v0.8.0/` closes it.
+  against `spec-data/v0.8.2/` closes it.
 
 ## Bottom line
 

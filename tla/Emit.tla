@@ -220,4 +220,13 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 \* §6.10: the emit pathway always completes its work; a core-only peer has no consumers, so
 \* there is no cascade/convergence obligation — this just confirms emit does not wedge.
 EmitTerminates == <>(ops = MaxOps)
+
+\* NON-VACUITY WITNESS (PROPERTIES.md §C.4 / EmitWitness.cfg). TLC has no ProVerif-style
+\* reachability query, so a witness is expressed as an invariant that MUST BE VIOLATED. A
+\* violation is the PASS condition: it exhibits a reachable state in which
+\* a store or tree EVENT actually FIRED — so the §6.10 event-iff-real-work results are not
+\* vacuously true of an emitter that never emits.
+\* Checking it GREEN would mean the interesting state is unreachable — i.e. the results above
+\* hold of an inert model. Expected verdict: VIOLATION.
+WitnessEventFired == ~(sEvt \/ tEvt)
 ====

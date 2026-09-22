@@ -1,8 +1,8 @@
 # FINAL ASSURANCE SUMMARY — entity-core-formalization
 
-**Status: complete and paused clean.** This is the capstone note over
+**Status: current against protocol 0.8.2.** This is the capstone note over
 everything this repo produced: the TLA+ concurrency/liveness model and the
-Tamarin/ProVerif active-attacker model of the Entity Core Protocol V7 design — each now
+Tamarin/ProVerif active-attacker model of the Entity Core Protocol V8 design — each now
 independently cross-checked. It is written so a future reader (or a returning agent) can
 understand *what was proved, how far it goes, and what it deliberately does not say*
 without re-reading the underlying reports.
@@ -13,7 +13,7 @@ concurrency + liveness, and is cross-checked with **two independent engines**: a
 **Spin** (Promela) re-encoding of every concurrency module — written from the spec, not
 translated — and **Apalache** SMT proofs that turn the key safety invariants from *checked at
 a bound* into *proven inductive (unbounded)*. **Tamarin + ProVerif** (two provers, lockstep)
-cover the active-attacker surface (12 lemmas). Every property is §-cited to `spec-data/v0.8.0/`,
+cover the active-attacker surface (14 lemmas). Every property is §-cited to `spec-data/v0.8.2/`,
 every secure result has a negative control with teeth, and the scope boundaries — above all the
 **5th wall (spec↔model fidelity)** — are stated, not hidden. This is a strong machine-checked
 **demonstrator, not a closed proof** of the protocol: it now needs **human review against the
@@ -23,18 +23,17 @@ extension protocols, gated on vendoring `EXTENSION-*`).
 If you are resuming work, read this capstone first — the optional leftovers are enumerated
 in §5 (Findings and residual risk).
 
-> **Read this before treating the capstone as current.** Everything here certifies models
-> written against the SHA-pinned `spec-data/v0.8.0/` — the protocol at spec version
-> **0.8.0**. As of 2026-08-27 the protocol is at **0.8.2**, and **13 of the 26 spec
-> sections the models cite have moved**, including §6.11, the reentry contract this
-> project spiked on. That count overstates the change: 16 lines of pre-existing text
-> altered against 105 added, and no property proved here is contradicted.
-> The results below are reproducible and remain true of the 0.8.0 design; they are not a
-> current statement about the protocol today. The drift is even across all three tracks
-> (52%/59%/54% of cited sections); what is stable is the *depth* — §5.5 chain verification
-> (33 model files) and §7.3 signatures (22) did not move.
-> Method, per-section detail and the re-check work-list: `docs/SPEC-DRIFT-ASSESSMENT.md`.
-> The §5 leftovers below are no longer all optional — re-vendor-and-re-check now leads.
+> **Which spec version this capstone certifies.** Everything here certifies models written
+> against the SHA-pinned `spec-data/v0.8.2/` — the protocol at spec version **0.8.2**, the
+> current published line. `make specdrift` reports **no drift** against the live spec.
+>
+> This was not always so, and the history is worth keeping: the models were pinned at 0.8.0
+> while the protocol advanced to 0.8.2, and `docs/SPEC-DRIFT-ASSESSMENT.md` records how that
+> gap was measured — from the `§`-citations the models themselves carry, not from a prose
+> summary. That measurement is what scoped the re-target: the structure was completely
+> stable (nothing added, removed or renumbered; 0 of 35 citations broken), so the work was
+> **new normative surface to model**, not contradicted results. It is modeled, and the pin
+> moved as the last step. §2a below is the record of what changed.
 
 ---
 
@@ -52,7 +51,7 @@ layer Lean structurally cannot reach (`docs/ASSURANCE-MAP.md`, rows 4 & 5):
    escalate, replay, reflect, or run a confused deputy? → **Tamarin / ProVerif**.
 
 This repo answered both at demonstrator altitude, against the SHA-pinned vendored
-spec `spec-data/v0.8.0/`, with every model abstracting the Lean-owned verdict interior
+spec `spec-data/v0.8.2/`, with every model abstracting the Lean-owned verdict interior
 away on purpose.
 
 ## 2. What was built — the three workstreams
@@ -78,20 +77,29 @@ Rather than trust the reports, the **entire model matrix was re-run from the pin
 container images** and each result graded against its expected verdict. All three
 matrices reproduce exactly what the reports claim.
 
+As of the 0.8.2 re-target this is a **single command** — `make matrix` — and it asks three
+questions rather than one: do the properties hold (**green**), could they have failed
+(**negative controls**), and does the model reach an interesting state at all
+(**non-vacuity witnesses**). The third is new at 0.8.2 and closes a real gap: the TLA+ track
+previously had no reachability assertions, so a trivially-inert model would have reported the
+same green as a working one. `make check` remains the green-only slice and now says so.
+
 | Matrix | Runs | Outcome |
 |---|---|---|
-| **TLA+** (TLC) | 25 | 7 base configs green (rc=0, "No error has been found"); **18 negative controls each caught their defect** (invariant violation / deadlock / temporal-property violation). Clean sweep. |
-| **ProVerif** | 26 | 13 secure theories — security lemma `is true` + non-vacuity reachable; **13 bug controls each falsified** (`is false` + attack). |
-| **Tamarin** | 25 | 12 secure theories `verified`; **13 bug controls each `falsified` + trace**. |
+| **TLA+** (TLC) | 48 | 9 base configs green + `Store`'s liveness slice; **29 negative controls each caught their defect** (invariant violation / deadlock / temporal-property violation); **9 non-vacuity witnesses each violated as required**. Clean sweep. |
+| **ProVerif** | 30 | 15 secure theories — security lemma `is true` + non-vacuity reachable; **15 bug controls each falsified** (`is false` + attack). |
+| **Tamarin** | 28 | 14 secure theories `verified`; **14 bug controls each `falsified` + trace**. |
 | **Tamarin `RevokeMech`** | 1 | **Expected non-termination confirmed empirically** — the backward search loops the regenerated `Valid` fact; the run was observed still executing after **2–8 hours** across two sessions (vs. the report's conservative ">130s"). The documented irreducible tool split, excluded from the matrix. NB: `timeout` wraps the `podman run` client, not the detached container — kill the container directly (`podman kill`) to reclaim it. |
-| **Spin cross-check** | 28 | **All 6 concurrency modules** (reentry/conn/store/revoke/emit/register) × fix + defect variants. Every fix clean (safety + liveness); every defect caught the same way the matching TLC control fails (Class-G deadlock, handshake-ordering, store race, admission-bound, §5.1 revocation-ignored, §5.10 determinism-leak, emit mis-fire, marker-type, registration partial-residue, system-guard, and all liveness controls). |
-| **Apalache cross-check** | 22 | **5 modules, 8 safety invariants** (Revoke ×2, Store ×2, Conn ×1, Emit ×2, Register ×1) × {base, step} proven **inductive (unbounded)** + every negative control caught symbolically (`ERROR 12`), matching TLC. |
+| **Spin cross-check** | 29 | **All 6 concurrency modules** (reentry/conn/store/revoke/emit/register) × fix + defect variants. Every fix clean (safety + liveness); every defect caught the same way the matching TLC control fails (Class-G deadlock, handshake-ordering, store race, admission-bound, §5.1 revocation-ignored, §5.10 determinism-leak, emit mis-fire, marker-type, registration partial-residue, system-guard, and all liveness controls). |
+| **Apalache cross-check** | 21 | **5 modules, 9 safety invariants** (Revoke ×2, Store ×3, Conn ×1, Emit ×2, Register ×1) × {base, step} proven **inductive (unbounded)** + 3 negative controls caught symbolically (`ERROR 12`), matching TLC. The Store additions are `InvUAF` — §4.8's refcount use-after-free, new at 0.8.2. |
 
 The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**76 model runs reproduced + 50 cross-check runs; all behave exactly as designed.**
+**156 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+(The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
+surface, the 9 witnesses, and controls for both.)
 Method note: the first
 automated pass ran all three matrices concurrently, which produced four spurious
 failures from an SELinux `:Z` bind-mount relabel race (three concurrent containers on
@@ -106,7 +114,7 @@ The boundaries are stated in full in each report and `docs/ASSURANCE-MAP.md`; th
 load-bearing ones:
 
 - **5th wall — spec↔model fidelity (deepest).** Every guarantee is relative to the
-  model faithfully transcribing `spec-data/v0.8.0/`. Mitigation: every modeled element
+  model faithfully transcribing `spec-data/v0.8.2/`. Mitigation: every modeled element
   cites its V7 §ref; every negative control reproduces a *named, real* V7 bug class.
   No tool closes this wall — review against the vendored spec owns it.
 - **Verdict-interior + crypto walls.** §5.4 attenuation arithmetic is Lean's
@@ -147,7 +155,7 @@ would be a proposal/review-note in `entity-core-protocol`, never a spec edit her
    invariant **inductive (unbounded)** — both engines agreeing with TLC on green and every
    negative control (`docs/CROSSCHECK-RESULTS.md`). The 5th wall is now **substantially
    narrowed** — two independent paradigms agree across the whole surface — but **not closed**:
-   they could in principle share a misreading of V7, so human review against `spec-data/v0.8.0/`
+   they could in principle share a misreading of the spec, so human review against `spec-data/v0.8.2/`
    still owns it. The only deferred cross-check item is the optional composed Core-conjunction
    inductive invariant (lowest value; deadlock already reproduced by Spin).
 2. **Liveness is bounded; safety is now unbounded (TLA+).** As §4 — the inductive Apalache
@@ -182,7 +190,7 @@ inductive invariant) and the follow-ons that are out of this project's scope by 
 This is a strong machine-checked **demonstrator, not a closed proof.** It is a complementary
 third leg beside Lean (logic) and validate-peer (conformance) — not a replacement, and not a
 claim that "the protocol is proven." The honest next step is **human review of the models
-against `spec-data/v0.8.0/`** (the 5th wall no tool can close), then the code-level follow-ons
+against `spec-data/v0.8.2/`** (the 5th wall no tool can close), then the code-level follow-ons
 (fuzzing + adversarial-authz) and Phase 3 extension protocols. State plainly, to anyone who
 asks: we verified *models of the design*, as far as the time allowed, and said exactly where
 the boundaries are.

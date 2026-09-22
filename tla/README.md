@@ -4,6 +4,15 @@
 liveness property, run TLC, report the go/no-go. The lead spike because setup is
 near-zero and the odds of a fast real result are highest.
 
+> **This file is the Phase-0 spike brief, kept as written.** It describes the original
+> §6.11 go/no-go gate, not the current state of the track. Today the TLA+ workspace carries
+> **9 TLC modules** (reentry, conn, store, revoke, emit, register, the composed `Core`, and
+> — added at 0.8.2 — `Authority` for §5.2 dispatch authority and `Bounds` for §5.9/§4.10
+> TTL-vs-`chain_depth`), **9 Apalache invariants proven inductive**, 29 negative controls
+> and 9 non-vacuity witnesses. `make matrix` runs all of it. Start at
+> `../docs/FINAL-ASSURANCE-SUMMARY.md` and `../docs/PROPERTIES.md`.
+
+
 ## Setup — make + podman only (no host Java, no loose jar)
 
 **Build discipline: all toolchains run in podman, driven by `make`.** The JRE +
@@ -36,7 +45,7 @@ Toolbox GUI is optional; command-line TLC via `make` is enough for the spike.
 
 ## The modeling target — §6.11 reentry
 
-Source: `../spec-data/v0.8.0/ENTITY-CORE-PROTOCOL.md` §6.11 (handler-initiated
+Source: `../spec-data/v0.8.2/ENTITY-CORE-PROTOCOL.md` §6.11 (handler-initiated
 outbound dispatch / reentry) + §4.8 (store-safety) + §4.9 (resilience under load).
 Background: the deadlock surface is catalogued as **Class G** in V7 §6.11's rationale
 ("transports that serialize per-connection deadlock under bidirectional symmetric
