@@ -29,7 +29,7 @@ one tool, on the layer it can actually reach.
 
 Rows 4 and 5 are this project. The tell that they belong to architecture (not to
 per-language peer generation): **both sit at the "protocol design" layer.** They
-validate V7 itself.
+validate the protocol design itself.
 
 ## Complementarity (why there's no overlap or redo)
 
@@ -37,6 +37,20 @@ validate V7 itself.
   *abstract that away* — they treat cap-chain-verify as an abstract predicate /
   function symbol — precisely so they can focus on concurrency and the adversary.
   No re-modeling of the Lean-proven algorithm.
+
+  > **The seam between row 1 and rows 4–5 is asserted, not checked — say so.** "Lean owns
+  > the interior, we abstract it away" is a *division of labour*, and a division of labour
+  > is only sound if the property each model **assumes** of the abstraction is the property
+  > Lean **proves**. Nothing in this repo writes that correspondence down, and no tool
+  > checks it. It is not vacuous — spot-checking finds the two sides consistent, and in the
+  > one case examined closely Lean's result is the *stronger* of the pair (TLA+'s
+  > `VerdictFnOfLayer1` assumes determinism only at equal `t`; Lean's
+  > `verifyChain_time_stable` proves it across any two times agreeing on each link's
+  > temporal predicate). But "spot-checking finds them consistent" is exactly the standard
+  > this repo refuses everywhere else. There are ≥9 such correspondences
+  > (`docs/STATUS.md` §Next item 4). Until they are enumerated with each one's discharging
+  > theorem cited or marked **unclosed**, complementarity is a claim of the same kind as an
+  > ungated green.
 - **validate-peer** owns "implementations match the spec" (row 2).
 - **Fuzzing + adversarial-authz** own hostile-input rejection in the real code (row
   6). Tamarin proves the *design* resists an attacker; fuzzing checks the *code*
@@ -64,12 +78,13 @@ its honest boundary.
    input. Owned by **live adversarial-authz tests** + the Tamarin attacker model
    (which asks whether the attacker can *cause* a wrong resolution).
 5. **The 5th wall — spec↔model fidelity (the deepest assumption).** Every model
-   here certifies a *model of V7*, not V7's prose and not the code. The whole effort
+   here certifies a *model of the design at the pin*, not the spec's prose and not the
+   code. The whole effort
    is relative to the model being a faithful transcription of `spec-data/v0.8.2/`.
    There is no tool that closes this — it is owned by **careful modeling + review
    against the vendored spec**, and by keeping models at spec altitude. State it in
    every report; never let it hide. Chain of trust:
-   `V7 prose ─(faithful modeling)─ formal model ─(TLC/Tamarin)─ proved property`.
+   `spec prose ─(faithful modeling)─ formal model ─(TLC/Tamarin)─ proved property`.
 
 ## What a "done" looks like for this project (demonstrator scope)
 

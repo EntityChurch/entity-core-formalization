@@ -41,8 +41,12 @@ rule Setup_Time:
 // §5.6 CAP-6a representability. Seeded for every value a verifier can actually read,
 // INCLUDING the absent marker (a missing field is well-formed). DELIBERATELY NOT seeded for
 // 'tbad' — that absence IS the property under test.
+// The action label is ReprSeeded(), NOT Repr(): an action `Repr()` and the persistent fact
+// `!Repr(x)` are the same fact name `repr` at arities 0 and 1, which Tamarin reports as a fact-
+// arity wellformedness failure ("the analysis results might be wrong"). The label is a firing
+// marker only — no lemma or restriction reads it — so renaming it is semantics-preserving.
 rule Setup_Repr:
-    [ ] --[ Repr() ]->
+    [ ] --[ ReprSeeded() ]->
     [ !Repr('t0'), !Repr('t1'), !Repr('t2'), !Repr('tabsent') ]
 
 rule Setup_P:
@@ -54,10 +58,13 @@ rule Setup_A:
 // P issues a cap to A with expires_at = exp. The NETWORK picks exp, so the attacker can
 // choose the malformed value — that is the threat CAP-6a addresses.
 rule Issue:
-    let m = <pk(~skA), exp>  sig = sign(m, ~skP) in
-    [ !LtkP(~skP), !PkA(pk(~skA)), In(exp) ]
-  --[ Issued(pk(~skA), exp) ]->
-    [ Out(<pk(~skA), exp, sig>) ]
+    // Binds A's PUBLIC key as `gA`; matching `!PkA(pk(~skA))` instead would bind ~skA to
+    // something no premise can derive and trip Tamarin's message-derivation wellformedness
+    // check ("the analysis results might be wrong"). This rule only ever needs pk(~skA).
+    let m = <gA, exp>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !PkA(gA), In(exp) ]
+  --[ Issued(gA, exp) ]->
+    [ Out(<gA, exp, sig>) ]
 
 // Verifier, TIMED branch (§5.5): the field is representable AND orderable, so the temporal
 // check applies at the single sampled t = 't1'. Accept iff t <= expires_at.

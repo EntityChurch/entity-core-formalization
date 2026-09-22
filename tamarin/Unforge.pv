@@ -44,6 +44,15 @@ query g: pkey, s: scope;
 query gA: pkey, gB: pkey, s2: scope;
   event(AcceptedDeleg(gB, s2)) ==> event(Delegated(gA, gB, s2)).
 
+(* NON-VACUITY (mirrors Unforge.spthy's `accepted_reachable` exists-trace lemma).
+ * Both lemmas above are correspondences: "accepted ==> issued". A model in which the
+ * verifier can NEVER accept satisfies them vacuously and reports the same green. This
+ * query asserts the honest delegated chain IS acceptable, so the correspondences are
+ * statements about a reachable event rather than about an empty set.
+ * EXPECTED VERDICT: `is false` — ProVerif reports a REACHABLE event as a falsified
+ * "not event(...)" query. A `true` here means the model went inert. *)
+query gB: pkey, s2: scope; event(AcceptedDeleg(gB, s2)).
+
 (* ---- honest principals ---- *)
 
 (* P issues a root cap ONLY to the honest delegator A (gA). This is what makes the

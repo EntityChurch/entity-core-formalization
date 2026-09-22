@@ -46,7 +46,11 @@ rule DelegateB:
         mleaf = <gC, 'star', pk(~skB)>
         lsig  = sign(mleaf, ~skB)
     in
-    [ !LtkB(~skB), !PkA(gAp), In(<pk(~skB), 'allp', gAp, sigA>) ]
+    // In(gC) binds the delegatee, exactly as DelegateA binds gB above. Without it gC is a
+    // free variable in the conclusion and the action — not derivable from any premise — which
+    // trips Tamarin's message-derivation wellformedness check and lets the backward search
+    // instantiate the delegatee at will ("you may be performing unintended pattern matching").
+    [ !LtkB(~skB), !PkA(gAp), In(<pk(~skB), 'allp', gAp, sigA>), In(gC) ]
   --[ Eq(verify(sigA, mlink, gAp), true), DelegatedLeaf(pk(~skB), gC) ]->
     [ Out(<gC, 'star', pk(~skB), lsig>) ]
 

@@ -34,10 +34,13 @@ rule Setup_A:
 
 // P issues a cap to A with expires_at = exp (the network picks the expiry constant).
 rule Issue:
-    let m = <pk(~skA), exp>  sig = sign(m, ~skP) in
-    [ !LtkP(~skP), !PkA(pk(~skA)), In(exp) ]
-  --[ Issued(pk(~skA), exp) ]->
-    [ Out(<pk(~skA), exp, sig>) ]
+    // Binds A's PUBLIC key as `gA`; matching `!PkA(pk(~skA))` instead would bind ~skA to
+    // something no premise can derive and trip Tamarin's message-derivation wellformedness
+    // check ("the analysis results might be wrong"). This rule only ever needs pk(~skA).
+    let m = <gA, exp>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !PkA(gA), In(exp) ]
+  --[ Issued(gA, exp) ]->
+    [ Out(<gA, exp, sig>) ]
 
 // Verifier §5.5: samples the single t = 't1', accepts only if not expired (t <= expires_at,
 // i.e. !Le('t1', exp) holds).

@@ -66,8 +66,16 @@ is additive and breaks no existing reference.
 
 ### Content: additive refinement, not redefinition
 
-`ENTITY-CORE-PROTOCOL.md` changes by 197 lines across 25 of 93 numbered sections. Of the
-26 sections the models cite, 13 were touched — but that count overstates the change:
+`ENTITY-CORE-PROTOCOL.md` changes by 197 lines across 25 of **85** numbered sections. Of
+the 26 sections the models cite, 13 were touched — but that count overstates the change:
+
+> *Correction (denominator only).* This read "25 of 93" until the second gate audit. **85** is
+> the count of `### N.M` headings with a pure numeric label, excluding the letter-suffixed
+> refinements (`1.2a`, `4.5a`, `5.2a`, `5.5a`, `6.9a`, `9.5a`) and `####` sub-sections; it is
+> the denominator `docs/COVERAGE-MATRIX.md` uses, and 93 was never reconcilable with it. The
+> numerator 25 is unchanged and was correct. Editing this is not editing the pin: `MANIFEST.md`
+> is repo-authored provenance, is excluded from the hashed set by `tools/spec-drift.py`, and
+> the three normative `.md` files and their SHA-256 digests above are untouched.
 
 | | lines |
 |---|---|

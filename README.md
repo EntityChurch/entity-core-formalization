@@ -20,8 +20,8 @@ security** (Tamarin / ProVerif).
 
 This is a sibling project to `entity-core-protocol` (the spec authority — it publishes
 the three specifications this repo models), `entity-core-keystone` (per-language peer
-generation + conformance), and the reference implementations. It is **arch-owned**: it
-verifies the *design* (the protocol itself), not any generated peer.
+generation + conformance), and the reference implementations. It verifies the *design*
+(the protocol itself), not any generated peer.
 
 ## Why this exists (the one-paragraph version)
 
@@ -32,8 +32,8 @@ questions about the **design**, each owned by a different tool:
 
 1. **Does the distributed protocol behave correctly under concurrency** — no
    deadlock/livelock, eventual progress, store-safety, bounded resources, across
-   interleaved multi-peer sessions? → **TLA+** (safety **and liveness** — liveness
-   is the property nothing we currently prove).
+   interleaved multi-peer sessions? → **TLA+** (safety **and liveness** — liveness is the
+   property no other tool in the family reaches at all).
 2. **Does the protocol resist an active network attacker** — capability
    unforgeability, no privilege escalation, no replay/reflection/confused-deputy? →
    **Tamarin / ProVerif** (Dolev-Yao symbolic model).
@@ -47,20 +47,55 @@ available for a delegated-authority protocol:
 
 Full picture: **`docs/ASSURANCE-MAP.md`**.
 
-## Status: paused (complete and bundled)
+## Status: current against protocol 0.8.2
 
-Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency **and** Tamarin/ProVerif
-active-attacker), and Phase 2 (prover surface-closure) are **complete**; the full
-76-run matrix was independently re-verified, and the TLA+ cross-check
-(Spin + Apalache) is now **complete across every modeled subsystem** — all 6 concurrency
-modules independently re-encoded in Spin (incl. the Class-G deadlock), and every module's
-key safety invariant proven inductive/unbounded in Apalache (8 invariants, 5 modules), both
-engines agreeing with TLC on green and every negative control
-([`docs/CROSSCHECK-RESULTS.md`](docs/CROSSCHECK-RESULTS.md)). The project is bundled and
-paused. **Capstone:
-[`docs/FINAL-ASSURANCE-SUMMARY.md`](docs/FINAL-ASSURANCE-SUMMARY.md)** — it records what
-was proved and the only optional leftovers. The spike-first framing below is the
-history of how it was gated.
+The models are pinned at `spec-data/v0.8.2/` and `make specdrift` reports **no drift**
+against the live spec — results here are statements about the protocol as it stands, not
+about a previous release.
+
+### What is verified, and by what
+
+Four engines in two families. **Every concurrency module is checked by all three engines of
+its family, and both provers close every attacker lemma but two** — that redundancy is the
+answer to the obvious objection, *"who formalizes the formalization?"* The two exceptions are
+named, not glossed: `BindingReplay` is ProVerif-only (ProVerif's tables do not model single-use
+atomically, so no-replay is Tamarin's) and `RevokeMech` does not terminate in Tamarin. The grid
+above is per *module*; at *section* granularity two rows still rest on one engine (§4.7, §6.9)
+and `docs/COVERAGE-MATRIX.md` §3 names them.
+
+| Module | Protocol surface | TLC<br>*bounded* | Apalache<br>*unbounded* | Spin<br>*independent* |
+|---|---|:---:|:---:|:---:|
+| `Reentry` | §6.11 transport reentry + (a′) frame-write atomicity | ● | ● | ● |
+| `Conn` | §4.1–4.7 connection establishment | ● | ● | ● |
+| `Store` | §4.8–4.10 store safety, refcount, admission | ● | ● | ● |
+| `Revoke` | §5.1/§5.10 revocation + verdict determinism | ● | ● | ● |
+| `Emit` | §6.10 event emission | ● | ● | ● |
+| `Register` | §6.1/§6.2 handler registration | ● | ● | ● |
+| `Core` | **composition of all of the above** | ● | ● | ● |
+| `Authority` | §5.2 three-valued dispatch authority | ● | ● | ● |
+| `Bounds` | §5.9/§4.10(b) TTL vs chain-depth brakes | ● | ● | ● |
+
+| Active attacker (Dolev–Yao) | ProVerif | Tamarin |
+|---|:---:|:---:|
+| 14 lemmas — unforgeability, no-escalation, binding/no-replay, caveats, depth-bound, deep-chain integrity, expiry, malformed-temporal ingest, third-party chain topology, K-of-N multisig, revocation, persistent re-check | ● *(+`BindingReplay`)* | ● |
+
+**Coverage: 28 of 85 numbered spec sections (33%)** — by area, **§4 70% · §5 90% · §6 62%**,
+the three surfaces this repo owns. The near-zero coverage of §2, §3, §7–§9 is deliberate
+scope (type system, encoding, trusted crypto, conformance profiles belong to other layers),
+not neglect. Which is which — and every limit and bound on every result — is set out in:
+
+> ### ⇒ **[`docs/COVERAGE-MATRIX.md`](docs/COVERAGE-MATRIX.md)** — start here
+> What each engine can and cannot do · protocol section × engine · what is *not* covered,
+> split into out-of-scope / tool-limited / backlog · the exact bound on every claim.
+
+The gate is `make matrix`, which asks three questions rather than one: do the properties
+hold, **could they have failed** (every negative control must fail), and **does the model
+reach an interesting state at all** (every non-vacuity witness must be violated). A green
+control or a clean witness is a build failure.
+
+**Capstone:** [`docs/FINAL-ASSURANCE-SUMMARY.md`](docs/FINAL-ASSURANCE-SUMMARY.md).
+**Honesty scorecard:** [`docs/PROPERTIES.md`](docs/PROPERTIES.md).
+The spike-first framing below is the history of how the project was gated.
 
 ### How it was gated — spike-first, demonstrator-altitude
 
@@ -85,7 +120,9 @@ ProVerif toolchain) runs everything; the model checkers are all containerized.
 ```
 make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
-make check    # run the GREEN verification matrix across all 4 engines (the gate)
+make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (204 runs)
+make check    # the green-only slice — does NOT show the properties could have failed
+make specdrift # has the spec moved out from under the pin?
 make clean    # remove generated model-checker artifacts
 make caps     # print the active per-container resource ceilings
 ```
@@ -100,7 +137,7 @@ untracked `caps.local.mk` or env vars (see `caps.mk`). What is
 
 ```
 README.md                 ← you are here
-Makefile                  ← the door: build / smoke / check / clean (make+podman only)
+Makefile                  ← the door: build / smoke / matrix / check / clean (make+podman only)
 caps.mk                   ← shared podman resource caps (per-container ceilings)
 VERSION                   ← 0.8.2
 CANONICAL-DOCS.toml        ← declared canonical doc/spec surface (content ingest)
@@ -108,16 +145,20 @@ CLAUDE.md                 ← shim that loads the agent guidance (AGENTS-STANDAR
 AGENTS.md                 ← repo-specific agent guidance (build/test, layout, boundaries)
 docs/
   PROPERTIES.md           ← PROVEN-vs-MODELED scorecard (the honesty surface)
-  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 156-run matrix
+  COVERAGE-MATRIX.md      ← section x engine, the limits, what is NOT covered (start here)
+  FINAL-ASSURANCE-SUMMARY.md ← capstone: what was proved + the 204-run matrix
+  STATUS.md               ← rolling status: where it is, what is next
+  SPEC-DRIFT-ASSESSMENT.md ← how far the pin has aged behind the live spec
   ASSURANCE-MAP.md        ← the complete formal-assurance map + the limits walls
   CROSSCHECK-RESULTS.md   ← Spin + Apalache independent corroboration
-  SCOPING-AND-SPIKE-PLAN.md ← arch's calls on scope + Phase 0 gates + Phase 1 trigger
+  SCOPING-AND-SPIKE-PLAN.md ← scope calls + Phase 0 gates + Phase 1 trigger
   PRIOR-ART.md            ← TLA+ & Tamarin learning resources + comparable models
 spec-data/v0.8.2/          ← VENDORED specs (byte-for-byte) = the modeling ground truth
 spec-data/MODELING-PIN     ← which snapshot the models transcribe (the answer to "verified what?")
 tla/                      ← TLA+/PlusCal + TLC (concurrency + liveness) + Apalache (unbounded)
 spin/                     ← Spin/Promela independent re-encoding (cross-check)
 tamarin/                  ← Tamarin/ProVerif (active-attacker, Dolev-Yao)
+tools/spec-drift.py       ← the pin-vs-live-spec detector behind `make specdrift`
 ```
 
 ## Where the spec lives

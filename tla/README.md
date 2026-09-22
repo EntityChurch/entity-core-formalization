@@ -56,14 +56,20 @@ empirically during the Lean build.
 - 2 peers, each with an inbox + one pooled connection.
 - A request from A to B; B's handler dispatches an outbound request back to A over
   the same pooled connection (the reentry).
-- The store as an abstract map; writes bounded by live keys.
+- The store as an abstract map (the handler's write — the observable the dispatch gate
+  protects). The §4.8/§4.9(b) store BOUND is not asserted here: it is `Store.tla`'s, which
+  models the store multi-key with refcount lifetimes. Asserting it in this module produced a
+  vacuous conjunct — one literal key written once — and it has been removed rather than
+  carried; see the note in `Reentry.tla`.
 - Cap-verify = an **abstract operator** returning a Boolean. **Do NOT model §5.4/§5.6
   attenuation — Lean owns that.** The point is the protocol *around* the verdict.
 
 **Properties (state exactly one of each for the spike):**
-- *Safety:* `StoreBounded` — store size never exceeds the number of live keys
-  (surfaces the leak class); and/or `NoDispatchWithoutGate` — no request is
-  delivered to a handler without the gate predicate having held.
+- *Safety:* `NoDispatchWithoutGate` — no request is delivered to a handler without the gate
+  predicate having held; and (added at 0.8.2) `FramesNotInterleaved` — §6.11(a′), the bytes of
+  two frames never interleave on a pooled connection. (The spike plan also named a
+  `StoreBounded` conjunct here; it turned out to be vacuous in this module and now lives only
+  in `Store.tla`, where it has teeth.)
 - *Liveness:* `EventuallyResolved` — every accepted request eventually reaches a
   response or a clean failure (no deadlock, no livelock). Needs a weak-fairness
   condition on the dispatch/serve step.

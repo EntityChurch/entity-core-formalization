@@ -63,10 +63,13 @@ rule Setup_W:   // VERIFIER — holds no signing key used in the chain
 // P issues the ROOT link to A granting the open cross-peer wildcard 'allp' (so attenuation is not the gate here
 // — the canonicalization FRAME is).
 rule Root_Issue:
-    let m = <pk(~skA), 'allp'>  sig = sign(m, ~skP) in
-    [ !LtkP(~skP), !PkA(pk(~skA)) ]
-  --[ RootIssued(pk(~skP), pk(~skA)) ]->
-    [ Out(<pk(~skA), 'allp', sig>) ]
+    // Binds A's PUBLIC key as `gA` (as Verify_W already does); matching `!PkA(pk(~skA))`
+    // instead would bind ~skA to something no premise can derive and trip Tamarin's
+    // message-derivation wellformedness check ("the analysis results might be wrong").
+    let m = <gA, 'allp'>  sig = sign(m, ~skP) in
+    [ !LtkP(~skP), !PkA(gA) ]
+  --[ RootIssued(pk(~skP), gA) ]->
+    [ Out(<gA, 'allp', sig>) ]
 
 // A delegates to any gB with a bare peer-relative '*' — A's intent is "my own namespace".
 // A is the in-chain granter and therefore the correct canonicalization frame.

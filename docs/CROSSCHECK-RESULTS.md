@@ -6,31 +6,69 @@ in the assurance family without a parallel attestation; they now have two, on bo
 dimensions that gap was about — **independent re-encoding** (Spin) and **unbounded proof**
 (Apalache).
 
-**Coverage now (was: priority surface only):** every concurrency module has an independent
-**Spin** re-encoding (6 modules: `Reentry`/`Core`, `Conn`, `Store`, `Revoke`, `Emit`,
-`Register`), and every module's key **safety** invariant(s) are proven **inductive
-(unbounded) in Apalache** (5 modules: `Revoke`, `Store`, `Conn`, `Emit`, `Register`). Both
-engines agree with TLC on every secure result and every negative control. The one
-consciously-deferred item is the optional composed *Core-conjunction* inductive invariant
-in Apalache (hardest, lowest marginal value — the Class-G deadlock it would corroborate is
-already independently reproduced by Spin); see Coverage.
+**Coverage now (was: priority surface only):** **all 9** concurrency modules have an
+independent **Spin** re-encoding (`Reentry`, `Conn`, `Store`, `Revoke`, `Emit`, `Register`,
+`Core`, `Authority`, `Bounds`), and **18 safety invariants across all 9** are proven
+**inductive (unbounded in steps) in Apalache**. Both engines agree with TLC on every secure
+result and every negative control, and **nothing is deferred** — the composed
+*Core-conjunction* inductive invariant, carried as the one optional deferral since Phase 1,
+was proved in the 0.8.2 audit. See Coverage for what that deferral's rationale got wrong.
 
 Read with `tla/PHASE1-FORMALIZATION-REPORT.md` (the models being corroborated).
 
 ---
 
-> **0.8.2 update.** The cross-check now spans the 0.8.2 surface: Spin re-encodes §6.11(a′)
-> frame-write atomicity and §4.8's refcount use-after-free alongside the original modules
-> (**17 negative controls**, up from 6 wired into the gate), and Apalache lifts
-> `NoUseAfterFree` to an **inductive (unbounded)** proof — the 9th such invariant.
+> **0.8.2 update.** The cross-check now spans the 0.8.2 surface AND is complete across every
+> module. Spin re-encodes §6.11(a′) frame-write atomicity and §4.8's refcount use-after-free
+> alongside the original modules, and gained three models it never had —`authority`, `bounds`
+> and, most importantly, `core`: **the composed whole-protocol model previously had no
+> independent encoding at all**, which the 0.8.2 audit identified as the worst-placed gap in
+> the repo. **29 negative controls**, up from 6 wired into the gate.
 >
-> The cross-check also did the thing it exists for, on the modeller rather than the protocol:
-> ProVerif and Tamarin **disagreed** on a negative control for the new §5.8 `ChainTopology`
-> theory. The cause was a hand-written Tamarin lemma whose `pkW` variable was never bound to
+> Apalache went from 9 invariants over 5 modules to **18 over all 9**, including the composed
+> conjunction (`CoreApalache.InvComposed`) that had been carried as "consciously deferred"
+> since Phase 1. Every module is now checked by all three engines; nothing is deferred.
+>
+> One Apalache result is stronger than the others in kind: `BoundsApalache` proves §5.9's
+> depth-brake property over **symbolic** constants constrained only by the ratio condition,
+> so it covers every conforming deployment rather than the one triple TLC checks.
+>
+> The cross-check also did the thing it exists for — on the modeller rather than the
+> protocol — **three times**. (1) Apalache's inductive step found a defect in `Reentry.tla`
+> that TLC structurally could not: the client released the connection write lock even when
+> that peer's own server held it mid-frame. TLC was right to miss it — at the 2-peer bound no
+> third writer exists to exploit the stolen lock — but an inductive check starts from
+> arbitrary states and caught it at once. Fixed in `Reentry.tla`, `Core.tla`, `reentry.pml`.
+> (2) A Spin negative control compiled out both the defect and its detector, reporting
+> `errors: 0`; caught only because a control that does not fail is itself a signal.
+> (3) ProVerif and Tamarin **disagreed** on a negative control for the new §5.8
+> `ChainTopology` theory. The cause was a hand-written Tamarin lemma whose `pkW` variable was never bound to
 > the verifier it named, so it asserted far less than it appeared to. The disagreement was
 > the signal; the lemma was fixed and both provers then agreed exactly. Recorded here and in
 > `docs/PROPERTIES.md` §C.1 because "the two engines could share a misreading" is the
 > standing caveat, and this is a case where they did not.
+
+> **Follow-up: the fourth time, and it was the tool telling us directly.** A later pass found
+> that **Tamarin had been reporting its own results as possibly wrong, and the gate read it as
+> green.** `tamarin-prover --prove` exits 0 when every lemma verifies even if its
+> wellformedness checks failed, printing `WARNING: N wellformedness check failed! The analysis
+> results might be wrong!` as it goes. Four green theories carried that warning; the
+> negative-control target captured prover output and echoed only a verdict line, so a warning
+> from a *control* never reached scrollback at all.
+>
+> Two were substantive. `DeepChainN`'s `DelegateB` had a **free variable in its rule
+> conclusion** — the delegatee `gC` appeared in the message, the action and the output, bound
+> by no premise, so the backward search could instantiate it at will; the sibling rule
+> `DelegateA` binds its own delegatee correctly, which is what makes the omission legible as
+> an omission. `Malformed` used `Repr` at **two arities**, colliding an action label with the
+> arity-1 fact that carries its entire §5.6 representability encoding. The other two were
+> `!PkA(pk(~skA))` premises binding a secret key derivable from nothing.
+>
+> This is the same defect family as (3) above — a Tamarin rule quietly asserting something
+> other than what it reads as — and it is the second time it has appeared. A wellformedness
+> failure is now a **build failure** in both prover targets. The lesson generalizes past
+> Tamarin: **when a tool says its answer might be wrong, that is not a green**, and the place
+> to enforce that is the gate, not a reader's attention.
 
 
 ## Why this phase existed (the gap it closes)
@@ -42,7 +80,7 @@ checked by one engine (TLC), at a finite bound.** Two things were unproven:
    for all N. → **Apalache** proves invariants *inductive* (`Init ⇒ Inv`,
    `Inv ∧ Next ⇒ Inv'`) symbolically via Z3, holding for all states at once.
 2. **Fidelity (the 5th wall)** — nothing corroborated that the `.tla` faithfully
-   encodes V7 except the author's §-citations. → **Spin** is a *different formalism*
+   encodes the spec except the author's §-citations. → **Spin** is a *different formalism*
    (Promela); an independent re-encoding *from the spec text* that reaches the same
    verdict makes a shared transcription error far less likely — the same logic as
    keystone's multi-language conformance peers and Spike B's Tamarin+ProVerif
@@ -55,7 +93,7 @@ seven (see Coverage).
 
 ## Track B — Spin: independent Promela re-encodings (fidelity)
 
-Each model was written **from the V7 §-design in Promela** (channels / processes /
+Each model was written **from the pinned spec's §-design in Promela** (channels / processes /
 atomic guards), *not* translated from the `.tla` — that independence is the point.
 Each has a fix variant and `#ifdef` defect variants mirroring the TLA+ negative
 controls. Verified exhaustively in the `entity-spin` container. **Every variant
@@ -128,20 +166,29 @@ use `--init=Init --length=0` for the base case and `--cinit=ConstInitBug*` for t
 
 ## Coverage — what is and isn't cross-checked (honest scope)
 
-- **Spin (fidelity): all 6 concurrency modules.** `Reentry`/`Core` (the marquee deadlock),
-  `Conn`, `Store`, `Revoke`, `Emit`, `Register` — each with a clean fix (safety **and**
-  liveness) and every negative control caught the same way the matching TLC control fails.
-- **Apalache (unbounded): every module's key safety invariant(s)** — `Revoke` (2), `Store`
-  (2), `Conn` (1), `Emit` (2), `Register` (1) — proven inductive, controls caught. Liveness
-  is out of Apalache's scope by construction (left to TLC + Spin); `Conn`'s `TokenBounded` and
-  `Register`'s relational `IndexMatchesTree` are deliberately left to TLC + Spin (the inductive
-  port adds no fidelity over what Spin already corroborates — stated in each module header).
-- **One optional item deferred:** the composed **Core-conjunction** inductive invariant in
-  Apalache (all modules' invariants at once). Hardest, lowest marginal value — each invariant
-  is already proven separately and the Class-G deadlock is already reproduced by Spin. It is the
-  one consciously-deferred optional item.
+- **Spin (fidelity): all 9 concurrency modules.** `Reentry`, `Conn`, `Store`, `Revoke`,
+  `Emit`, `Register`, `Core` (the marquee deadlock, and the composed model — which had **no**
+  independent encoding before the 0.8.2 audit), plus `Authority` and `Bounds` structurally.
+  Each with a clean fix and every negative control caught the same way the matching TLC
+  control fails.
+- **Apalache (unbounded in steps): 18 safety invariants across all 9 modules** — `Revoke` (2),
+  `Store` (3), `Conn` (1), `Emit` (2), `Register` (1), `Reentry` (1), `Authority` (4),
+  `Bounds` (3), `Core` (1) — proven inductive, controls caught. Liveness is out of Apalache's
+  scope by construction (left to TLC + Spin); `Conn`'s `TokenBounded` and `Register`'s
+  relational `IndexMatchesTree` are deliberately left to TLC + Spin (the inductive port adds
+  no fidelity over what Spin already corroborates — stated in each module header).
+- **Nothing is deferred.** The composed **Core-conjunction** inductive invariant
+  (`CoreApalache.InvComposed`) had been carried since Phase 1 as the one consciously-deferred
+  optional item, on the reasoning that each invariant is already proven separately and Spin
+  already reproduces the Class-G deadlock. The 0.8.2 audit rejected that reasoning and proved
+  it: *"each invariant is proven separately"* is precisely what a **composition** invariant is
+  not, and the deadlock it was said to corroborate is **liveness**, which Apalache cannot
+  prove either way — so neither half of the rationale actually bore on the deferred item.
+- **Unbounded in STEPS, not in PEERS.** Every Apalache result here fixes `Peers = {A,B}` and
+  proves the invariant for runs of any length over that set. A defect first appearing at 3
+  peers is outside every result on this page.
 - **The 5th wall is narrowed, not closed.** Two independent paradigms now agree across the
-  whole modeled surface — but they could in principle share a misreading of V7. Independent
+  whole modeled surface — but they could in principle share a misreading of the spec. Independent
   encoding + independent engine *narrow* the fidelity gap substantially; only human review
   against `spec-data/v0.8.2/` closes it.
 

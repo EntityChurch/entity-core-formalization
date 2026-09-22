@@ -1,7 +1,7 @@
 # ============================================================================
 # entity-core-formalization — ROOT Makefile  (make is the door)
 #
-# Formal design-assurance for the Entity Core Protocol V7. Four model checkers,
+# Formal design-assurance for the Entity Core Protocol. Four model checkers,
 # all containerized: a bare host with ONLY `make` + `podman` (no native TLA+/
 # Spin/Apalache/Tamarin/ProVerif toolchain) runs everything from here.
 #
@@ -17,7 +17,7 @@
 #   make -C spin    ...    Spin (independent re-encoding cross-check)
 #   make -C tamarin ...    ProVerif + Tamarin
 #
-# Honest scope: this verifies MODELS of the V7 design, not the prose and not the
+# Honest scope: this verifies MODELS of the design AT THE PIN, not the prose and not the
 # code. What is PROVEN vs only MODELED is stated exactly in docs/PROPERTIES.md
 # and docs/FINAL-ASSURANCE-SUMMARY.md. Design assurance, off the release
 # critical path — NOT a claim that "the protocol is proven correct."
@@ -88,16 +88,18 @@ smoke:
 
 # --- check: the GREEN matrix — properties that MUST hold ---------------------
 # TLA+ : 9 modules bounded-exhaustive (TLC, safety+liveness; + Store's liveness
-#        slice) + 9 invariants proven inductive/unbounded (Apalache).
-# Spin : the 6 concurrency modules independently re-encoded (safety + LTL) —
-#        the cross-check that the TLA+ transcription is faithful.
-# Provers: 15 ProVerif + 14 Tamarin active-attacker lemmas (lockstep).
+#        slice) + 18 invariants proven inductive/unbounded (Apalache).
+# Spin : all 9 concurrency modules independently re-encoded (7 safety + LTL,
+#        2 structural safety-only) — the cross-check that the TLA+
+#        transcription is faithful.
+# Provers: 15 ProVerif + 14 Tamarin active-attacker lemmas (lockstep), each
+#        graded against a declared per-query / per-lemma verdict table.
 # Negative controls and non-vacuity witnesses are NOT in this target — see
 # `make matrix`, which is the honest full gate. See docs/PROPERTIES.md.
 check: check-tla check-spin check-provers
 	@echo
 	@echo "GREEN matrix complete — every modeled property held. This certifies"
-	@echo "MODELS of the V8 design (see docs/PROPERTIES.md for proven-vs-modeled)."
+	@echo "MODELS of the design at the pin (see docs/PROPERTIES.md for proven-vs-modeled)."
 	@echo "NOTE: green alone does not show the properties COULD have failed, nor"
 	@echo "that the models reach any interesting state. Run 'make matrix' for that."
 

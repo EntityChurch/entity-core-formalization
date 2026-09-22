@@ -29,7 +29,7 @@ about the current protocol — is the exact overclaim this project was built not
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** *(moved 2026-08-28; this assessment records the drift that existed before the move)* |
 | Vendored, not yet modeled | `spec-data/v0.8.2/` — hash-verified 2026-08-27 |
 | Live (published `master`) | **0.8.2** |
-| Core spec delta | 197 changed lines; 25 of 93 numbered sections |
+| Core spec delta | 197 changed lines; 25 of 85 numbered sections |
 | **Sections the models cite that moved** | **13 of 26** |
 | Green matrix against the pin | still fully green (re-run 2026-08-27) |
 

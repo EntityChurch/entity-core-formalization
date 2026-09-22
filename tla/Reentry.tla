@@ -124,7 +124,16 @@ begin
     wlock[self] := IF Serialized THEN "client" ELSE "free";
   CRecv:
     await resp[self];                  \* await response (DEFECT: still holding wlock if Serialized)
-    wlock[self]  := "free";            \* release (no-op in the fix; client->free in the defect)
+    \* RELEASE ONLY A LOCK WE HOLD. Under the §6.11(a)+(a′) fix the client released at
+    \* end-of-frame (CFrame2), so by the time the response arrives the write lock may belong
+    \* to this peer's OWN SERVER, mid-frame. An unconditional release here would free a lock
+    \* held by another writer — a modeling defect with no observable consequence at the
+    \* 2-peer TLC bound (no third writer exists to exploit the stolen lock), which is exactly
+    \* why TLC did not surface it. tla/ReentryApalache.tla's INDUCTIVE step did, immediately,
+    \* because it starts from arbitrary states rather than reachable ones.
+    if wlock[self] = "client" then
+      wlock[self] := "free";           \* the Serialized defect's hold ends here
+    end if;
     cstate[self] := "done";
 end process;
 
@@ -163,7 +172,7 @@ begin
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "60e3ec9b" /\ chksum(tla) = "3ced781f")
+\* BEGIN TRANSLATION (chksum(pcal) = "c23a49ff" /\ chksum(tla) = "7128d826")
 VARIABLES pc, wlock, midframe, interleaved, inReq, resp, store, cstate, 
           sstate
 
@@ -211,7 +220,10 @@ CFrame2(self) == /\ pc[self] = "CFrame2"
 
 CRecv(self) == /\ pc[self] = "CRecv"
                /\ resp[self]
-               /\ wlock' = [wlock EXCEPT ![self] = "free"]
+               /\ IF wlock[self] = "client"
+                     THEN /\ wlock' = [wlock EXCEPT ![self] = "free"]
+                     ELSE /\ TRUE
+                          /\ wlock' = wlock
                /\ cstate' = [cstate EXCEPT ![self] = "done"]
                /\ pc' = [pc EXCEPT ![self] = "Done"]
                /\ UNCHANGED << midframe, interleaved, inReq, resp, store, 
@@ -279,8 +291,25 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 \* ===== Properties =====
 
-\* SAFETY — V7 §4.8 / §4.9(b): the store never exceeds its live-key bound (leak/runaway class).
-StoreBounded == \A p \in Peers : Cardinality(store[p]) <= MaxLiveKeys
+\* §4.8/§4.9(b) STORE BOUND — DELIBERATELY NOT ASSERTED HERE. Owned by tla/Store.tla.
+\*
+\* This module used to carry `StoreBounded == \A p \in Peers : Cardinality(store[p]) <=
+\* MaxLiveKeys`. It was VACUOUS: each of the two servers writes the single literal key "k"
+\* into its own peer's set exactly once, so the cardinality is 0 or 1 against a bound of 2 and
+\* the invariant could not fail in any behaviour of this model. It reported the same green a
+\* real obligation would, which is the failure mode this repo names as a first-class hazard
+\* (docs/COVERAGE-MATRIX.md §6). It was disclosed as vacuous twice without being fixed.
+\*
+\* It is REMOVED rather than given teeth, because the property is not expressible against this
+\* module's abstractions: the bound only has content under REPEATED dispatch or multi-key
+\* writes, and this model's servers serve once and write one key. Making it falsifiable would
+\* mean importing Store.tla's multi-key/refcount machinery — duplicating an owner rather than
+\* adding assurance, at a state-space cost in the model that already carries the most.
+\* The real §4.8/§4.9(b) live-key bound is Store.tla's `ResourceBounded`, which is multi-key,
+\* falsifiable, and discharged by refcount correctness (StoreApalache.InvBound / InvUAF).
+\*
+\* The `store` variable stays: the handler's write is the observable that §6.5's dispatch gate
+\* protects, which is what NoDispatchWithoutGate below is about. Only the bound is gone.
 
 \* SAFETY — V7 §6.5: a handler is only ever invoked after its dispatch gate held.
 NoDispatchWithoutGate == \A p \in Peers : (sstate[p] # "idle") => Gate(p)

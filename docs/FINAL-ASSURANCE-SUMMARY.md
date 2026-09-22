@@ -2,18 +2,30 @@
 
 **Status: current against protocol 0.8.2.** This is the capstone note over
 everything this repo produced: the TLA+ concurrency/liveness model and the
-Tamarin/ProVerif active-attacker model of the Entity Core Protocol V8 design — each now
+Tamarin/ProVerif active-attacker model of the Entity Core Protocol design — each now
 independently cross-checked. It is written so a future reader (or a returning agent) can
 understand *what was proved, how far it goes, and what it deliberately does not say*
 without re-reading the underlying reports.
 
-**The one-paragraph version for the team.** We ran formal verification on the V7 *design*
+> *On version names.* Live documents say **"the design"** or cite the pin
+> (`spec-data/v0.8.2/`). The phase reports below say **"V7"** because they were written
+> against the V7 line and are historical record; 0.8.0 was the de-versioned cutover of that
+> line and is **wire-identical** to it (`spec-data/v0.8.0/README.md`), so the older reports'
+> results carry forward unchanged. Restating a version in prose is how a repo ends up
+> publishing several answers to one question — the pin is the answer.
+
+**The one-paragraph version for the team.** We ran formal verification on the *design*
 and did as much as the time allowed. **TLA+** covers all of Core Protocol's
 concurrency + liveness, and is cross-checked with **two independent engines**: an independent
 **Spin** (Promela) re-encoding of every concurrency module — written from the spec, not
 translated — and **Apalache** SMT proofs that turn the key safety invariants from *checked at
 a bound* into *proven inductive (unbounded)*. **Tamarin + ProVerif** (two provers, lockstep)
-cover the active-attacker surface (14 lemmas). Every property is §-cited to `spec-data/v0.8.2/`,
+cover the active-attacker surface — **14 lemmas closed by both**, plus `BindingReplay` in
+ProVerif only. **Every concurrency module is checked by all three engines of its family**
+(that is per *module*; at *section* granularity two rows still rest on one engine — §4.7 and
+§6.9, named in `docs/COVERAGE-MATRIX.md` §3) — see `docs/COVERAGE-MATRIX.md` for the grid,
+what each engine can and cannot do, and the exact bound on every claim. Every property is §-cited to
+`spec-data/v0.8.2/`,
 every secure result has a negative control with teeth, and the scope boundaries — above all the
 **5th wall (spec↔model fidelity)** — are stated, not hidden. This is a strong machine-checked
 **demonstrator, not a closed proof** of the protocol: it now needs **human review against the
@@ -39,7 +51,7 @@ in §5 (Findings and residual risk).
 
 ## 1. What this project was for (one paragraph)
 
-The Lean proof-vector peer (in `entity-core-keystone`) already proved the V7
+The Lean proof-vector peer (in `entity-core-keystone`) already proved the
 authority **logic** correct — attenuation monotone, deny-by-default, the verdict
 enforces the per-edge check. That closes the implementation pure-core layer and is
 **not** re-done here. Two formal questions about the **design** remained, each on a
@@ -64,12 +76,15 @@ away on purpose.
 | 1 | Tamarin/ProVerif active-attacker | `tamarin/PHASE1-FORMALIZATION-REPORT.md` | 5 lemmas (no-escalation, deep-chain frame, binding+no-replay, revocation, multi-sig), lockstep both tools |
 | 2 | Tamarin/ProVerif surface-closure | `tamarin/PHASE2-FORMALIZATION-REPORT.md` | 7 more lemmas (caveats, depth, expiry, deep-N, K-of-N, no-replay-in-ProVerif, persistent re-check) + 1 documented non-closure |
 
-| 2 (x-check) | Apalache + Spin cross-check of the TLA+ models | `docs/CROSSCHECK-RESULTS.md` | **All 6 concurrency modules** independently re-encoded in Spin (incl. the Class-G deadlock); **every module's key safety invariant proven inductive (unbounded) in Apalache** — 5 modules, 8 invariants; both engines agree with TLC on green and on every control |
+| 2 (x-check) | Apalache + Spin cross-check of the TLA+ models | `docs/CROSSCHECK-RESULTS.md` | Concurrency modules independently re-encoded in Spin (incl. the Class-G deadlock) and their key safety invariants proven inductive (unbounded in steps) in Apalache; both engines agree with TLC on green and on every control. *At delivery: 6 Spin modules, 8 invariants over 5 modules. **Now 9 and 18 over 9** — the 0.8.2 coverage audit closed the rest.* |
 
 The cross-check (the TLA+ track's independent corroboration) is **complete across every
-modeled subsystem** — see §3 and `docs/CROSSCHECK-RESULTS.md`. The one
-consciously-deferred item is the optional composed *Core-conjunction* inductive invariant in
-Apalache (lowest-value, the deadlock it would corroborate is already reproduced by Spin).
+modeled subsystem** — see §3 and `docs/CROSSCHECK-RESULTS.md`. **Nothing is deferred.** The
+composed *Core-conjunction* inductive invariant in Apalache was carried from Phase 1 to the
+0.8.2 audit as the one optional deferral, justified on the grounds that each invariant is
+proven separately and Spin already reproduces the deadlock. The audit rejected both halves —
+proving the conjuncts separately is exactly what a composition invariant is *not*, and the
+deadlock is liveness, which Apalache cannot prove either way — and proved it instead.
 
 ## 3. Independent re-verification of every claim
 
@@ -84,22 +99,65 @@ questions rather than one: do the properties hold (**green**), could they have f
 previously had no reachability assertions, so a trivially-inert model would have reported the
 same green as a working one. `make check` remains the green-only slice and now says so.
 
+Two follow-up passes hardened *how* each of the three questions is graded, after finding that
+all three could be answered "yes" by a run that had not verified anything.
+
+The **first pass** fixed three of the five graders. Every TLC negative control now declares the
+exact verdict line it must produce, so a control broken by a typo (TLC exits non-zero for a
+parse error exactly as for a caught defect) or one that has drifted onto a different property
+fails the build. Spin controls must report a positive `errors: N`, not merely the absence of
+`errors: 0`, which a compile failure also produces. Tamarin runs must be **wellformed** — the
+prover exits 0 when lemmas verify even if its own checks failed, printing "the analysis results
+might be wrong" on the way out, and four theories were shipping that warning unread.
+
+The **second pass** found the same defect still standing in the graders the first pass had not
+touched, and one worse than any of them:
+
+- **`proverif-green` had no verdict gate at all** (15 runs). It ran `proverif $t.pv || exit 1`
+  and graded on the exit status — while **ProVerif exits 0 even when a query is false**, a fact
+  already written in the comment on the target immediately below it. A genuine attack found
+  against any of the 15 secure theories would have reported green.
+- **`proverif-neg`'s criterion was satisfied by the secure theory** (15 runs). It required "at
+  least one `RESULT ... is false`" — but ProVerif reports a *reachable* event as a falsified
+  `not event(...)` query, so the **non-vacuity witness** that 13 of the 15 secure theories carry
+  also prints `is false`. Secure `Revoke.pv` passes the criterion its own control was graded by.
+- **`apalache-neg` and `tlc-witness` graded on exit status with output discarded** (15 + 9 runs)
+  — verbatim the defect the first pass fixed in `tlc-neg`. Apalache exits `255` for a
+  configuration error and `12` for a counterexample; TLC exits `151` for an undefined invariant.
+  Both scored as "the control caught its defect". Confirmed by pointing one of each at a
+  nonexistent operator: both passed.
+
+Both provers are now graded by **declared verdict tables** — every query and every lemma of
+every theory states the verdict it must produce, and the run must produce exactly that set, no
+more and no less. The green/control distinction lives entirely in the declared verdicts, which
+is what makes "a control that failed for the wrong reason" a build failure. `apalache-neg` must
+see `EXITCODE: ERROR (12)`; `tlc-witness` must see its own witness invariant named in the
+violation. **Absence of a pass is not evidence of a catch**, and all five graders now encode it.
+
+*The results themselves did not move.* Every verdict in the matrix was re-derived by hand
+during this pass and matches what the reports claim; what was wrong was the gate's ability to
+notice if they ever stopped matching.
+
 | Matrix | Runs | Outcome |
 |---|---|---|
-| **TLA+** (TLC) | 48 | 9 base configs green + `Store`'s liveness slice; **29 negative controls each caught their defect** (invariant violation / deadlock / temporal-property violation); **9 non-vacuity witnesses each violated as required**. Clean sweep. |
-| **ProVerif** | 30 | 15 secure theories — security lemma `is true` + non-vacuity reachable; **15 bug controls each falsified** (`is false` + attack). |
-| **Tamarin** | 28 | 14 secure theories `verified`; **14 bug controls each `falsified` + trace**. |
+| **TLA+** (TLC) | 49 | 9 base configs green + `Store`'s liveness slice; **30 negative controls each caught their defect** (invariant violation / deadlock / temporal-property violation); **9 non-vacuity witnesses each violated as required**. Clean sweep. |
+| **ProVerif** | 30 | 15 secure theories — security query `is true` + non-vacuity query reachable; **15 bug controls each falsified** (`is false` + attack). Every query of every theory declares the verdict it must produce (`PV_EXPECT` / `PV_NEG_EXPECT`). |
+| **Tamarin** | 29 | 14 secure theories `verified`, including each theory's `exists-trace` non-vacuity lemma; **15 bug controls each `falsified` + trace**. Graded per lemma against `TM_EXPECT` / `TM_NEG_EXPECT`. The 15th is `BindingReplayBug`, which was on disk but in no gate list — so `Binding.spthy`'s `no_replay` lemma had no control running at all. |
 | **Tamarin `RevokeMech`** | 1 | **Expected non-termination confirmed empirically** — the backward search loops the regenerated `Valid` fact; the run was observed still executing after **2–8 hours** across two sessions (vs. the report's conservative ">130s"). The documented irreducible tool split, excluded from the matrix. NB: `timeout` wraps the `podman run` client, not the detached container — kill the container directly (`podman kill`) to reclaim it. |
-| **Spin cross-check** | 29 | **All 6 concurrency modules** (reentry/conn/store/revoke/emit/register) × fix + defect variants. Every fix clean (safety + liveness); every defect caught the same way the matching TLC control fails (Class-G deadlock, handshake-ordering, store race, admission-bound, §5.1 revocation-ignored, §5.10 determinism-leak, emit mis-fire, marker-type, registration partial-residue, system-guard, and all liveness controls). |
-| **Apalache cross-check** | 21 | **5 modules, 9 safety invariants** (Revoke ×2, Store ×3, Conn ×1, Emit ×2, Register ×1) × {base, step} proven **inductive (unbounded)** + 3 negative controls caught symbolically (`ERROR 12`), matching TLC. The Store additions are `InvUAF` — §4.8's refcount use-after-free, new at 0.8.2. |
+| **Spin cross-check** | 45 | **All 9 concurrency modules** (reentry/conn/store/revoke/emit/register/**core**/**authority**/**bounds**) × fix + defect variants. Every fix clean (safety + liveness); every defect caught the same way the matching TLC control fails (Class-G deadlock, handshake-ordering, store race, admission-bound, §5.1 revocation-ignored, §5.10 determinism-leak, emit mis-fire, marker-type, registration partial-residue, system-guard, and all liveness controls). |
+| **Apalache cross-check** | 51 | **ALL 9 modules, 18 safety invariants** × {base, step} proven **inductive (unbounded in steps)** + 15 negative controls caught symbolically (`ERROR 12`), matching TLC. Added at 0.8.2: `InvUAF` (§4.8 refcount use-after-free) and ports for `Reentry`, `Authority`, `Bounds` and `Core` — four modules that previously had TLC coverage only. `CoreApalache`'s `InvComposed` is the **composed whole-protocol conjunction deferred since Phase 1**. |
 
 The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**156 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**204 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
-surface, the 9 witnesses, and controls for both.)
+surface, the 9 non-vacuity witnesses, the four Apalache ports and three Spin re-encodings the
+coverage audit added, controls for all of it, and — in the second gate audit —
+`BindingReplayBug`, a control
+that existed on disk but was in no gate list, leaving `Binding.spthy`'s `no_replay` lemma
+with none.)
 Method note: the first
 automated pass ran all three matrices concurrently, which produced four spurious
 failures from an SELinux `:Z` bind-mount relabel race (three concurrent containers on
@@ -109,13 +167,14 @@ theories serially (ProVerif `MultisigKN`; Tamarin `BindingBug`, `Caveats`,
 
 ## 4. What is proved — and the walls (honest scope)
 
-Each result certifies a **model of the V7 design**, not the prose and not the code.
+Each result certifies a **model of the design at the pin**, not the prose and not the code.
 The boundaries are stated in full in each report and `docs/ASSURANCE-MAP.md`; the
 load-bearing ones:
 
 - **5th wall — spec↔model fidelity (deepest).** Every guarantee is relative to the
   model faithfully transcribing `spec-data/v0.8.2/`. Mitigation: every modeled element
-  cites its V7 §ref; every negative control reproduces a *named, real* V7 bug class.
+  cites its §ref; every negative control reproduces a *named, real* bug class from the
+  protocol's own history.
   No tool closes this wall — review against the vendored spec owns it.
 - **Verdict-interior + crypto walls.** §5.4 attenuation arithmetic is Lean's
   (abstract predicate / function symbol here); sign/verify are perfect symbolic
@@ -125,10 +184,11 @@ load-bearing ones:
   worst case for the concurrency bugs (Class-G is deterministic at N=2). That bound is no
   longer the whole story: **Apalache proves each module's key safety invariant *inductive*
   (`Init⇒Inv`, `Inv∧Next⇒Inv'`), i.e. for all states, not just the enumerated ones**
-  (8 invariants across 5 modules). What remains bounded-only is **liveness** (deadlock-/
-  stall-freedom, settling, convergence) — Apalache does safety/inductive by construction, so
-  liveness stays TLC + Spin at the modeled bound — and the *composed* whole-protocol inductive
-  invariant (the deferred Core-conjunction).
+  (**18 invariants across all 9 modules**, including the composed whole-protocol conjunction).
+  What remains bounded-only is **liveness** (deadlock-/stall-freedom, settling, convergence) —
+  Apalache does safety/inductive by construction, so liveness stays TLC + Spin at the modeled
+  bound. Note also that "unbounded" here means unbounded in *steps*: the peer set is fixed at
+  2 in every model.
 - **Distributed-time wall.** Cross-peer verdict determinism under different `t`
   (§5.10) is TLA+'s lane; the provers abstract it. Conversely the active-attacker
   surface is the provers'; TLA+ abstracts the adversary.
@@ -139,7 +199,7 @@ load-bearing ones:
 ## 5. Findings and residual risk
 
 **Findings routed to architecture: none new.** The models *re-derived* the known
-Class-G reentry deadlock (already fixed in V7) and otherwise confirmed the v7.76
+Class-G reentry deadlock (already fixed upstream) and otherwise confirmed the pinned
 design admits no deadlock, store race, resource leak, registration partial-residue,
 emit mis-fire, Layer-1 verdict leak, or — under an active attacker — forgery,
 escalation, replay, deep cross-peer frame confusion, threshold bypass, or
@@ -149,23 +209,27 @@ would be a proposal/review-note in `entity-core-protocol`, never a spec edit her
 **Residual risk, ranked (carried verbatim from the reports — not papered over):**
 
 1. **TLA+ cross-check: complete across every modeled subsystem (was the highest risk;
-   now largely retired).** The TLA+ track is no longer singly attested on any module: Spin
-   independently re-encodes all 6 concurrency modules (reproducing the Class-G deadlock and
-   reaching TLC's verdict on every defect), and Apalache proves every module's key safety
-   invariant **inductive (unbounded)** — both engines agreeing with TLC on green and every
-   negative control (`docs/CROSSCHECK-RESULTS.md`). The 5th wall is now **substantially
-   narrowed** — two independent paradigms agree across the whole surface — but **not closed**:
-   they could in principle share a misreading of the spec, so human review against `spec-data/v0.8.2/`
-   still owns it. The only deferred cross-check item is the optional composed Core-conjunction
-   inductive invariant (lowest value; deadlock already reproduced by Spin).
+   now retired).** The TLA+ track is no longer singly attested on any module: Spin
+   independently re-encodes all **9** concurrency modules (reproducing the Class-G deadlock and
+   reaching TLC's verdict on every defect), and Apalache proves **18 safety invariants across
+   all 9** **inductive (unbounded in steps)** — both engines agreeing with TLC on green and
+   every negative control (`docs/CROSSCHECK-RESULTS.md`). **Nothing is deferred**, including
+   the composed Core-conjunction. The 5th wall is now **substantially narrowed** — two
+   independent paradigms agree across the whole surface — but **not closed**: they could in
+   principle share a misreading of the spec, so human review against `spec-data/v0.8.2/`
+   still owns it. Note "unbounded" means unbounded in *steps*: `Peers = {A,B}` is fixed in
+   every model, TLC, Spin and Apalache alike.
 2. **Liveness is bounded; safety is now unbounded (TLA+).** As §4 — the inductive Apalache
    proofs lift the key *safety* invariants to all-N; *liveness* (deadlock-/stall-freedom,
    settling, convergence) remains small-scope exhaustive in TLC + Spin.
-3. **A few thin positives.** `Store`'s store-cardinality conjunct is vacuous at a
-   single key; `Register`'s correct-model atomicity is near-tautological. Both have
-   teeth on the control side; multi-key/sequenced-writes would harden the green side.
-   (The Apalache `Store` port makes the single-key bound explicit — `store ⊆ {"k"}` — so the
-   thinness is visible, not hidden.)
+3. **One thin positive left.** `Register`'s correct-model atomicity is near-tautological —
+   teeth on the control side only; sequenced writes would harden the green side. The other two
+   are retired: `Store`'s store-cardinality conjunct was de-vacuumed at 0.8.2 (multi-key,
+   discharged by refcount correctness), and `Reentry`/`Core`'s inherited `StoreBounded` was
+   **removed** in the follow-up pass — one literal key written once against a bound ≥ 1 could
+   not fail, and `core.pml`'s Spin counterpart clamped the write at the bound it then asserted.
+   It is now a declared structural exclusion pointing at `Store`, which owns the real
+   §4.8/§4.9(b) obligation.
 4. **One tool asymmetry is irreducible.** Mechanistic linear-token revocation does
    not terminate in Tamarin (`RevokeMech`); it stays ProVerif's lane while Tamarin
    uses the terminating trace-restriction idiom. This is a genuine tool-capability
@@ -173,10 +237,34 @@ would be a proposal/review-note in `entity-core-protocol`, never a spec edit her
 5. **Async/extension PROTOCOLS not modeled.** `EXTENSION-CONTINUATION/-SUBSCRIPTION/
    -COMPUTE` are not in the vendored snapshot; Phase 2 modeled only the §6.8 core
    property that governs them. Full protocols are Phase 3, gated on vendoring.
+6. **Every model fixes the peer set at 2 — this is the largest structural limit and no
+   engine here reaches past it.** TLC, Spin and Apalache alike run `Peers = {A,B}`;
+   Apalache's results are unbounded in *steps*, never in *peers*. A defect first appearing
+   at 3 peers is outside every result in this document. It is honestly disclosed throughout
+   and it is **not attacked**: the named technique is parameterized verification (Ivy's
+   decidable EPR fragment, `mypyvy`, or TLAPS), which proves an inductive invariant for all
+   N. Revocation propagation (§5.10) and cross-peer chain topology (§5.8) are where N > 2
+   is most plausible. `docs/STATUS.md` §Next item 5.
+7. **The Lean↔model seam is asserted, not checked.** `docs/ASSURANCE-MAP.md` divides labour:
+   Lean owns the authority-logic interior, TLA+ and Tamarin abstract it to a predicate /
+   function symbol. That division is sound only if the property each model **assumes** of the
+   abstraction is the property Lean **proves** — and nothing writes the correspondence down,
+   so nothing checks it. At least nine correspondences exist (§5.10 determinism ↔
+   `verifyChain_time_stable`; §5.2 deny-by-default ↔ `checkPermission_no_grants_deny`; §6.2
+   namespace guard ↔ `grantPattern_namespace_isolation`; §3.6 K-of-N ↔
+   `multiSigRootOk_quorum`; and others). Spot-checks find them consistent — in the one
+   examined closely, Lean's theorem is the *stronger* of the pair — but a spot-check is the
+   standard this repo refuses everywhere else. An **assumption ledger** and
+   **counterexample-replay differential checking** are the two proposed closures;
+   `docs/STATUS.md` §Next item 4.
+8. **Two negative controls are weak, and two section rows are single-engine.**
+   `DeepChainBug`/`DeepChainNBug` falsify their lemma in a variant whose honest path is
+   unreachable at 2 steps; §4.7 (Apalache-only) and §6.9 (TLC-only) rest on one engine each.
+   Both are declared in `docs/COVERAGE-MATRIX.md` and open.
 
 ## 6. Bottom line
 
-As a **design-assurance demonstrator**, the project met its objective: the V7 design
+As a **design-assurance demonstrator**, the project met its objective: the design
 holds — under concurrency (safety + liveness) and under an active Dolev-Yao attacker —
 across every property modeled, each grounded in a §-cited check and demonstrated
 falsifiable by a negative control. **Both tracks are now doubly-attested:** the prover track
@@ -184,8 +272,9 @@ by ProVerif + Tamarin agreeing in lockstep, and the TLA+ track by an independent
 re-encoding of every concurrency module *plus* unbounded Apalache SMT proofs of every module's
 key safety invariant — both engines agreeing with TLC throughout. The two highest-value results
 (the Class-G deadlock and the §5.10 cross-peer determinism MUST) are corroborated on both
-dimensions. What remains is the deliberately-deferred optional item (the composed Core-conjunction
-inductive invariant) and the follow-ons that are out of this project's scope by design.
+dimensions. **Nothing is deferred** — the composed Core-conjunction inductive invariant, carried
+as optional since Phase 1, was proved in the 0.8.2 audit (§2, §3). What remains is the follow-ons
+that are out of this project's scope by design.
 
 This is a strong machine-checked **demonstrator, not a closed proof.** It is a complementary
 third leg beside Lean (logic) and validate-peer (conformance) — not a replacement, and not a

@@ -51,7 +51,13 @@ group = "Overview"
 [[doc]]
 path  = "docs/FINAL-ASSURANCE-SUMMARY.md"
 title = "Final Assurance Summary (capstone)"
-blurb = "What was proved, how far it goes, what it deliberately does not say; the 76-run re-verification matrix."
+blurb = "What was proved, how far it goes, what it deliberately does not say; the 203-run re-verification matrix."
+group = "Assurance"
+
+[[doc]]
+path  = "docs/COVERAGE-MATRIX.md"
+title = "Coverage matrix — what is verified, by which tool, and how far it reaches"
+blurb = "What each of the four engines can and cannot do; protocol section x engine; what is NOT covered, split into out-of-scope / tool-limited / backlog; the exact bound on every claim."
 group = "Assurance"
 
 [[doc]]

@@ -51,6 +51,14 @@ event AcceptedExec(pkey, bitstring).   (* verifier accepted an execute wielding 
 query g: pkey, n: bitstring;
   event(AcceptedExec(g, n)) ==> event(Authored(g, n)).
 
+(* NON-VACUITY (mirrors Binding.spthy's `accepted_reachable` exists-trace lemma).
+ * The binding lemma is a correspondence: a verifier that can never accept satisfies it
+ * vacuously. `Verifier` is a chain of four destructuring `let`s — if any one of them
+ * were unsatisfiable the whole theory would go green while proving nothing. This query
+ * asserts the honest execute IS accepted.
+ * EXPECTED VERDICT: `is false` — a reachable event falsifies the "not event(...)" form. *)
+query g: pkey, n: bitstring; event(AcceptedExec(g, n)).
+
 (* ---- honest principals ---- *)
 
 (* P issues a root cap to grantee G: signs (grantee, capTag). *)

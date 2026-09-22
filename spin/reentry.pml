@@ -35,7 +35,14 @@
 #define B 1
 #define other(p)  (1 - p)
 
-bool wlock_free[2] = true;  /* per-peer pooled-connection write lock (§6.11(a)/(a′)) */
+/* Per-peer pooled-connection write lock (§6.11(a)/(a′)). Tracks the OWNER, not just a free
+ * bit, because a writer must release only a lock it actually holds — under the fix the
+ * client releases at end-of-frame, so by the time its response arrives the lock may belong
+ * to this peer's own server, mid-frame. 0 = free, 1 = client, 2 = server. */
+byte wlock[2] = 0;
+#define WFREE   0
+#define WCLIENT 1
+#define WSERVER 2
 bool inReq[2]    = false;   /* an inbound request awaits peer p's server */
 bool resp[2]     = false;   /* a response has been delivered back to peer p's client */
 byte store[2]    = 0;       /* §4.8 live-key store count a handler has written */
@@ -49,7 +56,6 @@ byte midframe[2] = 0;
  * frame. Set when a writer begins or ends a frame while another writer is mid-frame. */
 bool interleaved = false;
 
-#define MAXLIVE 2          /* §4.9(b) store bound */
 
 /* LTL predicates (§4.9(a) — every admitted request eventually resolves) */
 #define sentA  (cstate[A] == 1)
@@ -62,8 +68,8 @@ proctype client(byte p) {
   /* --- Frame chunk 1 of the request frame (§6.11(a′)) --- */
   atomic {
 #ifndef NOATOMICFRAME
-    wlock_free[p];               /* (a′): take the write lock for this frame's bytes */
-    wlock_free[p] = false;
+    wlock[p] == WFREE;           /* (a′): take the write lock for this frame's bytes */
+    wlock[p] = WCLIENT;
 #endif
     /* beginning a frame while another writer is mid-frame IS an interleave */
     if :: midframe[p] > 0 -> interleaved = true;
@@ -84,14 +90,22 @@ proctype client(byte p) {
      * SERIALIZED defect (§6.11(a) violated): keep holding it across the recv. */
 #ifndef NOATOMICFRAME
 #ifndef SERIALIZED
-    wlock_free[p] = true;        /* §6.11(a)+(b) FIX: released before the await */
+    wlock[p] = WFREE;            /* §6.11(a)+(b) FIX: released before the await */
 #endif
 #endif
   }
-  /* CRecv — await the response (DEFECT: still holding the lock). */
+  /* CRecv — await the response (DEFECT: still holding the lock).
+   * RELEASE ONLY A LOCK WE HOLD. Under the fix the client already released at end-of-frame,
+   * so the lock may now belong to this peer's own server mid-frame; freeing it here would
+   * release another writer's lock. (Found by tla/ReentryApalache.tla's inductive step —
+   * invisible to both bounded checkers because no third writer exists at this bound to
+   * exploit the stolen lock.) */
   atomic {
     resp[p];                     /* await correlated response */
-    wlock_free[p] = true;        /* release (no-op in the fix; client->free in the defect) */
+    if
+    :: wlock[p] == WCLIENT -> wlock[p] = WFREE;   /* the SERIALIZED defect's hold ends here */
+    :: else -> skip
+    fi;
     cstate[p] = 2;               /* done */
   }
 }
@@ -106,15 +120,16 @@ proctype server(byte q) {
   /* --- Frame chunk 1 of the response frame --- */
   atomic {
 #ifndef NOATOMICFRAME
-    wlock_free[q];               /* acquire the write lock for the response frame */
-    wlock_free[q] = false;
+    wlock[q] == WFREE;           /* acquire the write lock for the response frame */
+    wlock[q] = WSERVER;
 #endif
     if :: midframe[q] > 0 -> interleaved = true;
        :: else -> skip
     fi;
     midframe[q]++;
-    store[q]++;                  /* §4.8 bounded store write */
-    assert(store[q] <= MAXLIVE); /* SAFETY §4.9(b): store never exceeds its bound */
+    store[q]++;                  /* §4.8 handler store write */
+    /* No §4.9(b) bound assert — it was VACUOUS here (one write per server against MAXLIVE=2,
+     * so it could not fail) and is removed to match Reentry.tla. store.pml owns the bound. */
   }
   /* --- Frame chunk 2; then deliver and release --- */
   atomic {
@@ -125,7 +140,7 @@ proctype server(byte q) {
     resp[other(q)] = true;       /* respond to the requesting client */
     sstate[q] = 2;               /* done */
 #ifndef NOATOMICFRAME
-    wlock_free[q] = true;        /* END OF FRAME */
+    wlock[q] = WFREE;            /* END OF FRAME */
 #endif
     /* SAFETY §6.11(a′): the bytes of two distinct frames never interleaved. */
     assert(!interleaved);

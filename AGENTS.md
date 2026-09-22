@@ -5,7 +5,7 @@ Read **AGENTS-STANDARD.md** first. This file adds entity-core-formalization spec
 ## Overview
 
 Formal design assurance for the Entity Core Protocol — machine-checked verification of
-the V7 *protocol design* on the two layers Lean cannot structurally reach: **TLA+**
+the *protocol design at the pin* on the two layers Lean cannot structurally reach: **TLA+**
 (distributed correctness under concurrency, safety + liveness — TLC, with **Apalache**
 for inductive/unbounded invariants and **Spin** as an independent cross-check) and
 **Tamarin / ProVerif** (active-attacker / Dolev-Yao security: capability unforgeability,
@@ -61,22 +61,60 @@ is the learning on-ramp; `docs/PROPERTIES.md` is the PROVEN/MODELED scorecard.
 
 - `spec-data/` — vendored, SHA-pinned, byte-for-byte spec snapshots. Currently `v0.8.0/`
   and `v0.8.2/`; **`spec-data/MODELING-PIN` names the one the models actually transcribe**
-  (`v0.8.0`) and therefore the one every published result is about. `make specdrift`
-  reports the distance from that pin to the live spec.
+  (`v0.8.2`) and therefore the one every published result is about. Do not restate it
+  here — read the file. `make specdrift` reports the distance from that pin to the live spec.
 - `tla/`, `spin/`, `tamarin/` — per-engine workspaces and reports.
 - Per-spike deliverable: a `FORMALIZATION-REPORT`-style note (properties proved /
   counterexamples / scope boundaries / on-ramp pain / go-no-go).
 
-**Status:** the spec has moved out from under the pin. `spec-data/v0.8.2/` is vendored
-and hash-verified; the models still transcribe `v0.8.0` and the next substantive work is
-modeling the new normative surface (§6.11 (a′) frame-write atomicity, §4.8 refcount
-use-after-free, §5.6 malformed temporal ingest) — `docs/STATUS.md` §Next is the work-list.
-Prior arc, all still green against the pin: Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
-Tamarin/ProVerif active-attacker), and Phase 2 (prover surface-closure) done; the full
-76-run matrix re-verified and the TLA+ cross-check complete across every subsystem (Spin
-re-encodes all 6 concurrency modules, reproducing the Class-G deadlock; Apalache proves
-8 inductive invariants across 5 modules; Tamarin/ProVerif close 12 lemmas in lockstep).
-Only optional leftovers remain — the capstone `docs/FINAL-ASSURANCE-SUMMARY.md` enumerates them.
+**Status:** pinned at `v0.8.2` and `make specdrift` reports **no drift** — the models
+transcribe the live spec. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
+Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done; the 0.8.2
+re-target modeled the new normative surface (§6.11 (a′) frame-write atomicity, §4.8 refcount
+use-after-free, §5.6 malformed temporal ingest, §5.2 dispatch authority, §5.9 bounds) and the
+coverage audit closed every single-tool gap **at module granularity** — two remain at
+*section* granularity (§4.7 Apalache-only, §6.9 TLC-only; `COVERAGE-MATRIX.md` §3).
+No inductive invariant is deferred. The full **204-run** `make matrix` is the gate: all 9
+concurrency modules checked by TLC + Apalache (18 inductive invariants) + Spin, both provers
+running every attacker theory (15 ProVerif / 14 Tamarin lemmas), 104 negative controls and
+9 non-vacuity witnesses. `docs/COVERAGE-MATRIX.md` is the section×engine map and the limits;
+`docs/STATUS.md` §Next is the work-list; `docs/FINAL-ASSURANCE-SUMMARY.md` is the capstone.
+
+**The failure mode this repo actually has is in the verification, not the protocol** — every
+defect found by the last three audits was one, and they have earned two ratified disciplines.
+
+### D13 — a gate must assert the outcome it claims, not merely a symptom of it
+
+For every grading target, answer in the file: **what does this assert, and what else
+satisfies it?** Exit status is almost never the answer. Demonstrated repeatedly here:
+ProVerif exits `0` with a *false* query; TLC exits non-zero for an undefined invariant exactly
+as for a violation; Apalache exits `255` for a config error and `12` for a counterexample;
+Spin prints `errors: 0` for a compile failure; Tamarin exits `0` while printing "the analysis
+results might be wrong"; and "some RESULT is false" is how a *passing* non-vacuity query
+reports, so a secure theory satisfied its own negative control's criterion. A control must
+fail **for its stated reason**, a green must **positively** report success, and a tool warning
+is a build failure.
+
+*Enforcement:* every row of `TLC_NEG`, `TLC_WITNESS`, `PV_EXPECT`, `PV_NEG_EXPECT`,
+`TM_EXPECT`, `TM_NEG_EXPECT` carries its expected verdict; `apalache-neg` requires
+`EXITCODE: ERROR (12)`; `spin/Makefile` requires a positive `errors: N` from controls and an
+explicit `errors: 0` from greens. Adding a run without adding its expected verdict fails the
+build — the graders reject a theory that declares nothing.
+
+### D14 — a finding is not closed until it is applied to every instance of its shape
+
+Do not fix the instance you found. Enumerate the class, then fix all of it in the same
+session, and say in the commit how many instances there were. Twice now the cost has been
+real: `StoreBounded` was *disclosed* as vacuous in two releases before anyone removed it; and
+the audit that hardened `tlc-neg`, Spin and Tamarin against exit-status grading left
+`apalache-neg`, `tlc-witness` and **both** ProVerif targets untouched — **62 of 203 runs**,
+found only because a later pass re-asked the question of every target rather than the one that
+had failed.
+
+*Enforcement:* a fix whose finding names a mechanism (a grading criterion, an idiom, a
+tool behaviour) must list every site of that mechanism and its disposition in
+`docs/PROPERTIES.md` §C or `docs/STATUS.md`. `grep -n 'dev/null' */Makefile` is the specific
+tripwire for this family: discarded output is the tell.
 
 ## Boundaries — do NOT modify
 

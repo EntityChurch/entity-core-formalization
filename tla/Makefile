@@ -74,49 +74,65 @@ TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds
 # interesting state and proves the green results above are not vacuously true of an inert
 # model. Format: MODULE CFG. EXPECTED VERDICT FOR EVERY ROW: violation (exit 12).
 # This closes the gap disclosed in ../docs/PROPERTIES.md §C.4 since Phase 1.
+# Format: MODULE|CFG|expected TLC verdict line — the same three-field shape as TLC_NEG, and
+# for the same reason. This target used to grade on TLC's EXIT STATUS with output sent to
+# /dev/null, so a witness cfg naming an operator that does not exist (TLC: "Error: The
+# invariant X specified in the configuration file is not defined in the specification",
+# exit 151) scored "ok (violated as required)" — identical to a real witnessed state. The
+# whole point of a witness is to prove the model is not inert; grading it by a criterion a
+# BROKEN CONFIG satisfies reintroduces exactly the vacuity it was added to rule out.
 TLC_WITNESS := \
-  "Reentry   ReentryWitness" \
-  "Store     StoreWitness" \
-  "Conn      ConnWitness" \
-  "Revoke    RevokeWitness" \
-  "Emit      EmitWitness" \
-  "Register  RegisterWitness" \
-  "Core      CoreWitness" \
-  "Authority AuthorityWitness" \
-  "Bounds    BoundsWitness"
+  "Reentry|ReentryWitness|Invariant WitnessBothComplete is violated" \
+  "Store|StoreWitness|Invariant WitnessStoreLive is violated" \
+  "Conn|ConnWitness|Invariant WitnessDispatched is violated" \
+  "Revoke|RevokeWitness|Invariant WitnessRevocationObserved is violated" \
+  "Emit|EmitWitness|Invariant WitnessEventFired is violated" \
+  "Register|RegisterWitness|Invariant WitnessHandlerLive is violated" \
+  "Core|CoreWitness|Invariant WitnessExchangeComplete is violated" \
+  "Authority|AuthorityWitness|Invariant WitnessSubAllowed is violated" \
+  "Bounds|BoundsWitness|Invariant WitnessDepthBrakeFires is violated"
 
-# NEGATIVE CONTROLS. Every row MUST fail — a green here means the property has no teeth.
-# Format: MODULE CFG.
+# NEGATIVE CONTROLS. Every row MUST fail — a green here means the property has no teeth —
+# AND IT MUST FAIL FOR THE STATED REASON. Format: MODULE|CFG|expected TLC verdict line.
+#
+# The third field was added after the 0.8.2 follow-up audit. Before it, this target graded on
+# TLC's EXIT STATUS alone with output sent to /dev/null, and TLC exits non-zero for a parse or
+# semantic error exactly as it does for a caught defect — so a control broken by a typo scored
+# "ok (failed as required)", and a control that started failing on a DIFFERENT property than
+# the one it targets scored the same. That is the repo's recurring failure mode (a Spin control
+# that compiled out its own detector; an Apalache control too short to reach its defect): a
+# green, or a red, that means something other than what it appears to.
 TLC_NEG := \
-  "Reentry   ReentryBug" \
-  "Reentry   ReentryFrameBug" \
-  "Store     StoreRaceBug" \
-  "Store     StoreAdmitBug" \
-  "Store     StoreRefcountBug" \
-  "Store     StoreDropBug" \
-  "Conn      ConnBug" \
-  "Conn      ConnDropBug" \
-  "Revoke    RevokeIgnoreBug" \
-  "Revoke    RevokeLeakBug" \
-  "Revoke    RevokeNoConvergeBug" \
-  "Revoke    RevokeUnboundedBug" \
-  "Emit      EmitFireBug" \
-  "Emit      EmitMarkerBug" \
-  "Emit      EmitStallBug" \
-  "Register  RegisterAtomicBug" \
-  "Register  RegisterSysGuardBug" \
-  "Register  RegisterWedgeBug" \
-  "Core      CoreBug" \
-  "Core      CoreEstabBug" \
-  "Core      CoreRevokeBug" \
-  "Authority AuthorityOptAllowBug" \
-  "Authority AuthorityOptDenyBug" \
-  "Authority AuthoritySubGateBug" \
-  "Authority AuthorityInheritBug" \
-  "Bounds    BoundsEqualBug" \
-  "Bounds    BoundsRatioBug" \
-  "Bounds    BoundsDoubleCountBug" \
-  "Bounds    BoundsCodeBug"
+  "Reentry|ReentryBug|Deadlock reached" \
+  "Reentry|ReentryFrameBug|Invariant FramesNotInterleaved is violated" \
+  "Store|StoreRaceBug|Invariant StoreRaceFree is violated" \
+  "Store|StoreAdmitBug|Invariant ResourceBounded is violated" \
+  "Store|StoreRefcountBug|Invariant NoUseAfterFree is violated" \
+  "Store|StoreDropBug|Temporal properties Responsive and Recovers were violated" \
+  "Conn|ConnBug|Invariant NoEstablishWithoutNonce is violated" \
+  "Conn|ConnDropBug|Temporal property AllAnswered was violated" \
+  "Revoke|RevokeIgnoreBug|Invariant RevokedNeverPasses is violated" \
+  "Revoke|RevokeLeakBug|Invariant VerdictFnOfLayer1 is violated" \
+  "Revoke|RevokeNoConvergeBug|Temporal property RevocationConverges was violated" \
+  "Revoke|RevokeUnboundedBug|Invariant BoundHonored is violated" \
+  "Emit|EmitFireBug|Invariant EventIffRealWork is violated" \
+  "Emit|EmitMarkerBug|Invariant EventTypeCorrect is violated" \
+  "Emit|EmitStallBug|Temporal property EmitTerminates was violated" \
+  "Register|RegisterAtomicBug|Invariant NoPartialResidue is violated" \
+  "Register|RegisterSysGuardBug|Invariant NoUserAtSystem is violated" \
+  "Register|RegisterWedgeBug|Temporal property RegisterSettles was violated" \
+  "Core|CoreBug|Deadlock reached" \
+  "Core|CoreEstabBug|Invariant DispatchNeedsEstablished is violated" \
+  "Core|CoreRevokeBug|Invariant NoServeWhenRevoked is violated" \
+  "Core|CoreFrameBug|Invariant FramesNotInterleaved is violated" \
+  "Authority|AuthorityOptAllowBug|Invariant NoGrantlessAllow is violated" \
+  "Authority|AuthorityOptDenyBug|Invariant EntryNotSpuriouslyDenied is violated" \
+  "Authority|AuthoritySubGateBug|Invariant ResourceAuthorized is violated" \
+  "Authority|AuthorityInheritBug|Invariant NoManufacturedTarget is violated" \
+  "Bounds|BoundsEqualBug|Invariant DepthBrakeFirst is violated" \
+  "Bounds|BoundsRatioBug|Invariant DepthBrakeFirst is violated" \
+  "Bounds|BoundsDoubleCountBug|Invariant TtlNotDoubleCounted is violated" \
+  "Bounds|BoundsCodeBug|Invariant ReasonCodesDistinct is violated"
 
 .PHONY: tlc-green apalache-green green tlc-witness tlc-neg
 tlc-green:
@@ -127,35 +143,61 @@ tlc-green:
 	@echo "== TLC Store (liveness slice, StoreLive.cfg) =="
 	@$(RUN) tlc2.TLC -workers $(WORKERS) -config StoreLive.cfg Store.tla || exit 1
 
-# Each witness MUST be violated. Inverted exit status: a clean run is the failure.
+# Each witness MUST be violated, AND MUST BE VIOLATED FOR THE DECLARED REASON. Both halves
+# matter: a clean run means the witnessed state became unreachable (the model went inert); a
+# non-zero exit for any OTHER reason means the witness never ran at all.
 tlc-witness:
 	@for row in $(TLC_WITNESS); do \
-	  set -- $$row; mod=$$1; cfg=$$2; \
-	  echo "== TLC witness $$mod/$$cfg (MUST be violated) =="; \
-	  if $(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla >/dev/null 2>&1; then \
+	  mod=$$(echo "$$row" | cut -d'|' -f1); cfg=$$(echo "$$row" | cut -d'|' -f2); \
+	  want=$$(echo "$$row" | cut -d'|' -f3); \
+	  echo "== TLC witness $$mod/$$cfg (MUST be violated: $$want) =="; \
+	  out=$$($(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -eq 0 ]; then \
 	    echo "FAIL: $$cfg reported NO violation — the witnessed state is unreachable, so"; \
 	    echo "      $$mod's green results may be vacuous. This is a real regression."; \
 	    exit 1; \
-	  else echo "   ok (violated as required)"; fi; \
+	  fi; \
+	  if ! echo "$$out" | grep -qF "$$want"; then \
+	    echo "FAIL: $$cfg failed, but NOT by exhibiting the witnessed state."; \
+	    echo "      expected: $$want"; \
+	    echo "      got:      $$(echo "$$out" | grep -E '^Error:' | head -3 | tr '\n' ' ')"; \
+	    echo "      TLC exits non-zero for a bad config exactly as for a violation; without"; \
+	    echo "      this check a witness naming a nonexistent operator scores as a pass."; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (violated as required: $$want)"; \
 	done
 
 # Each negative control MUST fail. Inverted exit status: a clean run is the failure.
 tlc-neg:
 	@for row in $(TLC_NEG); do \
-	  set -- $$row; mod=$$1; cfg=$$2; \
-	  echo "== TLC neg control $$mod/$$cfg (MUST fail) =="; \
-	  if $(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla >/dev/null 2>&1; then \
+	  mod=$$(echo "$$row" | cut -d'|' -f1); cfg=$$(echo "$$row" | cut -d'|' -f2); \
+	  want=$$(echo "$$row" | cut -d'|' -f3); \
+	  echo "== TLC neg control $$mod/$$cfg (MUST fail: $$want) =="; \
+	  out=$$($(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -eq 0 ]; then \
 	    echo "FAIL: $$cfg reported GREEN — the property it targets has no teeth."; \
 	    exit 1; \
-	  else echo "   ok (failed as required)"; fi; \
+	  fi; \
+	  if ! echo "$$out" | grep -qF "$$want"; then \
+	    echo "FAIL: $$cfg failed, but NOT for the reason it exists to demonstrate."; \
+	    echo "      expected: $$want"; \
+	    echo "      got:      $$(echo "$$out" | grep -E '^Error:' | head -3 | tr '\n' ' ')"; \
+	    echo "      A control that fails for the wrong reason is not evidence of teeth."; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (failed as required: $$want)"; \
 	done
 
 # Apalache: prove each module's key safety invariant INDUCTIVE (unbounded) —
 # base case (Init => Inv, length 0) and inductive step (IndInit /\ Next => Inv',
 # length 1). Operator names are in each *Apalache.tla
 # header. Format per line: MODULE CINIT INV INDINIT
-# 9 invariants across 5 modules (was 8 at v0.8.0; StoreApalache InvUAF is the §4.8 RT-13a
-# refcount use-after-free added at 0.8.2).
+# 18 invariants across 9 modules (was 8 across 5 at v0.8.0). Added at 0.8.2: StoreApalache
+# InvUAF (§4.8 RT-13a refcount use-after-free), and three modules that previously had TLC
+# coverage ONLY — ReentryApalache (§6.11(a') frame-write atomicity), AuthorityApalache (all
+# four §5.2 rules) and BoundsApalache (§5.9 / §4.10(b)). Single-tool coverage was a hole the
+# audit found, not a scope decision.
 APALACHE_GREEN := \
   "RevokeApalache ConstInitOK InvDet IndInitDet" \
   "RevokeApalache ConstInitOK InvRev IndInitRev" \
@@ -165,7 +207,16 @@ APALACHE_GREEN := \
   "ConnApalache   ConstInitOK Inv IndInit" \
   "EmitApalache   ConstInitOK InvIff IndInitIff" \
   "EmitApalache   ConstInitOK InvType IndInitType" \
-  "RegisterApalache ConstInitOK Inv IndInit"
+  "RegisterApalache ConstInitOK Inv IndInit" \
+  "ReentryApalache ConstInitOK InvFrame IndInitFrame" \
+  "AuthorityApalache ConstInitOK InvGrantless IndInitGrantless" \
+  "AuthorityApalache ConstInitOK InvEntry IndInitEntry" \
+  "AuthorityApalache ConstInitOK InvResource IndInitResource" \
+  "AuthorityApalache ConstInitOK InvTarget IndInitTarget" \
+  "BoundsApalache ConstInitOK InvBrake IndInitBrake" \
+  "BoundsApalache ConstInitOK InvCount IndInitCount" \
+  "BoundsApalache ConstInitOK InvCodes IndInitCodes" \
+  "CoreApalache ConstInitOK InvComposed IndInitComposed"
 
 # Apalache NEGATIVE CONTROLS. Format: MODULE CINIT INV INIT LENGTH. Every row MUST report an
 # error. NOTE the §4.8 refcount control (ConstInitBugRefs) runs BOUNDED FROM Init against the
@@ -173,20 +224,65 @@ APALACHE_GREEN := \
 # unreachable, so under SyncRefs = FALSE it is false and any inductive obligation carrying it
 # would be satisfied VACUOUSLY — a green that means nothing. Stated here because the
 # distinction is invisible from the row itself.
+#
+# THE LENGTH COLUMN IS LOAD-BEARING AND IS A TRAP. A bounded run that is too SHORT to reach
+# the defect reports NoError, which is textually identical to "the invariant holds" — so an
+# under-set length silently converts a negative control into a false pass. ReasonCodesDistinct
+# needs >= 5 (five Advance steps to reach the ceiling) and was observed passing at 4 during
+# the 0.8.2 audit. Lengths here carry margin over the shortest witness. Same failure family as
+# vacuity: a green that means nothing.
 APALACHE_NEG := \
   "StoreApalache ConstInitBugRace  InvRace      IndInitRace 1" \
   "StoreApalache ConstInitBugAdmit ResourceBounded Init     8" \
-  "StoreApalache ConstInitBugRefs  InvUAFPlain  Init        8"
+  "StoreApalache ConstInitBugRefs  InvUAFPlain  Init        8" \
+  "ReentryApalache ConstInitBugFrame FramesNotInterleaved Init 8" \
+  "AuthorityApalache ConstInitBugAllow   NoGrantlessAllow         Init 6" \
+  "AuthorityApalache ConstInitBugDeny    EntryNotSpuriouslyDenied Init 6" \
+  "AuthorityApalache ConstInitBugSubGate ResourceAuthorized       Init 6" \
+  "AuthorityApalache ConstInitBugInherit NoManufacturedTarget     Init 6" \
+  "BoundsApalache ConstInitBugEqual  DepthBrakeFirst     Init 10" \
+  "BoundsApalache ConstInitBugRatio  DepthBrakeFirst     Init 10" \
+  "BoundsApalache ConstInitBugDouble TtlNotDoubleCounted Init 4" \
+  "BoundsApalache ConstInitBugCode   ReasonCodesDistinct Init 6" \
+  "CoreApalache ConstInitBugFrame  FramesNotInterleaved     Init 8" \
+  "CoreApalache ConstInitBugEstab  DispatchNeedsEstablished Init 6" \
+  "CoreApalache ConstInitBugRevoke NoServeWhenRevoked       Init 8"
 
+# Every row MUST fail, AND MUST FAIL BY FINDING A COUNTEREXAMPLE — not by erroring out.
+#
+# This target used to grade on the EXIT STATUS with output sent to /dev/null, which is the
+# same defect fixed in `tlc-neg` and in spin/Makefile, left standing here. Apalache
+# distinguishes the two cases in its exit code and this check reads it:
+#   EXITCODE: ERROR (12)  — "Checker has found an error": a real counterexample.
+#   EXITCODE: ERROR (255) — a CONFIGURATION error, e.g. `--inv=` naming an operator that does
+#                           not exist. Also non-zero. Under the old grading that scored
+#                           "ok (counterexample found as required)".
+# So a control whose invariant or cinit was renamed or typo'd counted as teeth. Verified by
+# pointing one row at a nonexistent invariant: 255, and the old target passed it.
+#
+# RESIDUAL, stated because the check cannot close it: Apalache prints "State N: state
+# invariant K violated" — an INDEX, not the invariant's name — so this asserts that A
+# counterexample was found for the invariant NAMED ON THE COMMAND LINE, not which conjunct of
+# a conjunctive invariant broke. TLC's controls do assert the name; Apalache's cannot.
 .PHONY: apalache-neg
 apalache-neg:
 	@for row in $(APALACHE_NEG); do \
 	  set -- $$row; mod=$$1; ci=$$2; inv=$$3; init=$$4; len=$$5; \
-	  echo "== Apalache neg control $$mod $$ci/$$inv (MUST fail) =="; \
-	  if $(APRUN) check --cinit=$$ci --init=$$init --next=Next --inv=$$inv --length=$$len $$mod.tla >/dev/null 2>&1; then \
+	  echo "== Apalache neg control $$mod $$ci/$$inv (MUST find a counterexample) =="; \
+	  out=$$($(APRUN) check --cinit=$$ci --init=$$init --next=Next --inv=$$inv --length=$$len $$mod.tla 2>&1); rc=$$?; \
+	  if [ $$rc -eq 0 ]; then \
 	    echo "FAIL: $$ci/$$inv reported NoError — the invariant has no teeth."; \
+	    echo "      (Check the --length: a bounded run too SHORT to reach the defect also"; \
+	    echo "      reports NoError, textually identical to 'the invariant holds'.)"; \
 	    exit 1; \
-	  else echo "   ok (counterexample found as required)"; fi; \
+	  fi; \
+	  if ! echo "$$out" | grep -qF "EXITCODE: ERROR (12)"; then \
+	    echo "FAIL: $$ci/$$inv failed WITHOUT finding a counterexample — the run errored out"; \
+	    echo "      before verifying anything, so it is not evidence of teeth."; \
+	    echo "$$out" | grep -E "Configuration error|EXITCODE|^.*error" | tail -4 | sed 's/^/      /'; \
+	    exit 1; \
+	  fi; \
+	  echo "   ok (counterexample found as required)"; \
 	done
 
 apalache-green:

@@ -21,23 +21,51 @@
 \* against the 0.8.2 snapshot (no section was added, removed or renumbered — see
 \* docs/SPEC-DRIFT-ASSESSMENT.md), so the composition itself is unaffected by the version move.
 \*
-\* DECLARED SCOPE BOUNDARY for the new 0.8.2 surface (D11 — say what is NOT here). §6.11 gained
-\* sub-clause (a′) frame-write atomicity at 0.8.1 (RT-13b). It is NOT modeled in this composed
-\* module, deliberately: (a′) is a property of the byte-level write discipline on ONE
-\* connection, and this module's reason to exist is CROSS-SUBSYSTEM interleaving (revoke during
-\* reentry, dispatch before establishment). Adding a second write-lock granularity here would
-\* duplicate tla/Reentry.tla without producing an interleaving Reentry cannot already exhibit.
-\* §6.11(a′) is proved in tla/Reentry.tla (ReentryFrameBug.cfg) and independently re-encoded in
-\* spin/reentry.pml (-DNOATOMICFRAME). What THIS module still owns for §6.11 is clause (a) —
-\* the composed Class-G deadlock — which it continues to reproduce under Serialized = TRUE.
-\* Likewise §4.8's refcount use-after-free (RT-13a) is owned by tla/Store.tla, and the §5.2
-\* three-valued dispatch authority by tla/Authority.tla; the `Honored` gate here stays the
-\* opaque composed abstraction it always was.
+\* §6.11(a′) FRAME-WRITE ATOMICITY IS CARRIED HERE TOO, under composition. An earlier revision
+\* of this header argued it should not be — that carrying it would "duplicate Reentry without
+\* producing an interleaving Reentry cannot already exhibit." That was an EMPIRICAL claim
+\* asserted rather than checked, and it does not survive: Reentry has no revocation and no
+\* connection lifecycle, so it structurally cannot exhibit a frame-write window that overlaps
+\* a revocation or a pre-establishment dispatch. Whether those overlaps matter is a question
+\* for the model, not for a scoping paragraph. It is now modeled and the answer is recorded in
+\* docs/COVERAGE-MATRIX.md rather than assumed here.
+\*
+\* What the composition adds over Reentry for §6.11(a′): the response frame's two chunks
+\* straddle a step boundary at which the revoker and the peer's own client can both move, so
+\* the (a′) property is checked against interleavings involving §5.1 revocation and §4.2
+\* establishment. The verdict check and the store write stay in ONE atomic step (SFrame1) —
+\* that is deliberate and load-bearing, see the note at SFrame1.
+\*
+\* THE RESULT, stated as measured rather than as predicted. Carrying (a′) here produced NO NEW
+\* VIOLATION PATH: every invariant keeps the same verdict it has standalone, and the
+\* CoreFrameBug counterexample, inspected, is the same client-vs-own-server frame race
+\* Reentry exhibits. A revocation appears in that trace only because TLC scheduled the revoker
+\* first; it is not causally required. So the composed (a′) result is a CORROBORATION, not a
+\* new defect class.
+\*
+\* That is a weaker outcome than "this found something" and a stronger one than the scoping
+\* paragraph it replaced. The paragraph asserted this conclusion in advance as a reason not to
+\* do the work; the difference is that the conclusion is now a measurement. It also closes a
+\* real structural gap: without it, the composed whole-protocol model was not a faithful
+\* composition of §6.11 as it stands at 0.8.2, and "the composed model omits a sub-clause of
+\* the very section it composes" is not a defensible thing for this module to have been.
+\*
+\* Still owned elsewhere and deliberately NOT re-modeled here: §4.8's refcount use-after-free
+\* (tla/Store.tla — it is a property of the store's lifetime bookkeeping, and this module
+\* abstracts the store to a bounded key set) and §5.2's three-valued dispatch authority
+\* (tla/Authority.tla — this module's `Honored` gate is the opaque composed verdict, which is
+\* what lets the revocation interleaving be the subject). Both exclusions are structural, not
+\* discretionary: neither property is expressible against this module's abstractions.
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Serialized,     \* FALSE = §6.11 fix (reader-demux: mutex spans the write only);
                           \* TRUE  = negative control: hold the per-connection mutex across send+recv
                           \*         (the Class-G deadlock surface) — must deadlock even when composed.
+          AtomicFrame,    \* TRUE  = §6.11(a′): the per-connection write lock is held for the
+                          \*         duration of ONE FRAME's bytes, so frames serialize at the
+                          \*         byte level while dispatch stays concurrent.
+                          \* FALSE = negative control: a yielding write primitive — another
+                          \*         writer can begin a frame between this frame's chunks.
           GateEstablished,\* TRUE = A §4.2: client + server gate on established; FALSE = negative
                           \*        control: dispatch before establishment -> *NeedsEstablished fail.
           GateRevocation  \* TRUE = F §5.1/§6.5: handler write gated on the verdict (not revoked);
@@ -49,7 +77,6 @@ Servers  == {"sA", "sB"}
 Pof(s)   == IF s = "sA" THEN "A" ELSE "B"   \* server-id -> the peer it serves
 Links    == {"lA", "lB"}                     \* distinct ids for the establishment activities
 Lof(l)   == IF l = "lA" THEN "A" ELSE "B"   \* link-id -> the peer it establishes
-MaxKeys  == 1                                \* §4.8/4.9(b): bounded store
 
 (*--algorithm core
 variables
@@ -57,20 +84,44 @@ variables
   mtx     = [p \in Peers |-> "free"],    \* B §6.11(a): per-connection write mutex (the contended resource)
   inReq   = [p \in Peers |-> FALSE],     \* B: an inbound request awaits p's server
   resp    = [p \in Peers |-> FALSE],     \* B §6.11(b): a response routed back to p's client
-  store   = [p \in Peers |-> {}],        \* C §4.8: bounded content store written by handlers
+  store   = [p \in Peers |-> {}],        \* C §4.8: content store written by handlers — the
+                                         \* observable the §5.1/§6.5 gate protects. The §4.9(b)
+                                         \* BOUND is Store.tla's; see the note below.
   cstate  = [p \in Peers |-> "init"],    \* B client lifecycle: init | sent | done
   sstate  = [p \in Peers |-> "idle"],    \* B server lifecycle: idle | serving | done
   revoked = FALSE,                       \* F §5.1: a revocation marker (consulted by the gate)
-  servedRevoked = {};                    \* F ghost: peers whose handler wrote under a revoked cap
+  servedRevoked = {},                    \* F ghost: peers whose handler wrote under a revoked cap
+  \* B §6.11(a′): who holds a PARTIALLY WRITTEN frame on peer p's pooled connection. A frame
+  \* is two chunks; a writer is in this set between its first and last chunk.
+  midframe = [p \in Peers |-> {}],
+  \* B §6.11(a′) violation flag, latched — the corruption is not undone by finishing the frame.
+  interleaved = FALSE;
+
+\* §4.8/§4.9(b) STORE BOUND — DELIBERATELY NOT ASSERTED HERE. Owned by tla/Store.tla, and
+\* now a THIRD structural exclusion beside the two named in the header (§4.8's refcount
+\* use-after-free and §5.2's three-valued dispatch authority).
+\*
+\* This module used to carry `StoreBounded == \A p \in Peers : Cardinality(store[p]) <=
+\* MaxKeys` with MaxKeys == 1. It was VACUOUS: each peer's server writes the single literal
+\* key "k" once, so the cardinality is 0 or 1 against a bound of 1 and no behaviour of this
+\* model could violate it. A conjunct that cannot fail reports the same green as one that
+\* holds — and it was carried INTO `CoreApalache.ComposedSafety`, so the composed
+\* whole-protocol conjunction included a term that was true by construction.
+\*
+\* REMOVED rather than given teeth: the bound only has content under repeated dispatch or
+\* multi-key writes, and this model's servers serve once. Making it falsifiable would mean
+\* importing Store.tla's multi-key/refcount machinery into the largest model in the repo —
+\* duplicating an owner, not adding assurance. Store.tla's `ResourceBounded` is the real
+\* §4.8/§4.9(b) obligation: multi-key, falsifiable, discharged by refcount correctness.
+\*
+\* The `store` variable stays — the handler's write is the observable NoServeWhenRevoked is
+\* about ("no store write under a cap observed revoked"). Only the bound is gone.
 
 define
   \* §6.5/§5.10 verdict gate (abstracted): a request is honored iff the cap is not revoked. The
   \* structural verdict is Lean's; revocation observation/convergence is increment 5's — here it
   \* is one global flag the dispatch gate consults, exposing the revoke-during-reentry interleaving.
   Honored(p) == ~revoked
-
-  \* C §4.8/4.9(b): every peer's store stays within its live-key bound under concurrent dispatch.
-  StoreBounded == \A p \in Peers : Cardinality(store[p]) <= MaxKeys
 
   \* A∧B §4.2: a client never dispatches before its connection is established (the 403 pre-auth gate,
   \* composed with reentrant dispatch).
@@ -84,6 +135,11 @@ define
   \* F §5.1/§6.8: no handler ever performs a store write under a cap it has observed revoked
   \* (the revocation gate composed into dispatch; revoked-never-passes, mid-operation).
   NoServeWhenRevoked == servedRevoked = {}
+
+  \* B §6.11(a′): the bytes of two distinct frames never interleave on a shared/pooled
+  \* connection — now checked against interleavings that also involve §5.1 revocation and
+  \* §4.2 establishment, which the standalone Reentry module cannot produce.
+  FramesNotInterleaved == ~interleaved
 end define;
 
 \* A §4: the connection handshake completes (abstracted) — the precondition for any dispatch.
@@ -102,14 +158,35 @@ begin
     if GateEstablished then
       await conn[self] = "established";     \* A §4.2: no dispatch pre-establishment
     end if;
-  CSend:
-    await mtx[self] = "free";
-    mtx[self] := IF Serialized THEN "client" ELSE "free";   \* B §6.11(a)
-    inReq[Other(self)] := TRUE;
-    cstate[self] := "sent";
+  CFrame1:
+    \* B §6.11(a′): first chunk of the request frame. Under (a′) this takes the per-connection
+    \* write lock, which is what stops another writer's bytes getting in between.
+    if AtomicFrame then
+      await mtx[self] = "free";
+    end if;
+    if midframe[self] # {} then
+      interleaved := TRUE;                                   \* began a frame mid-frame
+    end if;
+    midframe[self] := midframe[self] \cup {"client"} ||
+    mtx[self]      := IF AtomicFrame THEN "client" ELSE "free";
+  CFrame2:
+    \* Last chunk of the same frame; then deliver. END OF FRAME is where the (a′)-conformant
+    \* hold ends — "never across the await". The Serialized defect keeps holding it (§6.11(a)).
+    if midframe[self] # {"client"} then
+      interleaved := TRUE;                                   \* another writer's chunk landed between ours
+    end if;
+    midframe[self] := midframe[self] \ {"client"} ||
+    inReq[Other(self)] := TRUE ||
+    cstate[self] := "sent" ||
+    mtx[self] := IF Serialized THEN "client" ELSE "free";     \* B §6.11(a)
   CRecv:
     await resp[self];                       \* B §6.11(b): demuxed response
-    mtx[self] := "free";
+    \* RELEASE ONLY A LOCK WE HOLD — see the same note in tla/Reentry.tla. Under the fix the
+    \* client released at end-of-frame, so the lock may belong to this peer's own server
+    \* mid-frame; an unconditional release would free another writer's lock.
+    if mtx[self] = "client" then
+      mtx[self] := "free";
+    end if;
     cstate[self] := "done";
 end process;
 
@@ -126,17 +203,43 @@ begin
       await conn[Pof(self)] = "established"; \* A + §6.5 gate precondition
     end if;
     sstate[Pof(self)] := "serving";
-  SHandle:
-    await mtx[Pof(self)] = "free";           \* B §6.11 reentry write mutex (deadlock point if Serialized)
-    if Honored(Pof(self)) \/ ~GateRevocation then   \* F §6.5/§5.10 verdict gate; correct writes only when honored
-      store[Pof(self)] := store[Pof(self)] \cup {"k"};   \* C §4.8 bounded store write
-      if revoked then
-        \* only reachable when GateRevocation=FALSE: wrote under a revoked cap (§5.1 violation)
-        servedRevoked := servedRevoked \cup {Pof(self)};
-      end if;
+  SFrame1:
+    \* B §6.11 reentry: the handler writes the response frame on the SAME pooled connection.
+    \* Under the Serialized defect the peer's own client holds the lock across its recv, so
+    \* this guard never enables — the Class-G deadlock, under full composition.
+    await mtx[Pof(self)] = "free";           \* B §6.11 reentry write lock (deadlock point if Serialized)
+    if midframe[Pof(self)] # {} then
+      interleaved := TRUE;
     end if;
-    resp[Other(Pof(self))] := TRUE;          \* §4.9(c) deliver-or-signal: respond either way
-    sstate[Pof(self)] := "done";
+    \* F §6.5/§5.10 VERDICT GATE AND C §4.8 STORE WRITE STAY IN ONE ATOMIC STEP.
+    \* This is load-bearing, not incidental. §5.2 completes verify_request (including the
+    \* step-4 revocation check) BEFORE dispatch, and §5.10 samples the verdict once per
+    \* verdict — so a revocation landing after the gate does not retroactively invalidate an
+    \* in-flight handler. That permitted window is exactly what §5.10's declared
+    \* `revocation_propagation_bound` bounds, and it is modeled in tla/Revoke.tla. Splitting
+    \* the gate from the write here would model a peer that RE-SAMPLES the verdict
+    \* mid-operation, which no clause requires and which would make NoServeWhenRevoked fail
+    \* in the GREEN config for a reason the spec does not call a defect.
+    if Honored(Pof(self)) \/ ~GateRevocation then   \* F §6.5/§5.10 verdict gate
+      store[Pof(self)] := store[Pof(self)] \cup {"k"} ||     \* C §4.8 bounded store write
+      midframe[Pof(self)] := midframe[Pof(self)] \cup {"server"} ||
+      mtx[Pof(self)] := IF AtomicFrame THEN "server" ELSE "free" ||
+      \* only reachable when GateRevocation=FALSE: wrote under a revoked cap (§5.1 violation)
+      servedRevoked := IF revoked THEN servedRevoked \cup {Pof(self)} ELSE servedRevoked;
+    else
+      midframe[Pof(self)] := midframe[Pof(self)] \cup {"server"} ||
+      mtx[Pof(self)] := IF AtomicFrame THEN "server" ELSE "free";
+    end if;
+  SFrame2:
+    \* Last chunk of the response frame; then deliver and release. §4.9(c) deliver-or-signal:
+    \* respond either way, honored or not.
+    if midframe[Pof(self)] # {"server"} then
+      interleaved := TRUE;
+    end if;
+    midframe[Pof(self)] := midframe[Pof(self)] \ {"server"} ||
+    resp[Other(Pof(self))] := TRUE ||
+    sstate[Pof(self)] := "done" ||
+    mtx[Pof(self)] := "free";
 end process;
 
 \* F §5.1: a revocation may (or may not) occur concurrently with in-flight dispatch.
@@ -147,15 +250,12 @@ begin
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "531862a4" /\ chksum(tla) = "76021510")
+\* BEGIN TRANSLATION (chksum(pcal) = "9597ffe7" /\ chksum(tla) = "fb496b23")
 VARIABLES pc, conn, mtx, inReq, resp, store, cstate, sstate, revoked, 
-          servedRevoked
+          servedRevoked, midframe, interleaved
 
 (* define statement *)
 Honored(p) == ~revoked
-
-
-StoreBounded == \A p \in Peers : Cardinality(store[p]) <= MaxKeys
 
 
 
@@ -171,8 +271,13 @@ ServeNeedsEstablished ==
 NoServeWhenRevoked == servedRevoked = {}
 
 
+
+
+FramesNotInterleaved == ~interleaved
+
+
 vars == << pc, conn, mtx, inReq, resp, store, cstate, sstate, revoked, 
-           servedRevoked >>
+           servedRevoked, midframe, interleaved >>
 
 ProcSet == (Links) \cup (Peers) \cup (Servers) \cup {"rev"}
 
@@ -186,6 +291,8 @@ Init == (* Global variables *)
         /\ sstate = [p \in Peers |-> "idle"]
         /\ revoked = FALSE
         /\ servedRevoked = {}
+        /\ midframe = [p \in Peers |-> {}]
+        /\ interleaved = FALSE
         /\ pc = [self \in ProcSet |-> CASE self \in Links -> "Estab"
                                         [] self \in Peers -> "CEst"
                                         [] self \in Servers -> "SWait"
@@ -195,7 +302,7 @@ Estab(self) == /\ pc[self] = "Estab"
                /\ conn' = [conn EXCEPT ![Lof(self)] = "established"]
                /\ pc' = [pc EXCEPT ![self] = "Done"]
                /\ UNCHANGED << mtx, inReq, resp, store, cstate, sstate, 
-                               revoked, servedRevoked >>
+                               revoked, servedRevoked, midframe, interleaved >>
 
 link(self) == Estab(self)
 
@@ -203,60 +310,97 @@ CEst(self) == /\ pc[self] = "CEst"
               /\ IF GateEstablished
                     THEN /\ conn[self] = "established"
                     ELSE /\ TRUE
-              /\ pc' = [pc EXCEPT ![self] = "CSend"]
+              /\ pc' = [pc EXCEPT ![self] = "CFrame1"]
               /\ UNCHANGED << conn, mtx, inReq, resp, store, cstate, sstate, 
-                              revoked, servedRevoked >>
+                              revoked, servedRevoked, midframe, interleaved >>
 
-CSend(self) == /\ pc[self] = "CSend"
-               /\ mtx[self] = "free"
-               /\ mtx' = [mtx EXCEPT ![self] = IF Serialized THEN "client" ELSE "free"]
-               /\ inReq' = [inReq EXCEPT ![Other(self)] = TRUE]
-               /\ cstate' = [cstate EXCEPT ![self] = "sent"]
-               /\ pc' = [pc EXCEPT ![self] = "CRecv"]
-               /\ UNCHANGED << conn, resp, store, sstate, revoked, 
-                               servedRevoked >>
+CFrame1(self) == /\ pc[self] = "CFrame1"
+                 /\ IF AtomicFrame
+                       THEN /\ mtx[self] = "free"
+                       ELSE /\ TRUE
+                 /\ IF midframe[self] # {}
+                       THEN /\ interleaved' = TRUE
+                       ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ /\ midframe' = [midframe EXCEPT ![self] = midframe[self] \cup {"client"}]
+                    /\ mtx' = [mtx EXCEPT ![self] = IF AtomicFrame THEN "client" ELSE "free"]
+                 /\ pc' = [pc EXCEPT ![self] = "CFrame2"]
+                 /\ UNCHANGED << conn, inReq, resp, store, cstate, sstate, 
+                                 revoked, servedRevoked >>
+
+CFrame2(self) == /\ pc[self] = "CFrame2"
+                 /\ IF midframe[self] # {"client"}
+                       THEN /\ interleaved' = TRUE
+                       ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ /\ cstate' = [cstate EXCEPT ![self] = "sent"]
+                    /\ inReq' = [inReq EXCEPT ![Other(self)] = TRUE]
+                    /\ midframe' = [midframe EXCEPT ![self] = midframe[self] \ {"client"}]
+                    /\ mtx' = [mtx EXCEPT ![self] = IF Serialized THEN "client" ELSE "free"]
+                 /\ pc' = [pc EXCEPT ![self] = "CRecv"]
+                 /\ UNCHANGED << conn, resp, store, sstate, revoked, 
+                                 servedRevoked >>
 
 CRecv(self) == /\ pc[self] = "CRecv"
                /\ resp[self]
-               /\ mtx' = [mtx EXCEPT ![self] = "free"]
+               /\ IF mtx[self] = "client"
+                     THEN /\ mtx' = [mtx EXCEPT ![self] = "free"]
+                     ELSE /\ TRUE
+                          /\ mtx' = mtx
                /\ cstate' = [cstate EXCEPT ![self] = "done"]
                /\ pc' = [pc EXCEPT ![self] = "Done"]
                /\ UNCHANGED << conn, inReq, resp, store, sstate, revoked, 
-                               servedRevoked >>
+                               servedRevoked, midframe, interleaved >>
 
-client(self) == CEst(self) \/ CSend(self) \/ CRecv(self)
+client(self) == CEst(self) \/ CFrame1(self) \/ CFrame2(self) \/ CRecv(self)
 
 SWait(self) == /\ pc[self] = "SWait"
                /\ inReq[Pof(self)]
                /\ pc' = [pc EXCEPT ![self] = "SGate"]
                /\ UNCHANGED << conn, mtx, inReq, resp, store, cstate, sstate, 
-                               revoked, servedRevoked >>
+                               revoked, servedRevoked, midframe, interleaved >>
 
 SGate(self) == /\ pc[self] = "SGate"
                /\ IF GateEstablished
                      THEN /\ conn[Pof(self)] = "established"
                      ELSE /\ TRUE
                /\ sstate' = [sstate EXCEPT ![Pof(self)] = "serving"]
-               /\ pc' = [pc EXCEPT ![self] = "SHandle"]
+               /\ pc' = [pc EXCEPT ![self] = "SFrame1"]
                /\ UNCHANGED << conn, mtx, inReq, resp, store, cstate, revoked, 
-                               servedRevoked >>
+                               servedRevoked, midframe, interleaved >>
 
-SHandle(self) == /\ pc[self] = "SHandle"
+SFrame1(self) == /\ pc[self] = "SFrame1"
                  /\ mtx[Pof(self)] = "free"
-                 /\ IF Honored(Pof(self)) \/ ~GateRevocation
-                       THEN /\ store' = [store EXCEPT ![Pof(self)] = store[Pof(self)] \cup {"k"}]
-                            /\ IF revoked
-                                  THEN /\ servedRevoked' = (servedRevoked \cup {Pof(self)})
-                                  ELSE /\ TRUE
-                                       /\ UNCHANGED servedRevoked
+                 /\ IF midframe[Pof(self)] # {}
+                       THEN /\ interleaved' = TRUE
                        ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ IF Honored(Pof(self)) \/ ~GateRevocation
+                       THEN /\ /\ midframe' = [midframe EXCEPT ![Pof(self)] = midframe[Pof(self)] \cup {"server"}]
+                               /\ mtx' = [mtx EXCEPT ![Pof(self)] = IF AtomicFrame THEN "server" ELSE "free"]
+                               /\ servedRevoked' = (IF revoked THEN servedRevoked \cup {Pof(self)} ELSE servedRevoked)
+                               /\ store' = [store EXCEPT ![Pof(self)] = store[Pof(self)] \cup {"k"}]
+                       ELSE /\ /\ midframe' = [midframe EXCEPT ![Pof(self)] = midframe[Pof(self)] \cup {"server"}]
+                               /\ mtx' = [mtx EXCEPT ![Pof(self)] = IF AtomicFrame THEN "server" ELSE "free"]
                             /\ UNCHANGED << store, servedRevoked >>
-                 /\ resp' = [resp EXCEPT ![Other(Pof(self))] = TRUE]
-                 /\ sstate' = [sstate EXCEPT ![Pof(self)] = "done"]
-                 /\ pc' = [pc EXCEPT ![self] = "Done"]
-                 /\ UNCHANGED << conn, mtx, inReq, cstate, revoked >>
+                 /\ pc' = [pc EXCEPT ![self] = "SFrame2"]
+                 /\ UNCHANGED << conn, inReq, resp, cstate, sstate, revoked >>
 
-server(self) == SWait(self) \/ SGate(self) \/ SHandle(self)
+SFrame2(self) == /\ pc[self] = "SFrame2"
+                 /\ IF midframe[Pof(self)] # {"server"}
+                       THEN /\ interleaved' = TRUE
+                       ELSE /\ TRUE
+                            /\ UNCHANGED interleaved
+                 /\ /\ midframe' = [midframe EXCEPT ![Pof(self)] = midframe[Pof(self)] \ {"server"}]
+                    /\ mtx' = [mtx EXCEPT ![Pof(self)] = "free"]
+                    /\ resp' = [resp EXCEPT ![Other(Pof(self))] = TRUE]
+                    /\ sstate' = [sstate EXCEPT ![Pof(self)] = "done"]
+                 /\ pc' = [pc EXCEPT ![self] = "Done"]
+                 /\ UNCHANGED << conn, inReq, store, cstate, revoked, 
+                                 servedRevoked >>
+
+server(self) == SWait(self) \/ SGate(self) \/ SFrame1(self)
+                   \/ SFrame2(self)
 
 RWrite == /\ pc["rev"] = "RWrite"
           /\ \/ /\ revoked' = TRUE
@@ -264,7 +408,7 @@ RWrite == /\ pc["rev"] = "RWrite"
                 /\ UNCHANGED revoked
           /\ pc' = [pc EXCEPT !["rev"] = "Done"]
           /\ UNCHANGED << conn, mtx, inReq, resp, store, cstate, sstate, 
-                          servedRevoked >>
+                          servedRevoked, midframe, interleaved >>
 
 revoker == RWrite
 
