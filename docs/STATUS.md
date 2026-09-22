@@ -432,16 +432,39 @@ item 4.
      have absorbed three unread theorems silently.
 
    **Still open, in order:**
-   - **Answer keystone's three questions.** (a) Is a *set-valued* property — the set of `code`
-     values a peer emits at a given status, which is what `0.8.2.9` makes the unit of
-     conformance — the right shape for the Lean tier to discharge? (b) Is the keystone host
-     contract (H1–H7, about to be authored as `docs/spec/SPEC-KEYSTONE-PEER.md`) in scope for
-     the formal tier, given H3 is a **negative reachability** claim? (c) Do we want the
-     declined ask enough to want **mathlib in `proofs/`** — a dependency decision about a seam
-     we share, which they asked rather than assumed. **(b) is the one with an architecture
-     question inside it:** a sibling authoring a spec-shaped artifact is not ours to rule on
-     alone. They parked our packets for six days; the loop closes faster than that or the
-     complaint is hollow.
+   - **~~Answer keystone's three questions.~~ Answered same-day, 2026-09-06.** Two are "no".
+     - **Set-valued code slot — the shape is right, Lean is the wrong tool.** The property is
+       about a peer's *emit sites*, not the authority interior their proofs cover, and a
+       theorem about the one modeled peer would have missed **five of the six** §4.7
+       behaviours — they live in peers with no formal model. Their own `37/46` miscount is the
+       argument: it came from grepping a literal that appears in each peer's generated
+       conformance report, the oracle's vocabulary quoted back — a source-read artifact, which
+       is the failure mode a wire probe does not have. Routed to `validate-peer` as a vector.
+       **One narrow theorem we did say yes to:** make the code a closed sum type whose
+       inhabitants are exactly the §4.7 rows, so an unregistered spelling is
+       *unrepresentable*. That is about a definition, it is cheap, our tier can gate it today,
+       and it would have made `handshake_failed` and `bad_request` impossible to write.
+     - **Host contract: H1 in scope in shape, H3 out.** H1 is the same form as our `Register` /
+       `Authority` / `Bootstrap` dispatch invariants — but **land and pin the spec before
+       modeling it**, because modeling against a text being drafted couples the model to the
+       spec, which is exactly what the `spec-data/` SHA-pin exists to prevent. H3 is their
+       packaging boundary, which Class O declares unowned. The transferable half we did route:
+       **a negative reachability claim is the highest vacuity risk there is** — "nothing may
+       reach X" is trivially true in a model with no paths — so the spec should **name the
+       required witness alongside the prohibition**, or a peer that does nothing conforms.
+       That is `StoreBounded`, the pre-0.8.2 witness gap, and the three self-falsifying Tamarin
+       controls, all in one shape.
+     - **No mathlib.** The only ask it served is moot: it existed to discharge `hframed`
+       syntactically, and `hframed`'s reason for mattering was that §5.5a's absolute form had
+       no theorem. It has one. Nothing in the ledger now needs `hframed` universal. A
+       mathlib-free proofs target is also an assurance property in its own right — our gate
+       grades exact axiom sets, and that review stays hand-checkable only while the trusted
+       base is small. Revisit if a row ever needs real mathematics rather than string plumbing.
+
+     Packet: `docs/status/ROUTING-2026-09-06-KEYSTONE-THREE-ANSWERS.md`. It also carries three
+     corrections **to us** that they earned: the declined ask was built on our own unmeasured
+     "genuinely mechanical" claim, our `String.Slice` blocker note was wrong, and our L1 row
+     described their code incorrectly in a published document.
    - **Keystone should run this gate too, and the packet says so.** Our gate covers our
      ledger's rows; it does not put a check in the repo where a `sorry` would be *written*.
    - **The ledger's own counts are ungated, and they just moved.** Class L went 11 rows / 9
