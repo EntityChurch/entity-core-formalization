@@ -84,7 +84,7 @@ on the scope's type** — id-scope (`operations`, `peers`) matches literally, pa
 (`handlers`, `resources`) canonicalizes. No model here contradicts it, because every model
 abstracts the matcher and the one dimension any of them frames (`resources`, the §5.5a
 granter-frame work in the Tamarin track) is path-scope in both texts. **It lands on the Lean
-seam instead** — see K1 in `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`. Re-vendoring is deliberately **not** the next move
+seam instead** — that is where it was routed, as K1. Re-vendoring is deliberately **not** the next move
 (keystone has not upgraded yet); `docs/SPEC-DRIFT-ASSESSMENT.md` is the live measurement and
 `make driftclaim` gates every prose site that states the status.
 **All four pins are measured as of 2026-09-09, and until that date only one was.** `specdrift`

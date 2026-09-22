@@ -62,7 +62,7 @@ Files pinned by this ledger, at the revision the correspondences below were deri
 > **These two digests were WRONG from 2026-09-06 to 2026-09-09, with `make leanseam` green
 > every day, and the mechanism is this repo's own headline class.** The gate parses the
 > `leanseam-pins` block in §5 and nothing else. When keystone adopted the routed §5.5a packet
-> and both files changed, commit `42ac3e4` updated the **pin block** — correctly, and the gate
+> and both files changed, the same-day commit here updated the **pin block** — correctly, and the gate
 > refused the re-declare until each new theorem was read — and left **this table**, which
 > restates the same two facts in prose, at the superseded values. So the document told a reader
 > the digest *is* the pin and that `make leanseam` checks every digest, while displaying two
@@ -246,8 +246,8 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   The theorems remain true and `make lean` remains green; what is qualified is what they are
   theorems *about*.
 - **⛔ T5a IS CONDITIONAL NOW, 2026-09-15, AND THE VERDICT MOVES WITH IT.** Keystone landed
-  this repo's `K-6` and `K-7` at `fee2e422` and **told us the cost in the same packet**
-  (`entity-core-keystone/docs/outbox/ROUTING-2026-09-15-b-…`, §3a). `scopeSubset` is now typed
+  this repo's `K-6` and `K-7` in their 2026-09-14 sweep and **told us the cost in the same
+  note that carried the change** (§3a). `scopeSubset` is now typed
   by `ScopeKind`; its `.id` branch compares with §3.6's literal `matchesIdPattern`, and the
   transitivity of *that* matcher is carried as an explicit undischarged hypothesis:
 
@@ -374,10 +374,9 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   what the row claims — but the row's *reach* is half of what the phrase "the two matchers are
   distinct" suggests, and that is worth having written down where the phrase is.
   **Recorded plainly: this row named the distinction and nobody here followed it into §5.6 for
-  three days, eleven lines away in a file we had read for another reason.** K1 —
-  `docs/outbox/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
+  three days, eleven lines away in a file we had read for another reason.** Routed as K1.
 - **⭐ K1 IS CLOSED, 2026-09-15 — ADOPTED, AND THE SENTENCE ABOVE IS NOW FALSE OF THE LIVE
-  TREE.** *"`scopeSubset` takes no `ScopeKind`"* was the finding; at keystone's `fee2e422` it
+  TREE.** *"`scopeSubset` takes no `ScopeKind`"* was the finding; at their 2026-09-14 sweep it
   takes one, dispatching `.id` for `operations`/`peers` and `.path` for `handlers`/`resources`,
   with `grantSubset` naming the kind per dimension and **no default** — because, in their own
   note at the site, a default is how the next dimension inherits the wrong matcher silently,
@@ -503,7 +502,7 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   which proves exactly the `{finite < ∞}` lattice step, `none` as top.
 - **This row did NOT move with L5 on 2026-09-15, and that is worth one line rather than
   silence.** `isAttenuated_trans` became conditional on `IdPatternTrans` at keystone's
-  `fee2e422`, and L5 is CLOSED-MODULO-H because of it. **The expiry conjunct is explicitly
+  2026-09-14 sweep, and L5 is CLOSED-MODULO-H because of it. **The expiry conjunct is explicitly
   unconditional** — keystone's own note says so (*"the expiry half is unconditional"*) and the
   proof is the `≤` step in the finite-or-∞ lattice, which touches no matcher. A reader who saw
   L5's verdict move and assumed the whole theorem weakened would be wrong about this row.
@@ -989,7 +988,7 @@ theorem coverage on one of them.
 `entity-core-keystone` as three asks: (a) discharge the relative half from a syntactic
 side-condition, (b) add the companion theorem for the absolute form, (c) correct the source
 comment calling `hframed` "mechanical stdlib plumbing." **No ask on the ProVerif/Tamarin side;
-there was never anything wrong with it.** Outcome (`8156792`):
+there was never anything wrong with it.** Outcome, in their 2026-09-05 answer:
 
 - **(b) and (c) adopted, and (c) sharpened past what we asked.** §5.5a now has a theorem per
   pattern form — `grantPattern_namespace_isolation` (relative), `absolutePattern_names_one_peer`
@@ -1109,7 +1108,8 @@ above; every prose citation must have a line here.
 > ⛔ **THE NOTE ABOVE IS DATED 2026-09-14 AND THE PIN BLOCK BELOW IS NOT — RE-PINNED AGAIN
 > 2026-09-15, and this is the re-read that licenses the values you are reading.** Found
 > 2026-09-16 while answering `A-4`. The digests below (`78a157cd…`, `dcba5d34…`) are
-> keystone's `fee2e422`, not the `0c4a537b` state the 2026-09-14 note describes: the
+> keystone's 2026-09-14 **sweep**, not the 2026-09-14 **sentinel** state the note above
+> describes — two changes, one day, and only one of them is what is pinned here: the
 > 2026-09-15 session did the re-read and moved the verdicts — **L5/L6 updated, K1 marked
 > CLOSED at its own row** — and **did not leave a note beside the block it re-pinned.** So for
 > one day the only prose licensing the live pin described a *different* re-read, and **its last
@@ -1132,14 +1132,15 @@ above; every prose citation must have a line here.
 > - **K1 — CLOSED.** Both halves adopted.
 > - **K2 — SURVIVES, measured rather than assumed.** `handlers`/`resources` stay `.path`;
 >   `lean/lemmas/StarFree.lean` still reports 108 interior-`*` disagreements over 3276 pairs
->   and `Chain.lean` 147 of 147, both re-derived green against `fee2e422` and again against
->   `c3356b43` on 2026-09-16.
+>   and `Chain.lean` 147 of 147, both re-derived green against the 2026-09-14 sweep and again
+>   against their 2026-09-16 head.
 > - **`A-4` — dissolved, and the measurement is in-tree** rather than in a paragraph:
 >   `lean/lemmas/IdScope.lean`, gated by `make leanlemma`. R11's witness constructed at
->   `97bf1a05` and is dead twice over at `c3356b43` — by `0c4a537b`'s `*/` sentinel arm and by
->   `fee2e422`'s `.id` dispatch, independently, neither of them the argument A-4 made. Routed:
->   `docs/outbox/ROUTING-2026-09-16-b-entity-core-keystone-a4-dissolves-…`.
-> - ⚠ **Keystone's tree moved again after the re-pin (`7c9f0dfc` `C-2`, `c3356b43` HEAD) and
+>   their 2026-09-09 state and is dead twice over at their 2026-09-16 head — by the sentinel
+>   change's `*/` arm and by the sweep's `.id` dispatch, independently, neither of them the
+>   argument A-4 made. Routed.
+> - ⚠ **Keystone's tree moved again after the re-pin (the 2026-09-15 `C-2` delivery, then
+>   their 2026-09-16 head) and
 >   both pinned digests are UNCHANGED**, verified out of their tree 2026-09-16 rather than
 >   taken from their commit message, which says the same thing. `Host.lean` is not pinned here.
 
@@ -1292,7 +1293,7 @@ produce exactly that set — no more, no less, both directions:
    gate about *this ledger* rather than about "some proofs built".
 5. **Warnings** — a Lean warning fails the build unless declared with an owner. One is
    declared, 2026-09-15: Lean's linter reporting an unused `simp` argument inside
-   `matchesSegNM_trans`, new at keystone's `fee2e422`, in the proofs file this ledger pins.
+   `matchesSegNM_trans`, new at keystone's 2026-09-14 sweep, in the proofs file this ledger pins.
    Not a hole — that declaration's axiom set is graded standard on its own row — and not ours
    to fix, since the keystone Lean tree is read-only input here. **Routed** rather than
    tolerated, with the row's own retirement condition written into it, and declared in **both**

@@ -3,22 +3,17 @@
 **Symptom that brings you here:** you have a finding and do not know which of the four
 registers it belongs in, or you are about to quote a count out of one of them.
 
-`docs/status/FINDINGS-INDEX.md` is the single index — read it before any handoff.
-
 **Where findings are tracked, 2026-09-08 — FOUR categories, and three of them had no home until
-this date.** `docs/status/FINDINGS-INDEX.md` is the single index; read it before any handoff.
-It covers: **spec defects** — 26 across the three **extension** protocols, 24 machine-checked, in five
-routing notes — three per-track plus TWO that second engines added to a track already routed,
-`ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md` and
-`ROUTING-2026-09-09-IDENTITY-ARRIVAL-PATH-STATE.md`); **validation-surface defects** (V1–V3, new, in
-`ROUTING-2026-09-08-VALIDATION-SURFACE.md`); **CORE-track spec defects, which that sentence's
-"three extension protocols" does not cover and did not used to exist** (`P-2`…`P-8` in
-`docs/status/TRACKER-entity-core-protocol.md` — the `system/peer` `.data.peer_id` sites and the
-§5.5a granter-frame set, 2026-09-16); **implementation divergences** (in
-`docs/status/CONFORMANCE-DIVERGENCE-REGISTER.md` — **do not quote a count or an id range from
-here; derive it**, `grep -cE '^\| D[0-9]+ \|'` for rows and the register's own `awk` one-liner for
-the class table, both of which have been published wrong); and **our own open work** (the ledger's
-OPEN rows and the one subject with no second engine).
+this date.** One index covers all four; it is internal, and so is every register named below.
+The categories are what transfers. **Spec defects** — 26 across the three **extension**
+protocols, 24 machine-checked, sent in five notes: three per-track, plus TWO that second engines
+added to a track already routed. **Validation-surface defects** — V1–V3, new at this date.
+**CORE-track spec defects**, which the phrase "three extension protocols" does not cover and
+which did not used to exist: `P-2`…`P-8`, the `system/peer` `.data.peer_id` sites and the §5.5a
+granter-frame set, 2026-09-16. **Implementation divergences**, in a register of their own —
+**do not quote a count or an id range out of it; derive them**, and both figures have been
+published wrong. And **our own open work**: the assumption ledger's OPEN rows and the one
+subject with no second engine.
 
 **The divergence register is the one to understand, because the gap it closes was invisible.**
 Every spec finding here was written with a census of what `entity-core-{go,rust,py}` do — this
@@ -51,7 +46,6 @@ under an active attacker, at the modeled bound"** — true, and load-bearing on 
 at a bound that never mentioned entity resolution. Both are corrected at the site; the form is
 retracted as **R13**. **The cause is D19's subject and it is why that candidate exists: every
 denominator in this repo was an artifact of ours.** `make obligations` supplies one from the pin
-instead — **120 of 365 core obligations are UNEXAMINED**. Audit:
-`docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`. **And the audit was
+instead — **120 of 365 core obligations are UNEXAMINED**. **And the audit was
 triggered from outside**, by a counterpart shipping the fix, which is recorded in its own process
 review as the finding that outranks the rest.

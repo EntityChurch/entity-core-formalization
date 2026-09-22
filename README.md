@@ -28,8 +28,9 @@ third engine, none has a Spin encoding, and none has a prover.** That count is d
 green gate tables rather than stated by hand, and `docs/CORROBORATION.md` names every subject
 that rests on one engine, with the reason. Their coverage is stated separately in `docs/COVERAGE-MATRIX.md` §3c, §3d and
 §3e, where a substantial share of the rows are **findings against the spec** rather than coverage
-of it. Read those three tracks as a defect report, not as assurance; the routed findings are
-indexed in `docs/status/FINDINGS-INDEX.md`. `scoped` is a gated state rather than a label:
+of it. Read those three tracks as a defect report, not as assurance; each finding is a model,
+the section it contradicts, and the run that shows it, sent to the repo that owns the text.
+`scoped` is a gated state rather than a label:
 assigning a model file to a scoped track **fails the build** until the track is promoted with a
 spec pin — which is the step where someone has to say which snapshot the results are about. It
 forced that step twice, on `quorum` and on `identity`; with both promoted **no track is scoped
@@ -199,7 +200,10 @@ make build    # build all 5 toolchain images (the only step that needs network)
 make smoke    # prove every containerized toolchain runs end-to-end
 make matrix   # THE GATE: green + negative controls + non-vacuity witnesses (687 runs)
 make check    # the green-only slice — does NOT show the properties could have failed
-make specdrift # has the spec moved out from under the pin?
+make specdrift # has the spec moved out from under the pin? Compares the pinned snapshot
+               # against the LIVE spec, which lives in the repo that owns it — so this one
+               # needs those repos checked out beside this one, and says so if they are not.
+               # Everything above it runs from a standalone clone.
 make trackcheck # which proof track is each model file on? (TRACKS.toml)
 make coverage  # does the coverage claim match what the models actually cite?
 make lean      # the Lean seam tier: the cited Lean text has not moved (leanseam), the

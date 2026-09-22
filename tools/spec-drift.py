@@ -555,6 +555,24 @@ def measure(root: str, track: str, live: str, fmt: str, emit) -> tuple[int, int,
     if newer:
         emit(f"{bullet}NOTE: newer snapshot(s) vendored but not yet modeled: {', '.join(newer)}")
 
+    # D22 -- what does this print when its own input is missing? The measurement needs TWO
+    # trees: the pin (ours, always here) and the live spec (a sibling repo's, often not).
+    # It used to check only the pin, walk the file list finding nothing on the live side,
+    # fall out of the loop with `pin_text` still None, and report
+    # `primary_spec 'X' not in <pin_dir>` -- accusing a file that is present, in a directory
+    # that is intact, and never naming the tree it could not reach. On a fresh clone, where
+    # no sibling exists, that is the ONLY thing this tool says. Say what is actually absent.
+    if not os.path.isdir(live):
+        raise SystemExit(
+            f"track {track!r}: the live spec tree is not here -- {live}\n"
+            f"  The pin (spec-data/{named}/) is intact; there is nothing to compare it "
+            f"AGAINST.\n"
+            f"  This measurement reads a SIBLING repository's working tree, so it cannot run "
+            f"from a\n"
+            f"  standalone clone. Check out the repo that owns this spec beside this one, or "
+            f"pass\n"
+            f"  --track {track} --live <path>. Every other gate here runs standalone.")
+
     files = sorted(f for f in os.listdir(pin_dir)
                    if f.endswith(".md") and f not in ("MANIFEST.md", "README.md"))
     if not files:

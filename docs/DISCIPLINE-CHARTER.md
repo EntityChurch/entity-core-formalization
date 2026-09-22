@@ -526,7 +526,7 @@ out of a write-up, and leaving it out is how the next session assumes one exists
 *Also corrected in the same pass, same mechanism, different figure:* **four live sites said
 `make leanproof` grades "all 40 `#print axioms` gates"** (`AGENTS.md` ×2, `docs/PROPERTIES.md`,
 `docs/FINAL-ASSURANCE-SUMMARY.md`, `docs/STATUS.md` ×2 — six in total). It is **41** since
-keystone's `fee2e422` added `matchesSegNM_trans`, and `lean/proof-gate.expect` was updated on
+keystone's 2026-09-14 sweep added `matchesSegNM_trans`, and `lean/proof-gate.expect` was updated on
 2026-09-15 while none of the prose was. **The repair is the same and it is the better one: the
 gate's actual assertion is EVERY declaration, exhaustively, in both directions** — a count was
 never what it asserted, so the sites now say `every` and cannot go stale again. *A figure that
@@ -587,7 +587,7 @@ Every prior "unread facet" here was a second *clause* in a gated sentence. This 
 **copy of the same fact in a notation the gate does not parse.** `docs/LEAN-SEAM.md` §"Citing the
 Lean side" carries a markdown table of the two pinned Lean file digests; `make leanseam` parses
 the ```` ```leanseam-pins ```` block and nothing else. When keystone adopted the §5.5a packet on
-2026-09-06 both files changed, commit `42ac3e4` updated the **pin block** — correctly, and the
+2026-09-06 both files changed, the same-day commit here updated the **pin block** — correctly, and the
 gate did its job, refusing the re-declare until each new theorem was read — and left the
 **table** at the superseded values. So for three days the document told a reader *"the digest is
 the pin"* and *"`make leanseam` checks every digest"* while displaying two digests that gate has

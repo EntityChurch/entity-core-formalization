@@ -14,6 +14,29 @@ for inductive/unbounded invariants and **Spin** as an independent cross-check) a
 no escalation, no replay/reflection/confused-deputy). Models the current core; **all three extension
 protocols — `attestation`, `quorum`, `identity` — are vendored, pinned and modeled too.**
 
+## Public surface — what "breaking" is allowed to mean here
+
+**Our public surface is what somebody needs in order to re-derive a published result: the
+model files and their names, the `make` verbs, `TRACKS.toml`, the `spec-data/` pins, and the
+documents declared in `CANONICAL-DOCS.toml`.** Everything that *produces* those — `tools/`,
+the Containerfiles, `caps.mk`, `lean/_work/`, and every undeclared document — is ours to
+change without notice.
+
+| in | out |
+|---|---|
+| model **file paths and module names** (`tla/*.tla`, `tla/*.cfg`, `spin/*.pml`, `tamarin/*.pv`, `*.spthy`) | `tools/*.py` — their flags, their output text, their internals. They are reached through `make`, and only `make` is promised |
+| the **`CONSTANTS` a module requires** and the **property / invariant / lemma names** it defines, plus which config asserts which | the podman images, `Containerfile*`, `caps.mk` values, `lean/_work/` |
+| the **`make` verbs** in `make help` and what each asserts | which engine happens to carry a subject, and every intermediate artifact under `tla/`, `spin/`, `tamarin/` |
+| **`TRACKS.toml`** — the track names and the field names a reader parses | anything under `docs/status/`, `docs/outbox/`, `docs/archive/` — undeclared, never published |
+| **`spec-data/<pin>/` bytes and `spec-data/MODELING-PIN`** — frozen by contract, and the thing every result is quoted against | `spec-data/` snapshots **added** beside the existing ones — additive, never a break |
+| the documents declared in **`CANONICAL-DOCS.toml`**, and the results stated in them | |
+
+⛔ **A derived number moving is NOT a breaking change.** The run total, the coverage pair, the
+ledger's row count, the drift figure — every one is a measurement re-derived at each cut by
+the gate that owns it, and each is *promised to be derived*, not promised to hold. What is
+breaking is a result being **withdrawn or weakened**: that goes in `docs/RETRACTIONS.toml`,
+and `make retractcheck` is what stops a withdrawn phrasing from surviving in live prose.
+
 ## Proof tracks — know which protocol your claim is about
 
 **`TRACKS.toml` is the registry and `make trackcheck` is its gate.** **4 proof tracks** —
@@ -174,7 +197,6 @@ not speculatively.
 | `SPEC-PIN-AND-DRIFT.md` | the drift gate fired, or a section moved under a model |
 | `GATES-AND-DERIVED-NUMBERS.md` | a gate is green and you want to know what it asserts |
 | `FINDINGS-AND-REGISTERS.md` | you have a finding and need the right register |
-| `COUNTERPARTS-AND-ROUTING.md` | session start, or routing a packet |
 
 **An entry that could become a check SHOULD become one, and is then deleted from memory.**
 Memory is where a finding waits while it is still only prose; it is not where findings
@@ -191,7 +213,10 @@ Per-counterpart state is `docs/status/TRACKER-<counterpart>.md`, each carrying a
 line for the last scan of that counterpart's outbox. `docs/status/INBOUND.md` is the
 inbound register. **Fetch their tree before scanning, go by the date in the filename never
 file mtime, and if you could not reach a tree write that down** — an omitted row reads as
-a clean scan. See `docs/agents/memory/COUNTERPARTS-AND-ROUTING.md`.
+a clean scan. The counterparts themselves — who they are, what each one's instrument can
+and cannot decide — are in `docs/status/COUNTERPARTS-AND-ROUTING.md`, which is durable and
+internal: it lives beside the trackers rather than in `docs/agents/memory/`, because that
+directory publishes and every reference in this one points into somebody else's tree.
 
 ## Boundaries — do NOT modify
 

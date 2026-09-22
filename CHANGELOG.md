@@ -5,8 +5,11 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**This repository versions alongside the Entity Core Protocol it tracks.** `0.8.2` here
-accompanies protocol `0.8.2`, so the two line up when read side by side.
+**This repository's version is its own; it does not name a protocol version.** The first
+releases here lined up with the protocol's number by choice, and that reading is no longer
+available: the four proof tracks pin to four separately-versioned spec snapshots, so no
+single number on this repository could name the text any of them is about. **Which spec
+text a result is a statement *about* is named by a pin, never by the number on `VERSION`.**
 
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
@@ -17,6 +20,71 @@ copy, so between a spec release and a re-validation this repository is *behind o
 `docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance section by section.
 
 ## [Unreleased]
+
+### Changed in ways that can break an existing caller
+
+This repository publishes models, not an API. A *caller* here is somebody who runs one of
+these models against a configuration of their own, builds one of the Promela models with
+their own harness, or follows a link to one of the documents. Four shapes changed for them,
+and all four are to the modelling apparatus — **no published result was weakened, and
+nothing about the protocol being modeled broke.**
+
+- **Five TLA+ modules gained required constants, so a `.cfg` written against the previous
+  release no longer instantiates them.** `tla/Core.tla` and `tla/Reentry.tla` now take `N`
+  and `AtomicFrame`; `tla/Register.tla` takes `SequencedWrites`; `tla/Store.tla` takes
+  `SyncRefs`; `tla/Revoke.tla` takes `PropBound`, `MaxTick`, `DeltaVals` and
+  `BoundedPropagation`. The configurations shipped beside them are updated in step and
+  `make matrix` is unaffected — a hand-written one is not, and TLC's answer to a missing
+  constant is a parse error rather than a verdict.
+- **Peers are numbered, not named.** `tla/Core.tla` and `tla/Reentry.tla` carried
+  `Peers == {"A", "B"}` with an `Other(p)` that silently assumed exactly two; they now carry
+  `Peers == 1..N` over a directed ring with `Succ`/`Pred`, so anything that named peer `"A"`
+  names nothing. Server and link identifiers moved into disjoint integer bands for the same
+  reason. `spin/reentry.pml` makes the same move — `other(p)` is gone in favour of
+  `succ(p)`/`pred(p)`, and the peer count is a compile-time `-DNPEERS` knob — though the
+  `sentA`/`doneA`/`sentB`/`doneB` macros still resolve.
+- **Two properties are no longer checked in the file that used to carry them.**
+  `StoreBounded` is **removed** from `tla/Core.tla` and `tla/Reentry.tla`, and from their
+  configurations. In both modules every server wrote one literal key once, so the bound could
+  not fail in any behaviour of either model and reported the same green a real obligation
+  would; the removed definitions' own comments carry the full account. The §4.8/§4.9(b)
+  live-key bound is `tla/Store.tla`'s `ResourceBounded`, which is multi-key and falsifiable.
+  Separately, `PROPERTY Responsive` and `PROPERTY Recovers` left `tla/Store.cfg` for the new
+  `tla/StoreLive.cfg`, which splits the liveness run from the safety run so each can take the
+  bound it needs. Both are still checked; neither is checked where it was.
+- **One published document moved.** The rolling status log is `docs/STATUS.md`. It was
+  `docs/status/STATUS.md`, which no longer publishes — nor does anything else under
+  `docs/status/`, which is now dated working notes only. Same document, one directory up.
+
+### Changed — published documents now cite things a reader outside this project can actually reach (2026-09-20)
+
+**No model, no result and no number changes.** Twenty-six references in `docs/LEAN-SEAM.md`,
+`docs/STATUS.md` and `docs/DISCIPLINE-CHARTER.md` named a sibling repository's internal commit
+identifiers. Those histories are re-authored when a release is published, so every one of them
+resolved to nothing for anybody reading this repository from outside — by construction, not by
+anyone's mistake. They now say which dated state of which repository is meant, which is a claim
+a reader can check. The content digests those documents pin were already the real anchors and
+are untouched.
+
+`docs/agents/memory/COUNTERPARTS-AND-ROUTING.md` moved to `docs/status/`. It is the one note in
+that directory that is not about the models: it is about how a finding reaches the other
+repositories this one works beside, and not a single reference in it is followable from outside.
+The rest of `docs/agents/memory/` is unchanged and still published.
+
+**What is not fixed, and is worth saying plainly:** around a hundred further references of the
+same kind remain across the published documents. They are pointers to internal working notes,
+and a reader who follows one will find nothing there. They will be worked through; nothing else
+about the documents depends on them.
+
+### Fixed — a check that could not reach its input blamed the wrong file for it (2026-09-20)
+
+`make specdrift` compares each track's pinned spec snapshot against the live spec, which
+lives in a sibling repository. On a fresh clone that sibling is not there, and the tool
+reported `primary_spec 'EXTENSION-ATTESTATION.md' not in spec-data/ext-attestation-v1.3` —
+naming a file that is present, in a directory that is intact, and saying nothing about the
+tree it actually could not find. It now says which live tree is missing and what to do about
+it. Found by cloning the repository into an empty directory and running it, which is the
+only way this failure is visible.
 
 ### Changed — the documentation is reorganised so that what a newcomer needs is separable from what a session accumulated (2026-09-17)
 

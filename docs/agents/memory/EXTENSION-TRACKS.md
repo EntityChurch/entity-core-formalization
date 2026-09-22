@@ -5,8 +5,11 @@ one of the three extension protocols, or you are about to repeat a census or a h
 one of these tracks already took.
 
 Each track is a different protocol with its own spec pin and its own denominator
-(`TRACKS.toml`). Findings are indexed in `docs/status/FINDINGS-INDEX.md` and routed in
-`docs/outbox/ROUTING-*`; this file is the *why it went that way*, not the register.
+(`TRACKS.toml`). Findings are indexed and sent on to the repository that owns the text;
+this file is the *why it went that way*, not the register. Where a finding below is
+described as *routed*, what was sent is the model, the section it contradicts, and the
+run that shows it — the note carrying it is internal and is not part of what this
+repository publishes.
 
 ---
 
@@ -20,8 +23,7 @@ false for any attestation that has a live descendant, so the link leading to the
 "live" and the walk returns null where a head exists. Corollary, green and more interesting
 than the bug: **§5.1's head-resolution step is an identity map**, which is *why the cross-impl
 vectors cannot catch it* — the composite is right because the liveness filter already did the
-work. T4's lesson on a different composition. Routed
-(`docs/outbox/ROUTING-2026-09-07-ATTESTATION-CHAIN-WALKS.md`) with the cohort measured first:
+work. T4's lesson on a different composition. Routed, with the cohort measured first:
 all three implementations diverge from the pseudocode identically, and `entity-core-rust`'s
 `SPEC-AMBIGUITIES.md` ATT-1 asked for a ruling on the neighbouring half in v1.0 — **v1.1
 adopted one of its two interim changes**, and this defect is the residue of the other.
@@ -79,8 +81,7 @@ right about *where* to look and wrong about *what is there*.
 **Quorum track, 2026-09-07 — promoted `scoped`→`modeled`, three modules, 28 runs, SEVEN
 findings.** `tla/QuorumSignerSet.tla` (§4.2 the resolver, with the clock), `tla/QuorumTrust.tla`
 (§4.2/§4.2.1 the arrival-time trust model), `tla/QuorumKofN.tla` (§4.1 the validator). Routed
-in `docs/outbox/ROUTING-2026-09-07-QUORUM.md`, indexed with attestation's in
-`docs/status/FINDINGS-INDEX.md`. Four things to carry forward.
+and indexed alongside attestation's. Four things to carry forward.
 
 **A pre-model hypothesis is worth writing down PRECISELY SO you can find out how it was wrong.**
 `TRACKS.toml`'s quorum note carried two, written before a line was modeled. One was right and
@@ -120,8 +121,8 @@ half*. Modelling it, not re-reading it, is what separated the two.
 **THIRD ENGINE-PORT ON THIS TRACK, 2026-09-09 — `tla/QuorumTrustApalache.tla`, AND IT CORRECTED A
 CLAIM RATHER THAN FINDING A DEFECT.** §4.2.1's cache-invalidation contract has **three**
 invalidation triggers. `tla/QuorumTrust.tla` has an action for two — trigger 3, *authority-
-revocation arrival*, is in no action, no constant and no invariant — and
-`ROUTING-2026-09-07-QUORUM.md` published *"the §4.2.1 contract is exactly sufficient"* naming
+revocation arrival*, is in no action, no constant and no invariant — and what we routed
+published *"the §4.2.1 contract is exactly sufficient"* naming
 those same two. **A sufficiency claim over an incomplete rule set is a claim about a different
 contract.** The correction is measured and comes out in the spec's favour: with the revocation
 action added, `CacheMatchesValidated` is green and inductive over all three triggers. The
@@ -138,7 +139,7 @@ closure (only validated entries are readable). §8 permits `tree:put` to these p
 With unbinds admitted the read-side closure holds and the cache still goes stale, because
 non-trigger 2 forbids invalidating on the write that removed the entry. **What §4.2 needs is
 write-side: the readable set changes only through validate-accept.** Routed as an amendment to Q5
-rather than a new number (`ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md`); LEAN-SEAM **O11**
+rather than a new number; LEAN-SEAM **O11**
 restated and still OPEN. Its cohort census for the two new directions was **declared not taken**
 in that note — naming a census is not taking one — and was **taken later the same day**, which is
 the part worth carrying.
@@ -167,9 +168,8 @@ to the source did.
 **Identity track, 2026-09-07 — promoted `scoped`→`modeled`, three modules, 33 runs, NINE
 findings, and the LAST scoped track.** `tla/IdentityProcess.tla` (§6.3 the arrival convergence
 point), `tla/IdentityRecovery.tla` (§9.4 compromise-recovery validation), `tla/IdentityCertChain.tla`
-(§3.6 topology dispatch, §9.2 key confinement). Routed in
-`docs/outbox/ROUTING-2026-09-07-IDENTITY.md`, indexed with the other two in
-`docs/status/FINDINGS-INDEX.md` (26 findings across five notes, 24 machine-checked). Five things
+(§3.6 topology dispatch, §9.2 key confinement). Routed and indexed with the other two
+tracks' (26 findings across five notes, 24 machine-checked). Five things
 to carry forward.
 
 **SECOND ENGINE ON §9.4, 2026-09-09 — AND THE TWO FINDINGS IT ADDED WERE ON A SUBJECT ALREADY
@@ -188,8 +188,7 @@ N2: §6.3's `update_handle_cache_to` is named in a normative dispatch table and 
 section, and its two readings each satisfy ONE of two properties the spec states** — Go moves the
 entry and breaks §6.3's idempotent semantic, Rust and Python retain it and make §9.4 usable once
 per published handle, Python not implementing the handler at all (C3). The reading that satisfies
-both is **measured green**, not proposed. Routed:
-`docs/outbox/ROUTING-2026-09-09-IDENTITY-HANDLE-CACHE-KEY.md`.
+both is **measured green**, not proposed. Routed.
 
 **SECOND ENGINE ON §6.3 THE SAME DAY — THE LAST SINGLE-ENGINE SUBJECT ON THIS TRACK, AND THE
 FOURTH CONSECUTIVE TIME A LIFTED DOMAIN PAID.** `tla/IdentityProcessApalache.tla`, 40 runs, and
@@ -209,8 +208,7 @@ it. **N4 — an `identity-retirement` is undone by the retired cert arriving aga
 2 dispatches on `(kind, function)` and consults no state, and phase 1 readmits the cert (§4.5 says
 nothing about liveness; §ATTEST:4.3 liveness is supersedes plus revocation). **It is violated
 under `ConstInitOK`, which on this track is the UNION of all three implementations' repairs** — so
-no cohort workaround touches it. Both candidate repairs are measured green. Routed:
-`docs/outbox/ROUTING-2026-09-09-IDENTITY-ARRIVAL-PATH-STATE.md`.
+no cohort workaround touches it. Both candidate repairs are measured green. Routed.
 
 **AND THE HANDLER CENSUS N2 DID NOT TAKE (D14 — enumerate the class, do not fix the instance).**
 N2 said `update_handle_cache_to` is "named in a normative dispatch table and defined in no

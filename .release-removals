@@ -1,35 +1,28 @@
-# .release-removals — deliberate deletions against the PUBLISHED tree.
+# .release-removals — files this repository used to publish and deliberately no longer does.
 #
-# One path or path-prefix per line; `#` comments allowed. The `[6/6] public-regress`
-# gate blocks any release that removes a file already on public `master` unless it is
-# declared here. A deletion is not forbidden — it must be intended, and this file is
-# the reviewed record that it was.
+# One path or path-prefix per line; `#` comments allowed. A comment-only or blank file
+# declares nothing — it is not an allow-all.
 #
-# A comment-only or blank file is NOT an allow-all; it declares nothing.
+# A file disappearing from a published tree is indistinguishable, from the outside, from a
+# mistake. This is the record that it was not one, and where the contents went.
 
-# ── [ADR-0031] — the rolling status log moved to `docs/STATUS.md` ──────────────
-# `docs/status/STATUS.md` has been public since v0.8.0. It is not withdrawn: it moved
-# one directory up to `docs/STATUS.md`, and its `[[doc]]` block in CANONICAL-DOCS.toml
-# is repointed in the same commit as this line. Same file, same content, shorter path.
+# ── The rolling status log moved up one directory ─────────────────────────────
+# `docs/status/STATUS.md` has been published since v0.8.0. It is not withdrawn: it is now
+# `docs/STATUS.md`. Same document, same content, shorter path — if you had a link, drop the
+# `status/`.
 #
-# Why move it. `docs/status/` is for DATED, episodic snapshots — handoffs, checkpoints,
-# point-in-time notes — which are working memory and publish nothing. The single rolling
-# log is the opposite: it is how this repo says out loud where it stands, and it is
-# canonical. Two kinds of document in one directory, separated only by remembering which
-# filename was the exception. After the move they separate by PATH, which is a property
-# a tool can check instead of a convention a person has to recall.
+# Why it moved. `docs/status/` holds dated, episodic working notes — handoffs, checkpoints,
+# point-in-time snapshots — none of which publish. The rolling log is the opposite: one file,
+# edited in place, and the place this repository says out loud where it stands. Keeping both
+# kinds in one directory meant the difference between them was a filename somebody had to
+# remember. After the move the difference is the path, which can be checked instead of
+# recalled.
 #
-# Unusually clean here: `docs/status/` held this one file and nothing else, so the move
-# empties the directory rather than sorting it.
+# The directory held this one published file and nothing else, so the move empties the
+# published side of it rather than splitting it.
 #
-# Declared with the EXACT path, not the `docs/status` prefix. A bare directory entry
-# would silently authorize removing anything ever published beneath it — a standing
-# permission granted for a one-time move. This entry authorizes exactly the file that
-# moved, and nothing else.
-#
-# Declared even though the gate may not ask for it. `public_regression_ok` runs
-# `git diff --diff-filter=D` with rename detection on, so a pure move like this one is
-# likely to resolve as a rename and pass silently. Declaring only what the gate happens
-# to notice would make this file a record of the tool's blind spot rather than of our
-# intent. Reversible: `git mv` it back and drop this line.
+# Written as the exact path, not as the `docs/status` prefix: a bare directory entry would
+# authorise removing anything ever published beneath it — a standing permission granted for a
+# one-time move. This authorises the one file that moved. Reversible by moving it back and
+# deleting this line.
 docs/status/STATUS.md

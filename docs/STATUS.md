@@ -434,8 +434,8 @@ two of our own claim gates were reporting green over stale numbers they could no
 numbers we sent is now in the tree, which it was not when we sent them.** Both counterparts
 signed off on the design the same day; nothing in this repo blocks anyone.
 
-- **A-31 reached arch and is ACCEPTED** — verified in their tree (`3052bc9`,
-  `docs/COHORT-OPEN-ITEMS.md` §0ad.3), not inferred. They reproduce the measurement, drop the K2
+- **A-31 reached arch and is ACCEPTED** — verified in their tree on 2026-09-10, in their own
+  cohort open-items list, not inferred. They reproduce the measurement, drop the K2
   hold on the R11 sentinel fold, accept the text ask (*state the star-free requirement*, landing
   as a `0.8.2.20` core proposal), and carry our three stated limits rather than dropping them.
   **They read it off a tracker row, and say in the same breath that tracker rows are not on the
@@ -1223,7 +1223,7 @@ inductive invariants, `P-9`/`P-10`.
    hypotheses were answered and one of its premises was wrong — see the outcome block below.)*
    *Original item:* ⛔ **RE-READ THE KEYSTONE LEAN SEAM — `make leanseam` IS RED BECAUSE OUR OWN
    PACKET WAS ADOPTED, WITHIN ONE DAY.**
-   `entity-core-keystone` `fee2e422` landed **both** defects we routed on 2026-09-14:
+   `entity-core-keystone`'s 2026-09-14 sweep landed **both** defects we routed that day:
    `scopeSubset` now calls `matchesSegNM` rather than raw `matchesSeg` (**K-6**) and takes a
    `ScopeKind` parameter dispatching `.id` for `operations` and `.path` for
    `handlers`/`resources` (**K-7**, which is **§3.6's typed grammar and therefore `K1`**). Both
@@ -1265,7 +1265,7 @@ inductive invariants, `P-9`/`P-10`.
      rules INVALID. `leanproof` went red on an entirely different declaration. **A packet's
      enumeration of what changed is an input set and can be narrower than the diff** (`K-9`).
    - ⚠ **AND THE BLOCKER THIS ITEM INHERITED WAS MEASURABLY FALSE.** The handoff held this item
-     back because keystone was mid-sweep. The two files we pin last moved at `fee2e422`; the six
+     back because keystone was mid-sweep. The two files we pin last moved in that sweep; the six
      commits after it, including the `0.8.2.25` vendor, touch **nothing** under
      `protocol-generator/lean/`. **`git log -- <the exact paths you pin>` is thirty seconds.** A
      blocker inherited from a handoff is a claim about someone else's tree and goes stale like
@@ -1279,9 +1279,9 @@ inductive invariants, `P-9`/`P-10`.
      and it DISSOLVED rather than resolving either way.** `lean/lemmas/IdScope.lean` (5 gated
      rows, positive control, must-agree control), routed as
      `ROUTING-2026-09-16-b-…-a4-dissolves-…`. R11's witness **constructed** at keystone
-     `97bf1a05` — the artifact our 2026-09-10 answer was about — and is dead **twice over** at
-     `c3356b43`, killed independently by `0c4a537b`'s `canonSegs` `*/`→`neverMatch` arm and by
-     `fee2e422`'s `.id` dispatch. ⛔ **Neither is the argument A-4 made**: §5.4 `canonicalize`'s
+     keystone's 2026-09-09 state — the artifact our 2026-09-10 answer was about — and is dead
+     **twice over** at their 2026-09-16 head, killed independently by the 2026-09-14 sentinel
+     change's `canonSegs` `*/`→`neverMatch` arm and by the same day's sweep `.id` dispatch. ⛔ **Neither is the argument A-4 made**: §5.4 `canonicalize`'s
      rejection was not in their Lean when they argued it, arriving five days later. The
      A-upper-end grade does not move, because it never rested on the witness.
      ⛔ **The measurement produced the half nobody had — `narrowed=2 widened=1`.** `K-7` moved
@@ -1682,8 +1682,8 @@ inductive invariants, `P-9`/`P-10`.
      the *checking* of the peer's own honesty gates now happens somewhere.
 
    **~~Both packets routed to keystone.~~ Answered 2026-09-06 — six of seven asks adopted,
-   one declined with a measurement, and the decline corrects us.** `entity-core-keystone`
-   `8156792`. What came back, and what it did to this repo:
+   one declined with a measurement, and the decline corrects us.** `entity-core-keystone`,
+   2026-09-05. What came back, and what it did to this repo:
    - **`hframed`'s residual is discharged.** `absolutePattern_names_one_peer` is the companion
      theorem for §5.5a's absolute named form, and keystone added **two we did not ask for** —
      `canonSegs_absolute_frame_independent` (frame-independence, which needs no `splitOn`

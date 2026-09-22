@@ -88,6 +88,16 @@ internal = true
 path     = "docs/status/INBOUND.md"
 internal = true
 
+# Durable, internal, and it lives HERE rather than in `docs/agents/memory/` because that
+# directory publishes as a whole. It is not about the models at all: it is about how a
+# finding reaches another repository — their trees, their registers, who owed whom what —
+# every line of it addressed to somebody inside this ecosystem, and not one reference in it
+# followable from outside. `[[living]] internal = true` inside a publishing `[[area]]` does
+# NOT keep a file back; the area's keep-list wins. Moving it was the fix, not re-declaring it.
+[[living]]
+path     = "docs/status/COUNTERPARTS-AND-ROUTING.md"
+internal = true
+
 [[living]]
 path = "docs/STATUS.md"
 
@@ -312,8 +322,3 @@ title = "Findings and registers — which one a result belongs in"
 blurb = "Four categories of finding and the register each goes to, including the implementation-divergence register, which is not a bug report about an implementation but a measurement of where the specification failed to converge three independent authors."
 group = "Memory"
 
-[[doc]]
-path  = "docs/agents/memory/COUNTERPARTS-AND-ROUTING.md"
-title = "Counterparts — who is out there, and how anything reaches them"
-blurb = "The seats this repo exchanges findings with, what each one's instrument can and cannot decide, and why a conservative default about another seat's state is still a claim."
-group = "Memory"

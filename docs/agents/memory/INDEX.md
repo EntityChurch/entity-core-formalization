@@ -37,7 +37,6 @@ prose, no session narration.
 | [`SPEC-PIN-AND-DRIFT.md`](SPEC-PIN-AND-DRIFT.md) | `make driftclaim` fired; a cited section moved underneath a model; or you are about to vendor a snapshot and need to know which repo owns which spec. |
 | [`GATES-AND-DERIVED-NUMBERS.md`](GATES-AND-DERIVED-NUMBERS.md) | A claim gate is green and you want to know what it actually asserts, or a published figure went stale with every gate green. |
 | [`FINDINGS-AND-REGISTERS.md`](FINDINGS-AND-REGISTERS.md) | You have a finding and do not know which of the four registers it belongs in, or you are about to quote a count out of one. |
-| [`COUNTERPARTS-AND-ROUTING.md`](COUNTERPARTS-AND-ROUTING.md) | Session start; routing a packet; or you are about to make a claim about another seat's state. |
 
 ## Not here
 
@@ -47,5 +46,9 @@ prose, no session narration.
   `docs/CORROBORATION.md` (engines per subject), `docs/COVERAGE-MATRIX.md`,
   `docs/LEAN-SEAM.md` (the assumption ledger). Those are the record; memory is the
   hard-won context around it.
+- **Who the counterpart repositories are, and how anything reaches them** —
+  `docs/status/COUNTERPARTS-AND-ROUTING.md`. Durable like the files above, and it would be
+  at home here, but every reference in it points into another repository's working tree, so
+  it sits with the internal registers instead of in a directory that publishes.
 - **Anything with a number in it you did not derive.** Every count in this repo is owned by
   a gate. Run it.
