@@ -75,6 +75,21 @@ MIN_ROWS = 9
 #   docs/status/**   dated snapshots and routing notes -- immutable once written, and the
 #                    place a retracted claim SHOULD survive verbatim so the record of the
 #                    error is not erased. Also where most `witness` rows point.
+#
+#                    KNOWN GAP, found 2026-09-10 and deliberately not patched here.
+#                    This prefix conflates two different kinds of document. A dated
+#                    CHECKPOINT/HANDOFF really is immutable history and belongs outside the
+#                    live set. A **ROUTING note is neither dated-immutable nor internal** --
+#                    it is an ACTIVE OUTBOUND PACKET, edited across a session and read by a
+#                    counterpart repo. R11's withdrawn reachability bound sat in a routing
+#                    note's own HEADER TABLE, as a live claim, and this scan is structurally
+#                    incapable of seeing it; the re-read caught it, the gate could not.
+#                    A blanket un-exclude does NOT work: routing notes legitimately quote
+#                    their own retracted phrasings in correction sections, so every one
+#                    would fire. What is needed is a distinction the registry can express
+#                    (quoted-as-history vs asserted), and inventing one at the end of a
+#                    session is how a gate's first draft ends up wrong for the fifth time.
+#                    Named in docs/RETRACTIONS.toml R11 and on the work-list instead.
 #   docs/archive/**  same, by the archive-do-not-delete rule.
 #   spec-data/**     vendored, SHA-pinned, never edited.
 LIVE_SUFFIXES = (".md", ".toml", ".tla", ".pml", ".spthy", ".pv", ".mk", "Makefile")

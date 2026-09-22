@@ -20,11 +20,13 @@ one tool, on the layer it can actually reach.
 > `identity` were "vendored, unpinned and unmodeled" until 2026-09-07; both were promoted the
 > same day, hours apart.)*
 
-> **Pinned at spec 0.8.2; the live spec is 0.8.2.15.** Rows 4 and 5 below — the two this
+> **Pinned at spec 0.8.2; the live spec is 0.8.2.19.** Rows 4 and 5 below — the two this
 > repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and
-> `make specdrift` reports **9 of 31 cited sections moved**. Eight of the nine are additive
-> clarification; §4.7 is the one that contradicts a model constant. Measured section by
-> section in `docs/SPEC-DRIFT-ASSESSMENT.md`.
+> `make specdrift` reports **12 of 31 cited sections moved**. Eleven of the twelve contradict no model — one of them, §5.8, is a **single backtick** removed
+> from a cross-reference row; §4.7 is the one that contradicts a model constant. Measured section by
+> section in `docs/SPEC-DRIFT-ASSESSMENT.md` — which is also where the two newest movements
+> (§5.2 and §5.6, 0.8.2.16) are classified: they contradict no model here, and they land on
+> the **Lean seam** instead.
 >
 > Worth keeping in view: for part of the 0.8.x cycle this note read *"pinned at 0.8.0; the
 > protocol is at 0.8.2"*, which was the 5th wall behaving exactly as this document warns it

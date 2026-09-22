@@ -10,13 +10,38 @@ accompanies protocol `0.8.2`, so the two line up when read side by side.
 
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
-**`v0.8.2`**. The live protocol has since advanced to **0.8.2.15** and `make specdrift`
-reports **9 of 31 cited sections moved**. That gap is deliberate and visible rather than
+**`v0.8.2`**. The live protocol has since advanced to **0.8.2.19** and `make specdrift`
+reports **12 of 31 cited sections moved**. That gap is deliberate and visible rather than
 hidden: the pin moves only as the last step of re-validating the models, never on a file
 copy, so between a spec release and a re-validation this repository is *behind on purpose*.
 `docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance section by section.
 
 ## [Unreleased]
+
+### Changed — the pin is further behind, and the distance was measured rather than assumed
+
+The live protocol advanced to **0.8.2.19** while this repository's models stayed pinned at
+**0.8.2**, and `make specdrift` now reports **12 of 31 cited sections moved**. Two of the eleven
+are new — **§5.2** and **§5.6**, which are the two most-cited sections here (17 and 14 model
+files). **Neither contradicts any model in this repository**, and that is an argument rather
+than a reassurance: every engine abstracts the scope matcher, and the one dimension any of them
+frames concretely is path-scope in both texts. `docs/SPEC-DRIFT-ASSESSMENT.md` §1a states the
+argument and the limit.
+
+What the movement did surface is a divergence that **predates it**: §3.6's id-scope pattern
+grammar has been normative since 0.8.1, and the sibling proof development this repository's
+assumption ledger cites does not implement it on the delegation-subset path. Machine-checked and
+routed; `docs/LEAN-SEAM.md` L1, L5 and L6 carry scope notes and no verdict changed. **A drift
+measurement scoped to models under-reports exposure in a repository whose published claims also
+rest on someone else's proofs** — that gap is now named in the assessment, and it is not gated.
+
+### Added — a third assertion in the Lean seam gate
+
+`make leanseam` now fails on any full SHA-256 stated **outside** its machine-read pin block that
+the pin block does not declare. It was added because the ledger's own prose table of pinned
+digests had been wrong for three days with the gate green: the gate parses one block, the table
+restates the same fact in a notation nothing reads, and **the stale copy was created by the very
+commit that correctly updated the block**. A digest does not read as a claim.
 
 ### Added — the corroboration standard, and its gate
 
@@ -25,8 +50,8 @@ to be carried by **at least two structurally different engines**, and a result c
 must say so by name. **`docs/CORROBORATION.md`** is the ledger — per modeled subject, which
 engines have a *green* result on it, and every subject that rests on a single engine listed
 individually with the reason — and **`make enginecount`** derives the whole thing from the gate
-tables and fails when any published figure disagrees. It is **31 of 35** subjects on two or more
-engines, **7 of 9** on the three extension protocols.
+tables and fails when any published figure disagrees. It is **33 of 35** subjects on two or more
+engines, **9 of 9** on the three extension protocols.
 
 The ledger says in its own text what a second engine does **not** buy, because the number is
 easy to over-read: it does not make two models of one spec section independent of the reading

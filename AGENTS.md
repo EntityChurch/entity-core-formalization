@@ -431,10 +431,18 @@ V1–V3; none of them is visible from any single finding.
 are three sibling repos, so they go stale with our tree untouched — the `driftclaim` class
 exactly (D15). Re-read the source before quoting a row.
 
-**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.15** and `make specdrift` reports
-**9 of 31 cited sections moved**. Eight of the nine are additive clarification no model
-contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
-`tla/ConnCodes.tla` transcribes 400. Re-vendoring is deliberately **not** the next move
+**Status:** pinned at `v0.8.2`; the live spec is **0.8.2.19** and `make specdrift` reports
+**12 of 31 cited sections moved**. Eleven of the twelve contradict no model — one of them (§5.8) is a
+single backtick removed from a cross-reference row; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
+`tla/ConnCodes.tla` transcribes 400.
+**§5.2 and §5.6 moved on 2026-09-09 (spec 0.8.2.16) and they are the two most-cited sections
+in the repo (17 and 14 model files), so read the classification rather than the count.** What
+changed in both is *pseudocode*, not prose: `matches_scope` and `scope_subset` now **dispatch
+on the scope's type** — id-scope (`operations`, `peers`) matches literally, path-scope
+(`handlers`, `resources`) canonicalizes. No model here contradicts it, because every model
+abstracts the matcher and the one dimension any of them frames (`resources`, the §5.5a
+granter-frame work in the Tamarin track) is path-scope in both texts. **It lands on the Lean
+seam instead** — see K1 in `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`. Re-vendoring is deliberately **not** the next move
 (keystone has not upgraded yet); `docs/SPEC-DRIFT-ASSESSMENT.md` is the live measurement and
 `make driftclaim` gates every prose site that states the status.
 **All four pins are measured as of 2026-09-09, and until that date only one was.** `specdrift`
@@ -621,6 +629,56 @@ as a warning and ProVerif exiting 0 on a false query. Read the call sites, not t
 **grep the whole subtree for the noun** (`revocation` → one hit, in a comment) rather than for the
 verb you expect to find.
 
+*Tenth instance, 2026-09-09 — **`make lean` IS GREEN AND K1 IS REAL AT THE SAME TIME, AND
+NEITHER GATE IS BROKEN.*** The Lean tier asserts two things: `leanseam` says the cited text has
+not moved, `leanproof` grades the **axiom set** of all 40 `#print axioms` gates in both
+directions. Both pass. And `scopeSubset` — the §5.6 attenuation check the ledger's sharpest row
+(L5) rests on — **does not implement the section it is named after.** §3.6's id-scope pattern
+grammar is **normative at our own pin** (0.8.1, F40): `operations` and `peers` match literally.
+`scopeSubset` takes no scope type and canonicalizes all four dimensions. Machine-checked by
+`#eval` over nine pattern pairs — **two disagree, in opposite directions** (an over-grant *and*
+a fail-closed), and the other seven agree because they are built from ordinary operation names.
+Ask D13's question of the tier and the answer is exact: *what does this assert?* That the proofs
+have **no holes**. *What else satisfies it?* **A hole-free proof about the wrong definition.**
+Soundness and fidelity are different properties and only one of them has a gate here.
+
+*And the second divergence came out of a row written to PASS.* The sweep's `("*", child)` row
+was a must-agree sanity check — a bare `*` is the most permissive grant expressible, so it must
+cover everything — and it returned **false**: `canonSegs` prepends the local frame to any pattern
+not starting with `/`, so `*` becomes `["peerL","*"]` and an absolute-looking child misses at the
+first segment. **The untyped matcher is not uniformly more permissive; it is differently
+shaped**, and a repair argued only from the over-grant we went looking for would have fixed half
+of it. Same shape as *"run the restored state too, not just the broken ones"* — this time in a
+differential sweep, where the must-agree rows are the controls. **Write the rows you expect to
+agree, and read them.**
+
+*And the reason 7 of 9 rows agree is the finding's other half.* Every pair built from a bare or
+trailing-`/*` pattern — `get`, `put`, `compute`, `tree/get`, `tree/*` — agrees exactly, which is
+why this survived F40, three spec revisions and the conformance surface: **the two definitions
+agree on the patterns everyone writes tests for.** D13's seventh instance in a third costume — a
+grader over the plausible domain asserts nothing about the domain where two definitions differ —
+and the practical rule is to **build the differential over the ugly inputs first**.
+
+***And then the bound we published off that sweep was wrong, within the hour, in the expensive
+direction.*** The note said *"both divergences require a leading `/`"* — **inferred from the two
+rows that happened to diverge, not probed.** A second sweep over `exclude` and over
+namespaced-but-relative patterns found the over-grant on **`*/apply` covering `compute/apply`**,
+no leading `/`, on the operation-name shape §3.6 itself calls the meaningful one. **A differential
+over nine hand-picked pairs is a SAMPLE, not a domain**, and reading a boundary off which samples
+failed is D15's question — *what is the input set* — going unasked about a sweep. Add it to the
+list beside globs, regexes and denominators: **the pair list of a differential is an input set,
+and the bound you read off it is a claim.**
+
+That is the ledger's own §5 limit — *"neither says the correspondence is the right one"* — paying
+out with a concrete instance for the first time, and it is worth having one, because a stated
+limit that never fires reads as a formality. **The 5th wall is not only spec↔model; it is
+spec↔ANY artifact a published claim cites**, and a proof checker is the most convincing possible
+way to be confidently wrong about the wrong thing. What caught it was not re-reading: `L6` has
+carried the sentence *"0.8.1 F40 makes the two matchers distinct"* since the ledger was written,
+eleven lines from a `grantSubset` that does not make them distinct, and we read that very
+function on 2026-09-06 to correct L1. **An upstream commit forcing a re-read of the diff is what
+caught it** — the gate in the unusual position of being the thing that ran.
+
 *Eighth instance, 2026-09-08 — asked of THE INDUCTIVE PROOF ITSELF, and the answer was "less
 than it says".* `apalache-green` checks two things per row: `Init => Inv`, and
 `IndInit /\ Next => Inv'`. Where `IndInit` is just `Inv` those two ARE the inductive proof.
@@ -697,7 +755,7 @@ tripwire for this family: discarded output is the tell.
 
 ***And for the WITHDRAWN-CLAIM half specifically, "grep the retracted words" is now a program:
 `make retractcheck` (`tools/retractcheck.py`, `docs/RETRACTIONS.toml`), in `check` and
-`matrix`.*** Nine rows, each with the phrasing, the date, why it was withdrawn — and a
+`matrix`.*** **Ten** rows, each with the phrasing, the date, why it was withdrawn — and a
 **`witness`**, a document that must still contain the words, because a mistyped tripwire reports
 a clean pass forever. It found one on its first run: **`tla/AttestRevoke.tla`'s header still
 asserted F5's withdrawn conclusion** ("termination rests on the revocation graph being acyclic"),
@@ -936,6 +994,37 @@ the RESTORE test then showed `make driftclaim` exiting non-zero on a correct tre
 rewrite had let the drift exit status leak into the claim exit status. A gate that fails whenever
 drift exists — which here is every day — gets muted within a week. **Run the restored state too,
 not just the broken ones.**
+
+*Thirteenth shape, 2026-09-09 — **A SECOND COPY OF A GATED FACT, IN A DIFFERENT NOTATION.***
+Every prior "unread facet" here was a second *clause* in a gated sentence. This one is a second
+**copy of the same fact in a notation the gate does not parse.** `docs/LEAN-SEAM.md` §"Citing the
+Lean side" carries a markdown table of the two pinned Lean file digests; `make leanseam` parses
+the ```` ```leanseam-pins ```` block and nothing else. When keystone adopted the §5.5a packet on
+2026-09-06 both files changed, commit `42ac3e4` updated the **pin block** — correctly, and the
+gate did its job, refusing the re-declare until each new theorem was read — and left the
+**table** at the superseded values. So for three days the document told a reader *"the digest is
+the pin"* and *"`make leanseam` checks every digest"* while displaying two digests that gate has
+never read, with everything green.
+
+**Two things generalize.** First, *the stale copy was created by the commit that correctly fixed
+the gated one* — the session was thinking about digests and still did not see the table as a
+site, because **a 64-hex string does not read as a claim.** Add it to D14's grep list beside "a
+command a reader runs": *a fact rendered as data.* Second, the fix is cheap and it is the one to
+copy — `tools/lean-seam.py` now scans the whole ledger for any full sha256 **outside** the pin
+block and fails when one is not a declared pin, so a third copy in a fourth notation cannot go
+stale silently either. Teeth-tested both ways plus the restore. *Not numbered: D15's mechanism —
+what is the input set of the gate — in a thirteenth medium, and the standing rule holds.*
+
+*And the drift tool's own input set is "models", which is narrower than what this repo
+publishes.* `make specdrift` answers *spec-vs-model*. Two of this repo's Class-L rows rest on a
+**sibling's Lean development**, and when spec 0.8.2.16 moved §5.2 and §5.6 the thing that
+diverged from the text was that development, not any model here. `specdrift` cannot see it —
+models are its universe — and `leanseam` reads the Lean text as an opaque **digest**, so a
+change inside it is visible only as "the digest moved", which is not the same statement. **Between
+the two gates is a seam neither watches: the spec moving in a way that makes a cited proof
+artifact diverge from it.** Found by hand (K1,
+`docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`); named here rather than gated,
+because the input is a third tree and that is the `driftclaim` class by construction.
 
 *Seventh and eighth shapes, 2026-09-07, and the seventh is D15 arriving by SUBTRACTION.*
 Promoting `identity` emptied the `scoped` state: `TRACKS.toml` now has four modeled tracks and
@@ -1235,6 +1324,28 @@ weaker than a gate, deliberately** — its inputs are three sibling repos and th
 design corpus, so it is the `driftclaim` class (D15): nothing that runs on our diffs can see it
 go stale, and re-reading the source before quoting a row is the whole procedure. `V1` is what
 happens when that is skipped.
+
+***Fourth required item, added 2026-09-10 — THE COUNTERPART'S DECLARED PIN.*** A routed finding
+must state **which spec revision the counterpart targets**, read from their tree, because
+*"you diverge from text you have adopted"* and *"here is what a revision you have not taken up
+will mean for you"* are different artifacts: one is an **ask**, the other is a **courtesy
+heads-up**, and they are not interchangeable in someone else's backlog.
+
+K1 was drafted as the second and is the first. The reasoning that produced the weak framing was
+sound and the input was missing: the §5.2/§5.6 pseudocode repair landed in **0.8.2.16**, so the
+obligation was assumed to arrive with it. **It did not** — the id-scope grammar is **§3.6,
+normative, 0.8.1 F40**, sitting in `spec-data/v0.8.2` verbatim, and keystone targets **v0.8.2.11**,
+five revisions later. 0.8.2.16 repaired the *pseudocode that had been contradicting the rule*;
+the rule itself was binding when the file's neighbouring function was written to satisfy it.
+**Reading the counterpart's `README`/`VERSION` for their declared pin — thirty seconds — is what
+separated the two**, and it also produced **P-2**: checking whether the rule was at their pin is
+what surfaced that §3.6 *still* carries `; Both use matches_pattern (§5.4).` under the id-scope
+type, at live, in the section that forbids it.
+
+*The general form, and it is the D12 discipline pointed one repo over:* **a finding is measured
+against a TEXT, and the text is whichever one the counterpart has adopted** — not the newest one,
+and not the one we happen to have open. Naming that revision in the packet is what makes the
+finding checkable by them rather than by us.
 
 ## Boundaries — do NOT modify
 

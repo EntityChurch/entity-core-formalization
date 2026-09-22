@@ -1,9 +1,16 @@
 # Spec-drift assessment — the pin vs the live spec
 
 > **LIVE — the pin is behind again, and this document is the measurement.** The models are
-> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.15**, and `make specdrift`
-> reports **9 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
-> and re-derived 2026-09-09. §0 is the **per-track** table, new on 2026-09-09 and the reason
+> pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.19**, and `make specdrift`
+> reports **12 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
+> and re-derived **three times since** — twice on 2026-09-09 and again on 2026-09-10, because
+> the upstream repo committed **0.8.2.15 through 0.8.2.19** across that window — **four separate
+> commits, two of them while this document was being edited.** §1a classifies the two sections
+> 0.8.2.16 added. 0.8.2.19 added a twelfth, **§5.8**, whose entire delta is **one backtick**: it is
+> the sharpest example on record of this document's own standing limit — *a section-touch count is
+> not a semantic delta* — and it is left in the count rather than filtered out, because the moment
+> this measurement starts deciding which movements are "real" it stops being reproducible.
+> §0 is the **per-track** table, new on 2026-09-09 and the reason
 > this document had been telling one quarter of the truth. §2 onward is the previous cycle's
 > — 0.8.0 vs 0.8.2, since resolved — kept because the method is the reusable part and because
 > a repo that deletes its last drift record has no way to show the pattern is normal rather
@@ -24,7 +31,7 @@ does not read.
 
 | Track | Pin | Live tree | Files | Cited § moved |
 |---|---|---|---|---|
-| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **9 of 31 cited sections moved** |
+| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **12 of 31 cited sections moved** |
 | `attestation` | `spec-data/ext-attestation-v1.3` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`attestation` no drift** |
 | `quorum` | `spec-data/ext-quorum-v1.2` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`quorum` no drift** |
 | `identity` | `spec-data/ext-identity-v3.10` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`identity` no drift** |
@@ -44,19 +51,28 @@ before believing a zero (D15, ninth shape).
 
 ---
 
-# 1. Live measurement — 0.8.2 pin vs 0.8.2.15 live
+# 1. Live measurement — 0.8.2 pin vs 0.8.2.19 live
 
-**Measured 2026-09-06, re-derived 2026-09-09.** Reproduce with `make specdrift`; the prose
-sites that state the status are gated by `make driftclaim`.
+**Measured 2026-09-06; re-derived twice on 2026-09-09 and again on 2026-09-10.** Reproduce with `make specdrift`; the
+prose sites that state the status are gated by `make driftclaim`.
 
 | | |
 |---|---|
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
-| Live (`entity-core-protocol/specs`) | **0.8.2.15** · CBOR encoding 1.5 → 1.6 · type system also differs |
-| Core spec delta | +152 lines added, −33 removed |
-| **Sections the models cite that moved** | **9 of 31** |
+| Live (`entity-core-protocol/specs`) | **0.8.2.19** · CBOR encoding 1.5 → 1.6 · type system also differs |
+| **Sections the models cite that moved** | **11 of 31** |
 | Sections whose movement contradicts a model | **1** (§4.7) |
+| Sections whose movement lands on the **Lean seam** rather than on a model | **2** (§5.2, §5.6 — §1a) |
 | Green matrix against the pin | unaffected — every result is quoted against `v0.8.2` |
+
+*The line-delta row that used to sit here (`+152 added, −33 removed`) has been **removed
+rather than updated**, and that is the point of this note. It was a hand-derived figure
+about the live tree with no gate behind it, sitting in the same table as two gated ones —
+`driftclaim` reads the section pair and the version string and has never read it. It was
+correct for 0.8.2.15 and silently wrong for 0.8.2.16 within the day. Rather than re-derive a
+number nothing will re-check, the table now carries only figures a gate reads or a reader can
+reproduce with `make specdrift`. Third facet of this same paragraph to go stale unread; the
+other two are the version and the section pair, both now gated.*
 
 *The denominator was **30** until 2026-09-09 and the row above said so in words the drift gate
 does not read — the fourth time in this repo a stale figure has hidden in a paraphrase of a
@@ -70,7 +86,7 @@ subtraction, which is also how eight `COVERAGE-MATRIX` document references were 
 inside the citation set wearing a `§` sigil they had no right to.
 
 **The pin is not being moved yet, and that is a decision rather than a backlog item.** The
-sibling `entity-core-keystone` has not upgraded to 0.8.2.15; re-vendoring and re-targeting
+sibling `entity-core-keystone` has not upgraded to 0.8.2.19; re-vendoring and re-targeting
 the models before the peer that ships has moved would put this repo's assumption ledger and
 the peer's Lean proofs on two different spec texts, which is the one configuration that makes
 `docs/LEAN-SEAM.md` unreadable. Re-vendor is sequenced *after* the sign-off, per
@@ -91,6 +107,9 @@ below records an earlier draft of this document making.
 | §5.2a | 1 | +1.4KB — connect-time row widened to "nonce absent, or `authenticate` before `hello`"; new pre-dispatch row | **confirms us**, in a second site |
 | §4.6 | 6 | +784B — the step numbering is a normative order; lowest-numbered failing step wins | new modelable surface, no contradiction |
 | §6.5 | 6 | +891B — step 3 is a **gate**, not an ordering preference; names a foreign-namespace privilege escalation | new modelable surface. Models cite §6.5 for the verdict gate and dispatch-after-establishment, not step 3 |
+| **§5.2** | **17** | **0.8.2.16** — `matches_scope` pseudocode now **dispatches on the scope's type**; new `scope_value_matches` helper | **none for any model here** — see §1a. Lands on the Lean seam |
+| **§5.6** | **14** | **0.8.2.16** — `scope_subset` likewise dispatches; new `pattern_covers` helper; a type mismatch between child and parent is now a malformed grant | **none for any model here** — see §1a. Lands on the Lean seam, and this is the half with a routed finding behind it |
+| §5.8 | 4 | **0.8.2.19** — **one backtick**, removed from a cross-reference table row (`` `EXTENSION-CONTINUATION.md` `` → `EXTENSION-CONTINUATION.md`) | **none, and it is the cleanest illustration this table has of its own limit.** One character, zero semantic content; the four `ChainTopology.*` theories cite §5.8 for chain-inclusion topology, not for that row |
 | **§4.7** | **3** | **+7.0KB** | **the one contradiction — see below** |
 
 ### §4.7 — the one section where the live text contradicts a model
@@ -99,7 +118,7 @@ below records an earlier draft of this document making.
 moved under them:
 
 1. **`connection_sequence_error` moved 400 → 409.** `ConnCodes.tla`'s `NormativeStatus`
-   maps it to 400 (via the `OTHER` arm, line 128). Against 0.8.2.15 that constant is wrong,
+   maps it to 400 (via the `OTHER` arm, line 128). Against 0.8.2.19 that constant is wrong,
    and `StatusMatchesCode` would be transcribing a status the spec no longer fixes.
 2. **`incompatible_key_type` is retired** — MUST NOT be emitted. Not modeled (the module
    declares the negotiation codes out of scope), so no impact beyond the transcription note.
@@ -110,23 +129,89 @@ moved under them:
 
 **The contested cell is resolved, in our favour.** `ConnCodes.tla`'s header documents
 `ConnCodesSeqReadingBug.cfg` as *"not a bug we injected — it is a conformant reading of the
-spec, and that is the point."* At 0.8.2.15 that reading is **no longer conformant**: row 10's
+spec, and that is the point."* At 0.8.2.19 that reading is **no longer conformant**: row 10's
 parenthetical was narrowed exactly as this repo argued (`docs/PROPERTIES.md` §D.1). So when
 the pin does move, the model gets **simpler** — the contested-cell constant collapses and the
 control demotes from "a conformant reading" to an ordinary injected defect. That is the whole
 finding being banked, and it is worth noting the direction: **the drift here is a repo's own
 argument coming back to it as spec text.**
 
+## 1a. §5.2 and §5.6 — the two newest movements, and why the count is the wrong thing to read
+
+These are the **two most-cited sections in the repository** — 17 and 14 model files. A reader
+who stops at the count will conclude the drift just got much worse. It did not, and the
+reason is worth stating precisely, because the same reasoning is what routes the finding.
+
+**What actually changed is pseudocode, not prose.** Both sections carried a scope matcher
+written as *uniform across grant dimensions*:
+
+```
+matches_scope(value, scope, local_peer_id):        ; §5.2, at the pin
+  ; Uniform scope check for all grant dimensions.
+    if matches_pattern(canonicalize(value, local_peer_id),
+                       canonicalize(pattern, local_peer_id)):
+```
+
+At 0.8.2.16 both dispatch on the scope's declared type:
+
+| scope type | dimensions | matcher |
+|---|---|---|
+| `system/capability/path-scope` | `handlers`, `resources` | canonicalize both sides, then §5.4 pattern match |
+| `system/capability/id-scope` | `operations`, `peers` | **literal**; exactly two wildcard forms (`*`, trailing `/*`); **no §5.4 path transforms** |
+
+This is **0.8.1 F40 finally reaching the pseudocode** — the upstream commit says so in its
+subject (*"the id-scope pin never reached the pseudocode"*). F40 fixed the *prose* rule in
+§3.6 two revisions earlier; §5.2's and §5.6's worked algorithms kept the uniform form, so the
+document specified one thing in prose and a contradicting thing in the code a reader
+transcribes. §5.6's new comment states the stakes in the spec's own words: *"Canonicalizing an
+id dimension here widens authority **down a delegation chain**, which is where nobody
+re-checks."*
+
+**Why no model here is affected — and this is an argument, not a reassurance.** Every model in
+this repo abstracts the matcher rather than transcribing it. The only dimension any engine
+frames concretely is **`resources`** — the §5.5a granter-frame work in `tamarin/ChainTopology.*`,
+`tamarin/DeepChain*`, whose `canon`/`covok` symbols are exactly the path-scope arm. `resources`
+is path-scope at the pin **and** at 0.8.2.16, matched by canonicalization in both, so that
+transcription is untouched. Checked the complement directly: the strings `matches_scope`,
+`scope_subset`, `id-scope` and `id_scope` occur in **zero** model files across `tla/`, `spin/`
+and `tamarin/`. No model encodes the uniform rule, so nothing here transcribed the sentence
+that moved.
+
+**Where it does land is `docs/LEAN-SEAM.md`.** The seam's Class-L rows face a Lean development
+whose `matchesScope` (the §5.2 dispatch check) *is* typed by scope kind and whose `scopeSubset`
+(the §5.6 attenuation check) is **not** — so the F40 fix reached one of the two sites in that
+file and not the other, which is the same asymmetry the spec has just closed. Rows L1, L5 and
+L6 all touch it. Routed as **K1**, machine-checked and with the cohort census, in
+`docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
+
+**And here the drift framing has to be corrected, in the document whose whole job is that
+framing.** It is tempting — this section's first draft did it — to say *"0.8.2.16 moved and a
+sibling now diverges."* **The divergence predates the movement.** §3.6's id-scope pattern
+grammar is **normative in our own pin** (0.8.1, F40) and in keystone's v0.8.2.11 target;
+0.8.2.16 repaired the §5.2/§5.6 *pseudocode that had been contradicting it* since 0.8.1. So the
+drift measurement did not detect a new divergence — **it forced a re-read that surfaced an old
+one.** Worth stating precisely, because the two are graded differently: a movement that breaks
+something is a cost of being behind, and a movement that makes you look at something is a
+benefit of measuring at all. This one is the second.
+
+**The transferable piece, and it is a new shape for this document.** Every prior entry in the
+table above answers *"does this movement contradict a model?"* Both of these answer **no** and
+are still the most consequential movements measured here, because what they bear on is a
+**sibling's proof artifact that our ledger cites** — an object `make specdrift` cannot see and
+`make leanseam` reads only as a digest. *A drift measurement scoped to models under-reports
+exposure in a repo whose published claims also rest on someone else's proofs.* That gap is now
+named; it is not yet gated, and §5 of the ledger says why.
+
 ## What this measurement does not assert
 
-- **Not that the models would pass at 0.8.2.15.** Nothing has been re-run against the new
+- **Not that the models would pass at 0.8.2.19.** Nothing has been re-run against the new
   text and nothing can be, because the models transcribe 0.8.2. Only a re-vendor and
   re-validation can speak to the current spec, and that is the point of keeping the two
   statements apart.
 - **Not that additive text is harmless.** "Additive" means it contradicts nothing modeled;
   §4.6's step-ordering rule and §6.5's step-3 gate are both new *obligations* a peer must
   meet, and neither has a model. They are backlog, not absolution.
-- **Not that the 30 cited sections are the right 30.** Coverage is bounded by what the
+- **Not that the 31 cited sections are the right 31.** Coverage is bounded by what the
   models chose to cite — the standing limit of this method, §3 below.
 
 ---

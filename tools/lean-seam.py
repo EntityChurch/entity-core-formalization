@@ -66,6 +66,8 @@ DECL = re.compile(r"^(?:theorem|lemma)\s+([A-Za-z_][A-Za-z0-9_'?!.]*)", re.M)
 AXIOM_GATE = re.compile(r"^#print\s+axioms\s+([A-Za-z_][A-Za-z0-9_'?!.]*)\s*$", re.M)
 # A backticked identifier in the prose that looks like a Lean declaration name.
 PROSE_IDENT = re.compile(r"`([A-Za-z_][A-Za-z0-9_']*(?:_[A-Za-z0-9_']+)+)`")
+# Any sha256 written out in full, anywhere in the ledger.
+DIGEST = re.compile(r"\b[0-9a-f]{64}\b")
 
 
 class Fail(Exception):
@@ -248,6 +250,40 @@ def check(keystone: str, ledger_path: str) -> int:
             f"  ok       {len(theorems)} discharging + {len(rejected)} rejected, "
             "both directions"
         )
+
+    # ---- 5. RESTATED DIGESTS -- the third assertion ---------------------------
+    #
+    # D13, asked of this gate rather than of a model: what does step 1 assert, and what
+    # else satisfies it? It reads the `leanseam-pins` block and NOTHING ELSE. From
+    # 2026-09-06 to 2026-09-09 the ledger's own §"Citing the Lean side" table restated both
+    # digests at superseded values -- while telling the reader that the digest IS the pin
+    # and that this tool checks every digest -- and step 1 was green throughout, because a
+    # prose table is not the pin block. The stale copy was created by the commit that
+    # correctly updated the pin block: a 64-hex string does not read as a claim, so the
+    # session that re-pinned did not see the table as a site.
+    #
+    # So: every full sha256 anywhere in the ledger must be a value the pin block declares.
+    # This does not assert the pin block is RIGHT (step 1 does that against the real file);
+    # it asserts the document does not state a second, different answer to the same
+    # question in a notation nobody parses.
+    print("\n== 5. restated digests (every sha256 in the ledger is a declared pin) ==")
+    pinned_values = set(files.values())
+    prose_only = PIN_BLOCK.sub("", ledger_text)
+    stray = sorted({d for d in DIGEST.findall(prose_only)} - pinned_values)
+    if stray:
+        problems.append(
+            "the ledger states "
+            f"{len(stray)} sha256 digest(s) outside the pin block that the pin block does\n"
+            "      not declare: " + ", ".join(f"{d[:12]}..." for d in stray) + "\n"
+            "      -> a digest restated in prose is a SECOND copy of a gated fact, and only\n"
+            "         the pin block is read. Update the restatement, or drop it -- do not\n"
+            "         leave two answers to one question in one document."
+        )
+        for d in stray:
+            print(f"  STRAY    {d[:12]}...  (not a declared pin)")
+    else:
+        n = len(DIGEST.findall(prose_only))
+        print(f"  ok       {n} restated digest(s), all declared in the pin block")
 
     # ---- verdict --------------------------------------------------------------
     print()

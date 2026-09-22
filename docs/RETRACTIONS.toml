@@ -181,3 +181,61 @@ next reader exactly as a stale claim does."""
 pattern = "[Nn]one has a drift gate"
 witness = "docs/status/FINDINGS-INDEX.md"
 allow   = []
+
+[[retraction]]
+id      = "R11"
+retired = "2026-09-10"
+claim   = "K1's divergence requires an id-scope value carrying path syntax — a leading `/`"
+why     = """Published in `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §5 and in the
+severity grade the same day, as the reachability bound the grade rested on. **Refuted within the
+hour by a second sweep**: parent `operations = ["*/apply"]` admits child `["compute/apply"]` under
+`scopeSubset` and is rejected by the id-scope grammar, with no leading `/` anywhere — on the
+`/`-namespaced operation shape §3.6 itself calls the meaningful one. The real bound is *an
+`operations` pattern with an interior `*` segment*.
+
+The bound was **read off the two rows that happened to diverge in a nine-pair sweep, not probed**.
+That is D15's question — what is the input set — going unasked about a differential: a hand-picked
+pair list is a SAMPLE, and a boundary inferred from which samples failed is a claim, not a
+measurement. Withdrawn in the direction that makes the finding worse, which is the direction a
+self-serving error does not usually take, and recorded here so the weaker bound cannot be quoted
+back out of the first draft.
+
+**And this row's FIRST form demonstrated a witness hazard worth stating.** The witness was set to
+the routing note itself — the same document that still carried the withdrawn bound live, in its
+header table. `retractcheck` excludes the witness from the live set by design (that is what makes
+the positive control possible), so it reported **0 occurrences** and went green **over the exact
+site that needed catching**. The bound was found by re-reading, not by the gate.
+**A witness must be a document where the phrasing appears ONLY as quoted history** — a routing
+note being actively edited is the worst possible choice, because it is simultaneously the place
+the retraction is explained and the place the live claim lives. Witness moved to this registry's
+own `claim` field, which cannot contain a live assertion.
+
+**And repointing the witness did NOT make the gate catch it, which is the larger finding.**
+Re-injecting the withdrawn phrasing into the routing note still passed: `EXCLUDE_PREFIXES`
+drops **all** of `docs/status/`, so no routing note is in the live set at all. That exclusion
+is right for a dated CHECKPOINT or HANDOFF -- immutable history, where the retracted words
+SHOULD survive verbatim -- and **wrong for a ROUTING note, which is an active outbound packet
+edited across a session and read by a counterpart repo.** The one class of document whose
+stale claims leave this repository is the one class this gate cannot see.
+Not patched, deliberately: a blanket un-exclude fires on every routing note, because they
+legitimately quote their own retracted phrasings in correction sections. The fix needs a
+distinction the registry can express -- *quoted as history* vs *asserted* -- and inventing one
+unhurried is worth more than inventing one now. `tools/retractcheck.py` carries the same note
+at the exclusion list; `docs/STATUS.md` §Next carries the work item.
+
+**AMENDED 2026-09-10 after keystone challenged this row, and they were half right.** They pointed
+out that §5.4's `canonicalize` rejects `*/`-leading patterns outright — *"ambiguous: use /*/rest"*,
+in our own pin — which we had not read. Their inference was that the witness therefore never
+reaches a matcher and the original leading-`/` bound was right. **We read all four
+implementations and the rejection is honoured in none of them:** Lean and keystone-Rust have no
+rejection at all, keystone-Go computes one and `canon` **discards** it, and entity-core-py
+declines it deliberately so grant patterns fail closed by non-match instead.
+So the correct statement is neither bound: **it is per-artifact.** On Go/Rust/py the witness fails
+closed (by literal comparison, not by the guard); on **Lean — the artifact this ledger cites — it
+over-grants, measured.** This row stays retracted **as an unqualified bound** and the amended
+claim is that a reachability bound must name the artifact it is about. Keystone's own control was
+run against a conformant peer that already has the fix, which cannot separate the two readings.
+Full exchange: `ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §9."""
+pattern = "require an id-scope value carrying"
+witness = "docs/RETRACTIONS.toml"
+allow   = []

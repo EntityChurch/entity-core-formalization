@@ -56,8 +56,28 @@ Files pinned by this ledger, at the revision the correspondences below were deri
 
 | File | sha256 |
 |---|---|
-| `protocol-generator/lean/proofs/EntityCoreProofs/CapabilityProofs.lean` | `715687f4505e0e7639b47fd34977375b6bf3a652bf5458d9231d507d0f64d029` |
-| `protocol-generator/lean/src/EntityCore/Capability.lean` | `c16a2f7c6c3e4351d974d8de57a476a577add9a5f098d788767c80169b6a1a93` |
+| `protocol-generator/lean/proofs/EntityCoreProofs/CapabilityProofs.lean` | `3a123b2a746f11dd37e39550d8e81b2389dbce6adf9aed31c20cd6236ec12ab4` |
+| `protocol-generator/lean/src/EntityCore/Capability.lean` | `c99d1067ca08a44cd9c22c67d6517d38932c3be161443b5fc74f5e957ab4672a` |
+
+> **These two digests were WRONG from 2026-09-06 to 2026-09-09, with `make leanseam` green
+> every day, and the mechanism is this repo's own headline class.** The gate parses the
+> `leanseam-pins` block in §5 and nothing else. When keystone adopted the routed §5.5a packet
+> and both files changed, commit `42ac3e4` updated the **pin block** — correctly, and the gate
+> refused the re-declare until each new theorem was read — and left **this table**, which
+> restates the same two facts in prose, at the superseded values. So the document told a reader
+> the digest *is* the pin and that `make leanseam` checks every digest, while displaying two
+> digests `make leanseam` has never read.
+>
+> That is the *unread facet* shape one level over: not a second clause in a gated sentence, but
+> a **second copy of a gated fact in a different notation** — a table beside a code block. It
+> is also D14's "a corrected defect survives longest somewhere that does not look like prose":
+> a 64-hex string does not read as a claim, so the session that fixed the pin did not think of
+> this as a site.
+>
+> **Fixed both ways.** The values above are current, and `tools/lean-seam.py` now scans the
+> whole ledger for any 64-hex digest outside the pin block and fails when one is not a declared
+> pin — so a third copy in a fourth notation cannot go stale silently either. Teeth-tested by
+> reverting this table and confirming the failure names both files.
 
 Both are core-Lean (no mathlib), toolchain `leanprover/lean4:v4.29.1`, and every theorem
 cited below sits under a `#print axioms` honesty gate in its own file — so a `sorry` would
@@ -116,6 +136,20 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   "every handlers/operations pattern in the chain is absolute, **and** `peers` is declared
   rather than defaulted", not "the two peers' frames agree." → work-item,
   `docs/STATUS.md` §Next.
+- **H is narrower than this row states, AS SPECIFIED — conditionally, 2026-09-10 (K1).**
+  Two of the three dimensions named above are **id-scope** (`operations`, `peers`), and §3.6's
+  normative grammar — at our pin, 0.8.1 F40 — matches those **literally, with no frame at all**.
+  A literal match is peer-independent by construction, so **as the spec specifies it** the
+  residual reduces to **`handlers` alone, plus the `peers` DEFAULT value** — which was never a
+  framing question and is the half this row already identified as unrepairable by
+  canonicalization.
+  **Stated as conditional and deliberately not folded into the verdict**, because the row cites
+  an artifact rather than the spec: keystone's `scopeSubset` **is** untyped, so in the
+  development this row actually rests on `operations` really is frame-dependent, and H reads
+  correctly against what ships. *The residual is smaller than stated in the specified system and
+  exactly as stated in the implemented one* — which is the seam this whole ledger exists to keep
+  visible, arriving inside a single row. The row moves when K1 does.
+  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §4.
 
 ### L2 · The verdict is computable before handler entry
 
@@ -184,6 +218,30 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   `matchesSeg_trans` — all in `CapabilityProofs.lean`, no residual hypotheses beyond the two
   premises, and the expiry conjunct (a finite parent forbids an infinite child) proved
   inline in `isAttenuated_trans`.
+- **Scope note, 2026-09-10 — what the transitivity is transitivity OF (K1), and it is not a
+  drift note.** §3.6's **id-scope pattern grammar is normative at OUR OWN PIN** (0.8.1, F40):
+  `operations` and `peers` match the raw value **literally**, with none of the §5.4 path
+  transforms. Lean's `scopeSubset` takes no `ScopeKind` and canonicalizes all four dimensions,
+  so it does not implement that rule for two of them — **machine-checked**, `#eval` over nine
+  pattern pairs, two disagreeing **in opposite directions**: parent `operations = ["/*/get"]`
+  *admits* child `["/other/get"]` (over-grant), and parent `["*"]` *fails to cover* the same
+  child (fail-closed). Spec 0.8.2.16 is confirmation, not the source — it repaired the §5.2/§5.6
+  pseudocode that had been contradicting §3.6.
+  This does **not** touch the row's proposition: transitivity of the untyped relation is as true
+  as transitivity of a typed one, and `isAttenuated_trans` is unaffected. What it qualifies is
+  the **discharge**: Tamarin's `no_escalation` is conditional on `narrow` being the real subset
+  relation, and the function proved about is not that relation on two of four dimensions.
+  **Verdict stays CLOSED — the row is about composition and composition holds — and the "strongest
+  single link" claim now carries a named boundary rather than none.** Routed as K1,
+  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
+- **And K2 reaches this row through the same function, 2026-09-10.** `scopeSubset_trans` →
+  `matchesSeg_trans` is the chain that discharges Tamarin's `no_escalation` condition, and
+  `matchesSeg` is **not** §5.4's matcher (L6, K2). So the condition is discharged for a matcher
+  strictly more permissive than the specified one, on `resources` — the dimension this row's
+  Tamarin models actually frame. **Two independent routes now qualify the same discharge**: K1
+  (wrong matcher applied to id dimensions) and K2 (wrong matcher on the path dimension itself).
+  The theorems remain true and `make lean` remains green; what is qualified is what they are
+  theorems *about*.
 - **Verdict: CLOSED.** This is the strongest single link in the whole assurance map, and
   worth stating in exactly this shape: *the Tamarin result is conditional, and Lean is what
   discharges the condition.*
@@ -199,6 +257,34 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   separately, because 0.8.1 F40 makes the two matchers distinct —
   `matchesScope_id_excl_override` and `matchesIdPattern_literal`, all in
   `CapabilityProofs.lean`.
+- **K2, 2026-09-10 — `matchesSeg` IS NOT §5.4's `matches_pattern`, and this row assumes it is.**
+  §5.4's matcher has exactly four arms: bare `*`; a **leading** `/*/` peer wildcard that strips one
+  segment and recurses; a trailing `/*` prefix match; otherwise **exact equality**. **There is no
+  interior-wildcard arm.** `matchesSeg` recurses structurally over both segment lists, so its
+  `| _ :: ps, "*" :: pt` arm fires at **every** position — measured: `/peerL/*/b` matches
+  `/peerL/a/b` in Lean (**true**), and falls to exact equality in §5.4 (**false**), in
+  keystone's own generated Go, and in its generated Rust. Controls in both directions agree.
+  **This row's assumed proposition — reflexivity and transitivity of *the §5.4 matcher* — is
+  discharged by theorems about a DIFFERENT, more permissive function.** `matchesSeg_refl` and
+  `matchesSeg_trans` are true; they are not about §5.4. The direction is the dangerous one: a more
+  permissive matcher inside `scopeSubset` admits child patterns a parent never authorized, and
+  unlike K1 this is on **`resources`** — a genuine path-scope dimension, and the one nine
+  `tamarin/` theories abstract as `canon`/`covok`. **Verdict held at CLOSED pending keystone's
+  ruling (K-4a), because which side is wrong is a spec question as much as a code one — but this
+  row should be read as OPEN-in-effect until it is answered.** Routed:
+  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md` §10.
+- **Scope note, 2026-09-09 — every theorem here is about the §5.2 side (K1).** This row has
+  carried *"0.8.1 F40 makes the two matchers distinct"* since the ledger was written, and all
+  five cited theorems are about `matchesScope` / `matchesIdPattern` — the **dispatch** check.
+  **Nothing here is about the id matcher on the SUBSET path**, because in that file there is no
+  such function to prove anything about: `scopeSubset` takes no `ScopeKind`. Spec 0.8.2.16 now
+  requires the same split in §5.6, so the distinction this row names holds on one of the two
+  sites the spec applies it to. No verdict changes — the theorems cited are true and discharge
+  what the row claims — but the row's *reach* is half of what the phrase "the two matchers are
+  distinct" suggests, and that is worth having written down where the phrase is.
+  **Recorded plainly: this row named the distinction and nobody here followed it into §5.6 for
+  three days, eleven lines away in a file we had read for another reason.** K1 —
+  `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
 - **Verdict: CLOSED.**
 
 ### L7 · Canonicalization roots a relative pattern at the granter's namespace

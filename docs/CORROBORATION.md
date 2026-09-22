@@ -176,6 +176,7 @@ set was a claim, and nobody checked it.
 <!-- enginecount-site: docs/STATUS.md :: subjects overall and -->
 <!-- enginecount-site: docs/PROPERTIES.md :: extension subjects have a second engine -->
 <!-- enginecount-site: docs/status/FINDINGS-INDEX.md :: Extension MODULES with a second engine -->
+<!-- enginecount-site: CHANGELOG.md :: subjects on two or more -->
 
 | Site | What it says there |
 |---|---|
@@ -188,6 +189,25 @@ set was a claim, and nobody checked it.
 | `docs/PROPERTIES.md` | the scorecard's scope note — **added 2026-09-09, and it had been stale since the day before.** It stated the count in WORDS ("five have a second engine … four are TLC-only"), so neither the gate nor a grep for the number reached it. Rewritten into the canonical `N of M` form specifically so a gate can read it |
 | `docs/status/FINDINGS-INDEX.md` | the open-work table — **added 2026-09-09, and it had been stale for a day**, saying `5 of 9` while listing two modules that had gained a second engine the previous afternoon. Its own header says *"do not quote these from here"*, which is a disclaimer and not a gate; the site list had gone stale a second time, one day after the paragraph above recorded it going stale the first time |
 | `docs/STATUS.md` | the rolling log's D16 entry — **added 2026-09-09, the day after the site list was written, because that entry stated both pairs and no gate read it.** The list is itself an input set (D15); it went stale within a day of being declared complete |
+| `CHANGELOG.md` | the `[Unreleased]` entry announcing this very standard — **added 2026-09-10, and it had been wrong in BOTH figures since 2026-09-09**, saying `31 of 35` and `7 of 9` while the gate derived `33 of 35` and `9 of 9`. **The fourth site missed by a list whose own three rows above record it going stale three times in one day** |
+
+**Read those last four rows together, because they are one finding told four times.** This list
+was declared complete, then extended on three consecutive occasions, each time by someone who had
+just written a paragraph about it going stale. **The fourth miss is the sharpest**: `CHANGELOG.md`
+is a **published** file — one of the four things a public reader actually gets — and the stale
+sentence is *the announcement of the corroboration standard itself*, stating in the present tense
+two numbers that the gate it announces derives differently. A feature's own release note is the
+least likely place anyone re-reads for drift, and it is the most likely place to state a headline
+figure.
+
+**Why it stayed invisible to every other gate we have:** `enginecount` reads only this list, so an
+undeclared site is outside its universe by construction; `retractcheck` matches *withdrawn
+phrasings* and nothing here was retracted; `driftclaim` and `runcount` derive different numbers
+entirely. Found by reading the `[Unreleased]` section for an unrelated reason. **The standing
+lesson is the one D15 keeps restating and this repo keeps re-earning: a gate whose input set is a
+hand-maintained list has moved the problem, not solved it** — the list is the claim. What is worth
+having is that the cost is bounded and visible: four misses, all caught, all recorded here rather
+than quietly appended.
 
 ## What is not in this file, and where it lives instead
 

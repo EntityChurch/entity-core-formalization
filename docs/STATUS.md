@@ -2,9 +2,9 @@
 
 _Updated: 2026-09-06 · this line: 0.8.2_
 
-> **The models are pinned at 0.8.2; the live spec is 0.8.2.15.** Every model in this repo is
+> **The models are pinned at 0.8.2; the live spec is 0.8.2.19.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
-> Protocol at spec version **0.8.2**. `make specdrift` reports **9 of 31 cited sections
+> Protocol at spec version **0.8.2**. `make specdrift` reports **12 of 31 cited sections
 > moved**, so the results below are a statement about **0.8.2** and not about the protocol as
 > it stands today.
 >
@@ -624,6 +624,53 @@ item 4.
 
 ## Next
 
+0**. **`make retractcheck` cannot see routing notes, and they are the packets that leave.** Found
+   2026-09-10 by teeth-testing R11 and watching it pass. `EXCLUDE_PREFIXES` drops all of
+   `docs/status/` — correct for a dated CHECKPOINT/HANDOFF, which is immutable history where the
+   retracted words *should* survive verbatim, and **wrong for a ROUTING note**, which is an active
+   outbound packet edited across a session and read by a counterpart repo. R11's withdrawn
+   reachability bound sat in a routing note's own header table as a live claim and the gate was
+   structurally blind to it; a re-read caught it.
+   **Not patched, deliberately.** A blanket un-exclude fires on every routing note, because they
+   legitimately quote their own retracted phrasings in correction sections. The fix needs a
+   distinction the registry can express — *quoted as history* vs *asserted* — and this repo's
+   record is that a gate's first draft written in a hurry is wrong (five consecutive sessions).
+   Named in `docs/RETRACTIONS.toml` R11 and at the exclusion list in `tools/retractcheck.py`.
+
+
+0*. **~~The Lean seam had a stale digest table beside its pin block.~~ Done 2026-09-09**, and the
+   drift gate fired a second time in two days. `entity-core-protocol` landed **0.8.2.16** and
+   **0.8.2.19** while the previous session's matrix was finishing, so `make driftclaim` went red
+   across 16 site-claims with our tree untouched — the class of failure it exists for, twice in
+   48 hours — and **twice more the next day** (0.8.2.19), so four fires in three days on four
+   separate upstream commits, our tree untouched every time. Core is now **12 of 31**; the twelfth
+   is §5.8, whose entire delta is **one backtick** removed from a cross-reference row. The two
+   sections that
+   moved are §5.2 and §5.6, **the two most-cited in the repo**, and they contradict **no model
+   here** (`docs/SPEC-DRIFT-ASSESSMENT.md` §1a is the argument, not a shrug).
+   **What they bear on is the Lean development our ledger cites, and the divergence PREDATES the
+   movement** — §3.6's id-scope grammar is normative at our own pin (0.8.1, F40) and at keystone's
+   v0.8.2.11 target; 0.8.2.16 only repaired the pseudocode that had been contradicting it. So the
+   drift measurement surfaced an old divergence rather than creating a new one. Keystone's
+   `scopeSubset` takes no scope type, in all three generator backends, eleven lines from a
+   correctly-typed `matchesScope`. **Machine-checked** (`#eval`, 9 pattern pairs): two disagree,
+   in **opposite** directions — an over-grant and a fail-closed — and the other seven agree
+   because they use ordinary operation names, which is why it survived three revisions. Routed as
+   **K1** with the cohort census (all three ground-up implementations dispatch on type; keystone
+   is the outlier), reachability explicitly **not** claimed and now bounded to id-scope values
+   carrying path syntax:
+   `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`. Register row **D24** — the
+   first C1 this repo can mark **RATIFIED**, because the spec adopted the cohort's reading on its
+   own. Ledger scope notes on **L1, L5, L6**; no verdict changed. Second finding to a second seat:
+   **P-2**, §3.6's own `id-scope` type definition still ends `; Both use matches_pattern (§5.4).`
+   at live 0.8.2.19 — the site 0.8.2.16's sweep did not reach, in the section that forbids it.
+   Also fixed on the way in: `docs/LEAN-SEAM.md`'s prose digest table had been **wrong since
+   2026-09-06** with `make leanseam` green, because the gate parses the pin block and the table is
+   a second copy of the same fact in a notation nothing reads — created by the very commit that
+   correctly updated the pin block. `tools/lean-seam.py` step 5 now fails on any sha256 outside
+   the pin block that the pin block does not declare. `AGENTS.md` D15 thirteenth shape; the
+   `make lean`-green-and-K1-real coexistence is D13's tenth instance.
+
 0. **~~`make specdrift` is a one-of-four gate.~~ Done 2026-09-09** — and it found three more
    input-set defects on the way in, all of which had been subtracting silently. `--track`, per-track
    pins and live trees derived from `TRACKS.toml`, per-track claim anchors (`docs/SPEC-DRIFT-ASSESSMENT.md`
@@ -640,7 +687,8 @@ item 4.
    **paraphrase**, and a gate that derives a number cannot see one. Checking the tool instead of
    assuming its shape is the only reason the fix is the right one.
    The fix is **`make retractcheck`** (`tools/retractcheck.py` + `docs/RETRACTIONS.toml`), in
-   `check` and `matrix` — D14's "grep the retracted words" as a program, nine rows, each with a
+   `check` and `matrix` — D14's "grep the retracted words" as a program, **ten** rows (nine at
+   landing; **R11** added 2026-09-10, the K1 reachability bound we withdrew), each with a
    `witness` that must still quote the withdrawn phrasing so a mistyped pattern cannot pass
    silently. Teeth-tested five ways. **It caught one on its first run**: `tla/AttestRevoke.tla`'s
    header still asserted F5's withdrawn conclusion, in the model the correction is about.
