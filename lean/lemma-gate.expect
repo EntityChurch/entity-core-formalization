@@ -15,6 +15,13 @@
 #   site|<repo-relative path>|<claim text, verbatim>         a document that publishes a
 #        figure this sweep produces.
 
+# ── declared warnings ───────────────────────────────────────────────────────────────────
+# This tier builds OUR lemmas inside a COPY of keystone's tree, so keystone's own warnings
+# reach it too — and the same one must therefore be declared in both expect files. It is not
+# a hole: `lean/proof-gate.expect` grades that declaration's axiom set and it is standard.
+# Routed to keystone 2026-09-15; DELETE THIS ROW WHEN THEY LAND IT, in both files.
+warn|CapabilityProofs.lean:144:14: This simp argument is unused|keystone's, new at `fee2e422` in `matchesSegNM_trans`. Cosmetic; graded standard-axiom by the proof tier. Delete on their fix.
+
 # ── the theorems ────────────────────────────────────────────────────────────────────────
 # All four on Lean's standard axiom set; none carries `sorryAx`. The two that pull in
 # `Classical.choice` do so through `simp`'s decidability instances, not through a classical
@@ -95,6 +102,17 @@ eval|[peerlike] /p/a/a<=/p/*/a@/p/a/a(parent54=1) /p/a/a<=/p/*/*@/p/a/a(parent54
 #        against the WRONG frame -- §5.5a's own named `canon-against-wrong-frame` defective
 #        architecture -- and the sweep MUST report non-zero. If Q6 ever reads 0/0 this file
 #        is comparing nothing and Q0-Q5 are worthless.
+#   Q7   THE QUESTION KEYSTONE'S TYPING CREATED (2026-09-15). `scope_subset` took a
+#        `ScopeKind` at their `fee2e422`, so there is now an id branch at the L3/L4 layer
+#        where before there was one untyped function. Mint-time rewrites an operand the id
+#        matcher compares literally, so the two readings DIVERGE on `operations`/`peers`.
+#   Q7b  Q7's ALPHABET CONTROL, and the row the finding actually rests on. `patterns` is a
+#        path-scope operand list; narrowed to forms §3.6's id grammar admits, `over` falls
+#        to 0 and only the fail-closed direction survives. ⛔ THE FIRST DRAFT OF Q7's NOTE
+#        CLAIMED THE PERMISSIVE DIRECTION off the wide sweep, and this row withdrew it
+#        within the hour -- the A-31 lesson (*the pair list of a differential is an input
+#        set*) firing on the file that carries it. If Q7b ever reads 0 while Q7 does not,
+#        the finding is about the alphabet and must be withdrawn, not re-declared.
 eval|Q0 round-trip      pairs=90 fail=0
 eval|Q1 L1/L2 include   pairs=240 disagree=0
 eval|Q1x L1/L2 exclude  pairs=240 disagree=0
@@ -104,6 +122,9 @@ eval|Q3 sentinel        refused-at-mint=8 set-differs=0
 eval|Q4 id-scope frame-independent  pairs=120 frame-sensitive=0
 eval|Q5 control (plain alphabet)    pairs=64 disagree=0
 eval|Q6 POSITIVE CONTROL wrong-frame mint  L3/L4=62 (MUST be > 0)  L1/L2=14 (MUST be > 0)
+eval|Q7 id-scope L3/L4 mint≠match   pairs=900 disagree=166 over=114 under=52 (MUST be > 0 — see the note)
+eval|Q7b id-plausible alphabet      pairs=144 disagree=26 over=0 under=26
+eval|Q7b witnesses: pA/pA:*/apply<=*(match=true,mint=false) pA/pB:*<=*(match=true,mint=false) pA/pB:tree/get<=*(match=true,mint=false) pA/pB:tree/get<=tree/get(match=true,mint=false)
 # The witness lines. Q0-Q2x are EMPTY because nothing disagrees; declaring them empty is the
 # point -- if a disagreement ever appears the gate names it rather than moving a count by one.
 eval|Q0 witnesses: none

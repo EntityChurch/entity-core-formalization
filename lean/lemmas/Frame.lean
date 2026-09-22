@@ -43,6 +43,25 @@
     * The pattern alphabet is an INPUT SET and therefore a claim. `Q5` is the control that
       says so out loud, in the shape this repo learned on A-31: narrow the alphabet to the
       forms everyone writes tests for and the sweep reports clean while asserting nothing.
+
+  ⛔ RE-MEASURED 2026-09-15, AGAINST A DEFINITION THAT MOVED UNDERNEATH THE ANSWER.
+  Keystone landed `K-6`/`K-7` at `fee2e422`: `scopeSubset` now takes a `ScopeKind` and
+  dispatches `.id` for `operations`/`peers`, `.path` for `handlers`/`resources` (F50). **This
+  file stopped compiling** — every `scopeSubset` call below was written against the untyped
+  four-argument function, which is the one the published A-31/KS-9c answer was measured on.
+  Nothing here was retracted by that: `Q0`–`Q6` are re-run against the `.path` branch, which
+  is the dimension arch asked about, and every figure reproduces.
+
+  **What the typing ADDED is `Q7`, and it is a question that did not exist when the ask was
+  answered.** With one untyped `scopeSubset` there was no id branch at the L3/L4 layer to
+  measure, so the scope note above — *"id-scope is out of frame by construction"* — was
+  discharged at the §5.2 layer only (`Q4`). There is now a second layer where the same
+  mistake can be made, and `scopeSubset .id` ignores its frames entirely while `mint`
+  rewrites the operand: **mint-time canonicalization applied to an id-scope dimension is NOT
+  equivalent to match-time** — fail-closed, on ordinary operation names, `Q7b`. That is a
+  bound on arch's ruling rather than a refutation of it — their ask names `resources` — and
+  it is stated because the ruling is scheduled and the function it lands in is now
+  type-dispatched.
 -/
 import EntityCoreProofs.CapabilityProofs
 
@@ -154,7 +173,11 @@ def q1x : List (String × String × String) :=
 /-- Arch §4 item 2, and the one they said to take if we only took one: under match-time each
 link's subset check canonicalizes each side against THAT LINK's granter; under mint-time both
 sides are already absolute. Every (child pattern × parent pattern × child frame × parent
-frame) combination, both arms. -/
+frame) combination, both arms.
+
+`ScopeKind.path` is named rather than defaulted, because `resources` is the dimension the ask
+is about and because keystone's own note on the typed function says a default is how the next
+dimension inherits the wrong matcher silently. `Q7` is the other branch. -/
 def q2 : List (String × String × String × String) :=
   frames.flatMap fun cf =>
     frames.flatMap fun pf =>
@@ -162,8 +185,8 @@ def q2 : List (String × String × String × String) :=
         patterns.filterMap fun pp =>
           let c : Scope := { incl := [cp], excl := [] }
           let p : Scope := { incl := [pp], excl := [] }
-          let matchT := scopeSubset cf pf c p
-          let mintT  := scopeSubset alienFrame alienFrame (mintScope cf c) (mintScope pf p)
+          let matchT := scopeSubset ScopeKind.path cf pf c p
+          let mintT  := scopeSubset ScopeKind.path alienFrame alienFrame (mintScope cf c) (mintScope pf p)
           if matchT == mintT then none else some (cf, pf, cp, pp)
 
 #eval s!"Q2 L3/L4 include   pairs={frames.length^2 * patterns.length^2} disagree={q2.length}"
@@ -176,8 +199,8 @@ def q2x : List (String × String × String × String) :=
         patterns.filterMap fun pp =>
           let c : Scope := { incl := [], excl := [cp] }
           let p : Scope := { incl := [], excl := [pp] }
-          let matchT := scopeSubset cf pf c p
-          let mintT  := scopeSubset alienFrame alienFrame (mintScope cf c) (mintScope pf p)
+          let matchT := scopeSubset ScopeKind.path cf pf c p
+          let mintT  := scopeSubset ScopeKind.path alienFrame alienFrame (mintScope cf c) (mintScope pf p)
           if matchT == mintT then none else some (cf, pf, cp, pp)
 
 #eval s!"Q2x L3/L4 exclude  pairs={frames.length^2 * patterns.length^2} disagree={q2x.length}"
@@ -221,6 +244,97 @@ def q4 : List (String × String) :=
 
 #eval s!"Q4 id-scope frame-independent  pairs={patterns.length * targets.length} frame-sensitive={q4.length}"
 
+-- ── Q7. the id branch of `scope_subset` — the layer Q4 does not reach ────────────────
+
+/-- **THE QUESTION THE TYPING CREATED, AND IT IS THE ONE ROW HERE THAT DOES NOT REPORT ZERO.**
+
+`Q4` establishes that `matches_scope`'s id arm is frame-independent — §5.2, L1/L2. It says
+nothing about L3/L4, because when this file was first written `scope_subset` was UNTYPED and
+there was no id branch to point a sweep at. Keystone's `K-7` landing (F50, `fee2e422`) creates
+one, and the two halves of the mint-time proposal now pull in opposite directions:
+
+  * `scopeSubset .id` **ignores both frames** and compares with `matchesIdPattern`, the §3.6
+    literal matcher;
+  * `mint` **rewrites the operand** — `tree/get` under granter `pA` becomes `/pA/tree/get`.
+
+So minting an id-scope dimension changes what the literal matcher is comparing. Measured here
+rather than argued, and the count is split by direction because only one of the two survives
+its own control:
+
+  * **under** (match admits, mint denies) — two links minted under different granters no
+    longer compare equal: `tree/get ≤ tree/get` becomes `/pA/tree/get ≤ /pB/tree/get`. This
+    is the real one; `Q7b` reproduces it 26 times on operands §3.6 actually admits, and its
+    first witness needs no frame difference at all — `*/apply ≤ *` is true literally, and
+    minting sends `*/apply` to `NEVER_MATCH`, which no id pattern covers.
+  * **over** (mint admits, match denies) — ⛔ **an ARTIFACT of this file's alphabet, and the
+    control is what said so.** `patterns` is a path-scope operand list, so it holds absolutely
+    spelled `/pA/tree/get` forms; against a relative parent those are literally false and
+    minting the parent to `/pA/tree/*` makes the trailing-`/*` arm cover them. Narrow to
+    id-plausible operands and `over` goes to **0** (`Q7b`). **The permissive direction is not
+    claimed.** The first draft of this note claimed it, off the wide sweep, before `Q7b` was
+    written — same failure as A-31's bound read off nine hand-picked pairs, one hour apart.
+
+⛔ **This is a BOUND on arch's ruling, not a refutation of it.** `ROUTING-2026-09-12-e` asks
+about `resources`, which is path-scope, and `Q2`/`Q2x` answer that question and reproduce
+unchanged. What `Q7` says is that the mint-time rewrite is **not dimension-uniform**: an
+implementation of CP-16 that canonicalizes a capability's scope patterns at admission without
+the F50 type dispatch changes `operations`/`peers` verdicts, **fail-closed**, on ordinary
+operation names. Fail-closed is the safe direction and it is still a divergence across a peer
+boundary, which is the class this specification pins rather than leaves open. -/
+def q7Split : Nat × Nat :=
+  (frames.flatMap fun cf =>
+    frames.flatMap fun pf =>
+      patterns.flatMap fun cp =>
+        patterns.filterMap fun pp =>
+          let c : Scope := { incl := [cp], excl := [] }
+          let p : Scope := { incl := [pp], excl := [] }
+          let matchT := scopeSubset ScopeKind.id cf pf c p
+          let mintT  := scopeSubset ScopeKind.id alienFrame alienFrame (mintScope cf c) (mintScope pf p)
+          if matchT == mintT then none else some (mintT && !matchT)).foldl
+    (fun acc isOver => if isOver then (acc.1 + 1, acc.2) else (acc.1, acc.2 + 1)) (0, 0)
+
+#eval s!"Q7 id-scope L3/L4 mint≠match   pairs={frames.length^2 * patterns.length^2} disagree={q7Split.1 + q7Split.2} over={q7Split.1} under={q7Split.2} (MUST be > 0 — see the note)"
+
+/-- **`Q7`'s ALPHABET CONTROL, and it is not optional.** `patterns` is a PATH-scope operand
+list — it carries `../x`, `./x` and absolute `/pA/...` spellings, none of which is a plausible
+`operations` or `peers` value. A divergence carried entirely by operands that dimension never
+holds would be an artifact of the input set, which is the failure this repo has now made twice
+(A-31's bound read off nine hand-picked pairs; the K2 chain measurement's first target
+alphabet). So the sweep is re-run over operand forms §3.6's id-scope grammar actually
+admits — a bare `*`, a literal operation name, and the `namespace/*` and `*/verb` forms the
+spec names by hand — and the claim rests on THIS row, not on the one above it.
+
+If this reads 0 while `Q7` does not, the finding is about the alphabet and must be withdrawn. -/
+def idPlausible : List String :=
+  [ "*", "tree/get", "tree/put", "tree/*", "*/apply", "compute/apply" ]
+
+def q7bSplit : Nat × Nat :=
+  (frames.flatMap fun cf =>
+    frames.flatMap fun pf =>
+      idPlausible.flatMap fun cp =>
+        idPlausible.filterMap fun pp =>
+          let c : Scope := { incl := [cp], excl := [] }
+          let p : Scope := { incl := [pp], excl := [] }
+          let matchT := scopeSubset ScopeKind.id cf pf c p
+          let mintT  := scopeSubset ScopeKind.id alienFrame alienFrame (mintScope cf c) (mintScope pf p)
+          if matchT == mintT then none else some (mintT && !matchT)).foldl
+    (fun acc isOver => if isOver then (acc.1 + 1, acc.2) else (acc.1, acc.2 + 1)) (0, 0)
+
+def q7bWitness : List String :=
+  (frames.flatMap fun cf =>
+    frames.flatMap fun pf =>
+      idPlausible.flatMap fun cp =>
+        idPlausible.filterMap fun pp =>
+          let c : Scope := { incl := [cp], excl := [] }
+          let p : Scope := { incl := [pp], excl := [] }
+          let matchT := scopeSubset ScopeKind.id cf pf c p
+          let mintT  := scopeSubset ScopeKind.id alienFrame alienFrame (mintScope cf c) (mintScope pf p)
+          if matchT == mintT then none
+          else some s!"{cf}/{pf}:{cp}<={pp}(match={matchT},mint={mintT})").take 4
+
+#eval s!"Q7b id-plausible alphabet      pairs={frames.length^2 * idPlausible.length^2} disagree={q7bSplit.1 + q7bSplit.2} over={q7bSplit.1} under={q7bSplit.2}"
+#eval witnesses "Q7b witnesses" q7bWitness
+
 -- ── Q5. the control: narrow the alphabet, get a clean answer to a smaller question ──
 
 /-- `neg-eval`'s shape, inline. Restricted to the operand forms everyone writes tests for —
@@ -235,8 +349,8 @@ def q5 : Nat :=
     plainPatterns.flatMap fun cp => plainPatterns.filterMap fun pp =>
       let c : Scope := { incl := [cp], excl := [] }
       let p : Scope := { incl := [pp], excl := [] }
-      if scopeSubset cf pf c p ==
-         scopeSubset alienFrame alienFrame (mintScope cf c) (mintScope pf p)
+      if scopeSubset ScopeKind.path cf pf c p ==
+         scopeSubset ScopeKind.path alienFrame alienFrame (mintScope cf c) (mintScope pf p)
       then none else some ()).length
 
 #eval s!"Q5 control (plain alphabet)    pairs={frames.length^2 * plainPatterns.length^2} disagree={q5}"
@@ -262,8 +376,8 @@ def q6 : Nat :=
     patterns.flatMap fun cp => patterns.filterMap fun pp =>
       let c : Scope := { incl := [cp], excl := [] }
       let p : Scope := { incl := [pp], excl := [] }
-      if scopeSubset cf pf c p ==
-         scopeSubset alienFrame alienFrame (mintScopeWrong cf c) (mintScopeWrong pf p)
+      if scopeSubset ScopeKind.path cf pf c p ==
+         scopeSubset ScopeKind.path alienFrame alienFrame (mintScopeWrong cf c) (mintScopeWrong pf p)
       then none else some ()).length
 
 def q6L1 : Nat :=

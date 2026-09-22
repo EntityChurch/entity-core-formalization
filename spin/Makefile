@@ -174,9 +174,13 @@ SPIN_NEG := \
   "reentry|-DNPEERS=3 -DSERIALIZED|safety|invalid end state" \
   "reentry|-DNPEERS=3 -DNOATOMICFRAME|safety|assertion violated !(interleaved)" \
   "core|-DNPEERS=3 -DSERIALIZED|safety|invalid end state" \
-  "conncodes|-DCOLLAPSE|safety|rowOf[i]!=rowOf[j]" \
+  "conncodes|-DCOLLAPSE|safety|nc1!=nc2" \
   "conncodes|-DWRONGSTATUS|safety|statOf[i]!=want" \
   "conncodes|-DSEQREADING|safety|fired[3]&&(codeOf[3]!=1)" \
+  "conncodes|-DAUTHFIRST|safety|fired[7]&&((codeOf[7]!=4)||(statOf[7]!=400))" \
+  "conncodes|-DDROP|safety|refused[x]&&(wire==2)" \
+  "conncodes|-DBARECLOSE|safety|refused[x]&&(wire==1)" \
+  "conncodes|-DECFFRAMING|safety|refused[3]&&(rcodeOf[3]==8)" \
   "bootstrap|-DEARLYINDEX|safety|inIndex[i]&&(facets[i]!=2)" \
   "bootstrap|-DGATEONE|safety|registered&&(facets[j]!=2)" \
   "bootstrap|-DNOCONNGATE|safety|established&&(facets[2]!=2)"

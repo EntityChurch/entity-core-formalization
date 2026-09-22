@@ -289,12 +289,35 @@ def main() -> int:
         spec = set(SPEC_HEADING.findall(read(primary))) if primary and \
             os.path.isfile(primary) else set()
 
+        # ---- pin-overridden models -------------------------------------------------
+        # Declared in `[track.<name>.model_pins]`, gated both directions by `make trackcheck`.
+        # A model transcribing a newer snapshot is NOT evidence about the pin, so its
+        # citations are held out of the coverage pair exactly as a cross-track reference is.
+        #
+        # ⛔ THE CONSEQUENCE IS VISIBLE AND IT IS SUPPOSED TO BE. Retargeting a module REMOVES
+        # its sections from the pin's coverage claim wherever no pin-targeting model also
+        # cites them -- the published `N of M` goes DOWN. That is the honest reading: nothing
+        # now verifies those sections AS THE PIN STATES THEM. A header-sentence override would
+        # have left the number untouched and the claim false, which is why the override is a
+        # registry fact with a gate rather than prose (AGENTS.md D15's eleventh shape).
+        overrides: dict[str, str] = t.get("model_pins", {}) or {}
+        ospec: dict[str, set[str]] = {}
+        for snap in sorted(set(overrides.values())):
+            p = os.path.join(root, "spec-data", snap, t["primary_spec"])
+            ospec[snap] = set(SPEC_HEADING.findall(read(p))) if os.path.isfile(p) else set()
+
         # ---- gather citations, splitting cross-track references out ---------------
         cited: dict[str, set[str]] = {}
+        offpin: dict[str, set[str]] = {}
         crossrefs: dict[str, list[str]] = {}
         bad_prefix: list[str] = []
         for f in files:
             rel = os.path.relpath(f, root)
+            # `fold()` needs the section set of the text THIS FILE transcribes, so that
+            # `§5.2a` is read as a heading where it is one. Using the pin's set for an
+            # overridden file is how a lettered clause gets credited to the wrong parent.
+            fspec = ospec.get(overrides.get(rel), spec) if rel in overrides else spec
+            sink = offpin if rel in overrides else cited
             for n, line in enumerate(read(f).splitlines(), 1):
                 pref = {(p, s) for p, s in PREFIXED.findall(line)}
                 for p, s in pref:
@@ -307,7 +330,7 @@ def main() -> int:
                 # draft subtracted the prefixed sections from this line's bare set, which is
                 # what turned 23 false prefix hits into 23 silently dropped citations.
                 for s in CITATION.findall(line):
-                    cited.setdefault(fold(s, spec), set()).add(rel)
+                    sink.setdefault(fold(s, fspec), set()).add(rel)
 
         if bad_prefix:
             problems.append(
@@ -357,6 +380,55 @@ def main() -> int:
         for tgt, refs in sorted(crossrefs.items()):
             print(f"  crossref  {len(refs)} citation(s) to track `{tgt}` "
                   f"(excluded from both tracks' coverage sets)")
+
+        # ---- A2. the off-pin grid, both directions ---------------------------------
+        # Held out of the pair above, and therefore needing its own declared home: an
+        # excluded set that is reported and nowhere published is a set nobody reads. Same
+        # both-directions rule as Matrix A, against the track's `offpin_heading`.
+        if offpin:
+            # A section cited by BOTH an overridden and a pin-targeting model stays in the
+            # pin's claim -- some model really does transcribe the pin's text for it -- so
+            # only the sections NO pin model cites are off-pin.
+            only_off = {s: v for s, v in offpin.items() if s not in cited}
+            ohead = t.get("offpin_heading", "")
+            print(f"\n== track `{name}` — sections cited ONLY by pin-overridden models ==")
+            if not ohead:
+                problems.append(
+                    f"track {name}: declares model_pins but no `offpin_heading`."
+                    "\n      -> a set held out of the coverage pair needs a published home, or"
+                    "\n         it is a silent exclusion -- which is the thing this gate is for."
+                )
+                print("  NOHEADING no offpin_heading declared")
+            else:
+                oblock = section_block(read(matrix_path), ohead)
+                if oblock is None:
+                    problems.append(
+                        f"track {name}: no off-pin grid section {ohead!r} in"
+                        f" {t.get('coverage_doc')}"
+                    )
+                    print(f"  NOGRID    {ohead!r}")
+                else:
+                    ogrid = set(GRID_ROW.findall(oblock))
+                    oc = sorted(set(only_off) - ogrid, key=skey)
+                    og = sorted(ogrid - set(only_off), key=skey)
+                    for s in oc:
+                        problems.append(
+                            f"track {name}: §{s} cited only by a pin-overridden model and"
+                            f" absent from the off-pin grid ({', '.join(sorted(only_off[s]))})"
+                        )
+                        print(f"  UNGRIDDED §{s:6s} {', '.join(sorted(only_off[s]))}")
+                    for s in og:
+                        problems.append(
+                            f"track {name}: §{s} is in the off-pin grid but cited by no"
+                            " pin-overridden model -- a phantom row, off-pin edition"
+                        )
+                        print(f"  PHANTOM   §{s}")
+                    if not oc and not og:
+                        print(f"  ok        {len(ogrid)} off-pin section(s), both directions")
+            shared = sorted(set(offpin) & set(cited), key=skey)
+            if shared:
+                print(f"  shared    §{', §'.join(shared)} — also cited by a pin-targeting "
+                      f"model, so they stay in the pin's claim above")
 
         # ---- B. the stated count ---------------------------------------------------
         print(f"\n== track `{name}` — the count stated in prose ==")

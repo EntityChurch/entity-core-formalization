@@ -53,7 +53,7 @@ in §5 (Findings and residual risk).
 
 > **Which spec version this capstone certifies.** Everything here certifies models written
 > against the SHA-pinned `spec-data/v0.8.2/` — the protocol at spec version **0.8.2**. The
-> live spec is **0.8.2.25** and `make specdrift` reports **16 of 31 cited sections moved**, so
+> live spec is **0.8.2.25** and `make specdrift` reports **14 of 29 cited sections moved**, so
 > this capstone certifies 0.8.2 and nothing later. No result below is falsified by the
 > movement — fifteen of the sixteen moved sections contradict nothing modeled, and §4.7's `connection_sequence_error`
 > status change (400 → 409) contradicts `tla/ConnCodes.tla` only against text this capstone
@@ -171,7 +171,7 @@ The Spin/Apalache cross-check (details in `docs/CROSSCHECK-RESULTS.md`) is the
 corroboration the TLA+ track had been missing — an independent re-encoding (Spin) *and* an
 unbounded proof (Apalache) for every modeled subsystem, not a re-run of an existing result.
 
-**609 runs in one `make matrix`, zero failures; all behave exactly as designed.**
+**633 runs in one `make matrix`, zero failures; all behave exactly as designed.**
 (The v0.8.0 line was 76 model runs + 50 cross-check runs. The growth is the 0.8.2 normative
 surface, the non-vacuity witnesses, the Apalache ports and Spin re-encodings the coverage
 audit added, controls for all of it, and — in the second gate audit — `BindingReplayBug`, a

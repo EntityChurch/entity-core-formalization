@@ -27,17 +27,35 @@
 # Re-deriving this file to make a red run go green defeats it entirely — the failing run is
 # telling you a proof changed, and the ledger rows that cite it need re-reading first.
 #
-# 40 gates. 25 of them are cited by `docs/LEAN-SEAM.md` (24 discharging + 1 pinned as a
+# 41 gates. 27 of them are cited by `docs/LEAN-SEAM.md` (26 discharging + 1 pinned as a
 # rejected correspondence); `tools/lean-proof.py` checks that tie separately and reports
-# LEDGER_UNCOVERED if a pinned theorem is not among the gates that reported. The other 15
-# are the proof track's own — the CBOR float-encoding and canonical-sort proofs, and five
+# LEDGER_UNCOVERED if a pinned theorem is not among the gates that reported. The other 14
+# are the proof track's own — the CBOR float-encoding and canonical-sort proofs, and four
 # CapabilityProofs helper lemmas — graded here because the peer gates them, not because
 # this repo's models rely on them.
+#
+# ⚠ THESE THREE NUMBERS ARE NOT GATED and one of their siblings was already stale when this
+# line was last edited: `lean/Makefile`'s own header said the ledger *"cites 21 theorems"*
+# while it cited 24, through three sessions. `make leanseam` DERIVES and prints the pair on
+# every run — `26 discharging + 1 rejected` — so run it rather than reading this comment.
+# Recorded as D15's shape in a header comment, which is where a count does not look like a
+# figure; the fix is the same as everywhere else, which is to derive it.
 #
 # 37 → 40 on 2026-09-06: keystone adopted the §5.5a packet and added a theorem per pattern
 # form. The three arrived as `UNDECLARED_GATE` failures from this file's own both-directions
 # check, which is the outcome it exists for — three new theorems nobody here had read would
 # otherwise have been absorbed silently by a gate that only counted.
+#
+# 40 → 41 on 2026-09-15: keystone adopted the `K-6`/`K-7` packet, one arrived the same way,
+# and **the interesting half of that landing is invisible to this file.** Four declarations
+# changed SIGNATURE — three gaining an undischarged hypothesis — with their axiom sets
+# unchanged, so every row below them stayed green while the theorem they name got weaker.
+# ⭐ Asked D13's question of this table: *what does it assert?* That no cited proof has a
+# HOLE. *What else satisfies it?* **A hole-free proof of a weaker statement.** That is the
+# same answer the tier got on 2026-09-09 (a hole-free proof about the wrong definition), in
+# a second shape — soundness, fidelity and STRENGTH are three properties and this file reads
+# one. The other two live in `docs/LEAN-SEAM.md`, which is why a red run here sends you there
+# first.
 #
 # Format:
 #   gate|<file, relative to protocol-generator/lean>|<full Lean name>|<axioms, or `-`>
@@ -67,6 +85,21 @@ gate|proofs/EntityCoreProofs/SortProofs.lean|EntityCore.Codec.Proofs.keyLe_refl|
 # [L5,L6] attenuation composes along a chain — the row that makes Tamarin's `no_escalation`
 # a statement about the protocol rather than about a free unary function symbol.
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesSeg_trans|propext
+# [L5,L6] NEW 2026-09-15 at keystone's `fee2e422`, and it is the lemma `K-6` needed: the
+# §5.4-guarded WRAPPER inherits transitivity, so the sentinel could move onto the attenuation
+# path without re-deriving `matchesSeg`'s five `rfl`-level arm lemmas. It arrived here as an
+# UNDECLARED_GATE failure, which is this file's both-directions check doing its job for the
+# second time — a proof ARRIVING is a diff exactly as a proof breaking is.
+gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.matchesSegNM_trans|propext,Classical.choice,Quot.sound
+# ⛔ THE THREE ROWS BELOW CHANGED SIGNATURE at the same commit and their axiom sets did NOT,
+# which is exactly the case this gate cannot see and the ledger must. `scopeSubset_trans` now
+# takes a `ScopeKind` AND an `IdPatternTrans` hypothesis; `grantSubset_trans` and
+# `isAttenuated_trans` (T5a) take the hypothesis. **T5a is CONDITIONAL now** — the path
+# dimensions and the expiry half compose unconditionally, the two id-scope dimensions compose
+# through an undischarged string-prefix assumption. An axiom-set gate reads `sorry`, not
+# `hypothesis`: a theorem can be weakened to near-vacuity with its axiom set untouched.
+# docs/LEAN-SEAM.md L5 carries the verdict; this comment exists so the next reader of THIS
+# file does not read three unchanged axiom sets as three unchanged theorems.
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.scopeSubset_trans|propext,Classical.choice,Quot.sound
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.grantSubset_trans|propext,Classical.choice,Quot.sound
 gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.isAttenuated_trans|propext,Classical.choice,Quot.sound
@@ -123,8 +156,29 @@ gate|proofs/EntityCoreProofs/CapabilityProofs.lean|EntityCore.Capability.Proofs.
 # belongs to another repo. So: every warning is a failure UNLESS declared here, by exact
 # substring, with an owner.
 #
-# NONE ARE DECLARED, and that is a state this file should be checked against rather than
-# assumed. One was: `String.dropRight` deprecated, in keystone's shipping
+# ONE IS DECLARED, 2026-09-15, and its retirement condition is written into the row. It is
+# NOT a `sorry` — `matchesSegNM_trans` reports the standard axiom set on the gate line four
+# rows above — it is Lean's linter reporting that one `simp` argument in that proof's own
+# sentinel case is redundant. Routed to keystone with the instruction to delete this row when
+# they land it, exactly as the `dropRight` row below was.
+#
+# ⛔ WHY IT IS DECLARED RATHER THAN FIXED OR IGNORED. It is in a file this ledger PINS, so
+# the gate must see it; it is in a tree this repo MUST NOT edit (AGENTS.md — the keystone Lean
+# tree is read-only input, and a local fork would make the ledger a claim about our copy); and
+# leaving it undeclared makes `make lean` red on a defect that is cosmetic and someone else's,
+# which is how a gate gets muted. The substring is exact and carries the line, so a DIFFERENT
+# warning in the same file still fails.
+#
+# ⭐ AND IT IS D13'S FOURTH-INSTANCE LINE PAYING AGAIN: keystone's own gate run, quoted in
+# their `ROUTING-2026-09-15-b` §3, prints `Build completed successfully (59 jobs)` and
+# `proofs OK — 41 declarations graded` for this same tree. Their gate does not fail on
+# warnings; ours does. The warning is in the channel a grader that reads exit status does not
+# read — the same shape as a `sorry` reported as a warning and ProVerif exiting 0 on a false
+# query, which is the reason this section exists at all.
+warn|CapabilityProofs.lean:144:14: This simp argument is unused|keystone's, new at `fee2e422` in `matchesSegNM_trans`'s sentinel case. Cosmetic, not a hole — the declaration's axiom set is graded above and is standard. Routed 2026-09-15; DELETE THIS ROW when they land it.
+
+# Other than that one, none are declared, and that is a state this file should be checked
+# against rather than assumed. One more was: `String.dropRight` deprecated, in keystone's shipping
 # `src/EntityCore/Capability.lean`, routed 2026-08-30 with the instruction "delete this row
 # when they land it." They landed it 2026-09-06 (`dropRight` → `dropEnd`), so the row is gone
 # and the build is warning-clean. Their note is worth keeping because we got it wrong: we

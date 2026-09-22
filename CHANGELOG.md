@@ -11,12 +11,71 @@ accompanies protocol `0.8.2`, so the two line up when read side by side.
 Which spec text the models actually transcribe — and therefore what every result in this
 repository is a statement *about* — is named by `spec-data/MODELING-PIN`, which reads
 **`v0.8.2`**. The live protocol has since advanced to **0.8.2.25** and `make specdrift`
-reports **16 of 31 cited sections moved**. That gap is deliberate and visible rather than
+reports **14 of 29 cited sections moved**. That gap is deliberate and visible rather than
 hidden: the pin moves only as the last step of re-validating the models, never on a file
 copy, so between a spec release and a re-validation this repository is *behind on purpose*.
 `docs/SPEC-DRIFT-ASSESSMENT.md` measures the distance section by section.
 
 ## [Unreleased]
+
+### Added — a model may now pin to a different snapshot than its track, and it is a gate rather than a sentence (2026-09-15)
+
+`tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` now transcribe
+`spec-data/v0.8.2.25` instead of the core pin `v0.8.2`, because **§4.11 does not exist at the
+pin at all** and §4.7's out-of-order row carries a different status there.
+
+**The mechanism is the durable part.** `spec-data/MODELING-PIN` says every published result is a
+statement about that snapshot *"and no other"*, and the obvious way to retarget one module is a
+paragraph in its header saying so. That is a disclaimer, and this project's own rule is that a
+self-aware caveat is where a stale figure survives longest. So the override is machine-read:
+`[track.core.model_pins]` in `TRACKS.toml`, a `MODELING-PIN-OVERRIDE:` marker in each file, and
+`make trackcheck` checks **both directions** — a declared row with no marker fails, a marker with
+no row fails, a redundant override fails, a missing snapshot fails. `make specdrift` then measures
+those files against their own snapshot and `make coverage` holds their citations out of the
+track's coverage pair.
+
+**The published coverage number went DOWN as a result, from 29 to 27 of 91, and that is the gate
+working rather than a regression.** §4.7 and §5.2a left the grid because no pin-targeting model
+cites either — so nothing in this repository now verifies those two sections *as the pin states
+them*. A header-sentence override would have left 29 standing and made it false.
+
+### Fixed — the one place the live spec contradicted a model (2026-09-15)
+
+`connection_sequence_error` moved 400 → 409 at protocol `0.8.2.4` while `ConnCodes` transcribed
+400. With the retarget above, `make specdrift` measures those three files against `.25` and finds
+**none of their 11 cited sections has moved**. *(Phrased without the canonical drift wording on
+purpose: `make driftclaim` expects exactly one drift claim in this file — the versioning preamble
+— and it caught this paragraph's first draft stating a second one. One claim per declared site is
+the rule; a file with two is a file where one of them can go stale unnoticed.)* Also newly modeled, all reachable by the connect phase machine: the
+unknown-connect-operation row (`invalid_request` 400, split out of the out-of-order row), the
+half-open state rule, and `0.8.2.6`'s *address is evaluated before authentication* — the last of
+which is a phase-**independence** claim and so the one property here a phase machine can really
+test.
+
+**§4.11 is modeled as its cause → code table plus its emission obligation**, with **dropping the
+frame** and **closing without a coded frame** as two separate controls breaking two separate
+invariants, because §4.11 states they *"are distinct failures rather than one"* and a single
+conformant/not boolean could not express that. ⛔ **§4.11's multiplexed arm (f) is NOT modeled**
+and `ConnCodes` cannot model it — it is a phase machine with one connection and no admitted
+requests. That is written into the coverage grid rather than left to be inferred from a citation.
+
+The matrix is **633 runs** (from 609): 24 added across TLC, Apalache and Spin.
+
+### Changed — a finding this repository routed was adopted upstream, and closing it exposed a filing error (2026-09-15)
+
+Protocol `0.8.2.1` (FM-1) narrowed §4.7 row 10's parenthetical exactly as argued in
+`docs/PROPERTIES.md` §D.1, so a pre-hello `authenticate` is unambiguously `401 invalid_nonce`.
+The model's contested-cell constant is gone and `ConnCodesSeqReadingBug` demotes from *"a
+conformant reading of the spec"* to an ordinary injected defect.
+
+**On the way out it surfaced a defect in this repository's own gate tables.** A *finding* row and
+a *negative control* grade identically and mean opposite things when green — a green control has
+no teeth; a green finding means the defect was fixed upstream and the row should be retired.
+`TLC_FINDING` was created to separate the two; **this row, which is the shape that table was
+written for and predates it, was never moved into it** and sat in `TLC_NEG` under a header whose
+sentence was false of it. It is correctly filed now without being moved, because the spec moved
+instead. A row that is misfiled and then made correct by an upstream fix is the hardest kind to
+notice: nothing was ever red.
 
 ### Fixed — a capability forgery was closed upstream in text that was in our pin, and no gate here was red (2026-09-14)
 

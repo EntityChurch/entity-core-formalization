@@ -107,6 +107,7 @@ specs        = [
 # heading; a track with no grid section fails rather than being skipped.
 coverage_doc     = "docs/COVERAGE-MATRIX.md"
 coverage_heading = "Matrix A — protocol section × property class × engine"
+offpin_heading   = "Matrix A-OFFPIN — sections modeled against a NEWER snapshot than the core pin"
 
 models = [
   "spin/authority.pml",
@@ -205,6 +206,34 @@ models = [
   "tla/Store.tla",
   "tla/StoreApalache.tla",
 ]
+
+# ── PER-MODEL PIN OVERRIDES ─────────────────────────────────────────────────────────────
+# A model that transcribes a DIFFERENT snapshot than this track's `pin_file`. Gated by
+# `make trackcheck` §E in BOTH directions: the file must carry a matching
+# `MODELING-PIN-OVERRIDE:` marker, and a marker with no row here FAILS. `spec-drift` measures
+# these files against their own snapshot; `coverage-check` holds their citations OUT of the
+# pin's coverage pair and requires them in the `offpin_heading` grid instead.
+#
+# WHY THE MECHANISM EXISTS AT ALL. `spec-data/MODELING-PIN` says every published result is a
+# statement about that snapshot "and no other". Modelling §4.11 — a section that does not
+# exist at `v0.8.2` — makes that sentence false the moment the file lands. The obvious remedy
+# is a paragraph in the module header saying which snapshot it targets, and AGENTS.md D15's
+# eleventh shape is exactly that a disclaimer is not a gate: a self-aware caveat is where a
+# stale figure survives longest, because it reads as a site someone has already thought about.
+#
+# ⛔ AND THE COST IS VISIBLE RATHER THAN HIDDEN, WHICH IS THE ARGUMENT FOR DOING IT THIS WAY.
+# Retargeting these three files REMOVED §4.7 and §5.2a from core's published coverage pair —
+# no pin-targeting model cites either — so the number went DOWN. That is the honest reading:
+# after the retarget, nothing verifies those sections as the PIN states them. A header-sentence
+# override would have left the figure untouched and the claim false.
+#
+# ALL THREE ENGINES MOVE TOGETHER. `docs/CORROBORATION.md` credits `conncodes` to TLC,
+# Apalache and Spin. Three engines checking three different texts is one reading per snapshot
+# presented as agreement, which is worse than one engine honestly scoped.
+[track.core.model_pins]
+"tla/ConnCodes.tla"          = "v0.8.2.25"
+"tla/ConnCodesApalache.tla"  = "v0.8.2.25"
+"spin/conncodes.pml"         = "v0.8.2.25"
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # EXTENSION TRACKS — all three are modeled as of 2026-09-07. NONE is scoped, which is itself a

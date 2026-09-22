@@ -2,7 +2,7 @@
 
 > **LIVE — the pin is behind again, and this document is the measurement.** The models are
 > pinned at `spec-data/v0.8.2/`; the live protocol is **0.8.2.25**, and `make specdrift`
-> reports **16 of 31 cited sections moved**. §1 below is that measurement, taken 2026-09-06
+> reports **14 of 29 cited sections moved**. §1 below is that measurement, taken 2026-09-06
 > and re-derived **six times since** — twice on 2026-09-09, again on 2026-09-10, on
 > 2026-09-12, on **2026-09-14**, and again on **2026-09-15**, because the upstream repo
 > committed **0.8.2.15 through 0.8.2.25** across that window — **ten separate
@@ -49,7 +49,7 @@ does not read.
 
 | Track | Pin | Live tree | Files | Cited § moved |
 |---|---|---|---|---|
-| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **16 of 31 cited sections moved** |
+| `core` | `spec-data/v0.8.2` | `entity-core-protocol/specs` | 3 differ | `make specdrift` reports **14 of 29 cited sections moved** |
 | `attestation` | `spec-data/ext-attestation-v1.3` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`attestation` no drift** |
 | `quorum` | `spec-data/ext-quorum-v1.2` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`quorum` no drift** |
 | `identity` | `spec-data/ext-identity-v3.10` | `entity-system-architecture/specs/extensions` | 1 differs | `make specdrift` reports **`identity` no drift** |
@@ -80,7 +80,7 @@ prose sites that state the status are gated by `make driftclaim`.
 | Modeling pin (`spec-data/MODELING-PIN`) | `spec-data/v0.8.2/` — Entity Core Protocol **0.8.2** |
 | Live (`entity-core-protocol/specs`) | **0.8.2.25** · CBOR encoding 1.5 → 1.7 · type system also differs |
 | Frozen copy of live, for the re-check | `spec-data/v0.8.2.25/` — **vendored 2026-09-15, digest-verified; the pin did NOT move.** `v0.8.2.24/` stays in place as a point-in-time pin. ⭐ **The first snapshot in this repo's history where a section was ADDED** (§4.11); 92 → 93 numbered sections, none removed, none renumbered, 31 of 31 model citations still resolve |
-| **Sections the models cite that moved** | **16 of 31** |
+| **Sections the models cite that moved** | **14 of 29** |
 | Sections whose movement contradicts a model | **1** (§4.7) |
 | Sections whose movement lands on the **Lean seam** rather than on a model | **2** (§5.2, §5.6 — §1a) |
 | Sections that moved where **every citation of them is an abstraction disclaimer** | **1** (§5.4 — §1b) |
@@ -148,7 +148,28 @@ below records an earlier draft of this document making.
 | **§4.10** | **8** | **0.8.2.25** — (a)'s *emission shape* goes **SHOULD/MAY → MUST** and is handed to the new **§4.11**; **(b) and (c) are byte-identical** | **none, and the row is an invitation rather than a cost.** All eight citations are to **(b)** (the capability-chain depth limit and its Ruling-3 reason-code distinctness) or to §4.10 generically as the admission bound. See **§1d** |
 | **§4.7** | **3** | **+7.0KB**, and **again at 0.8.2.25** — `invalid_request`'s scope widened to cover frames that never become an Envelope | **the one contradiction — see below.** The 0.8.2.25 widening does not add one: `ConnCodes.tla` transcribes the §4.7 *status table*, and what moved is the code's defining prose |
 
-### §4.7 — the one section where the live text contradicts a model
+### §4.7 — ✅ CLOSED 2026-09-15: the models were retargeted, not the spec re-read
+
+> ⭐ **This was "the one section where the live text contradicts a model" and it is not any
+> more.** `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` now
+> transcribe **`spec-data/v0.8.2.25`**, and `make specdrift` measures them against it: **0 of
+> 11 cited sections moved.** All four items below are modeled — the 409 status, the retired
+> code, the unknown-operation row and the half-open rule — plus §4.11 and the 0.8.2.6 address
+> table, which did not exist when this section was written.
+>
+> ⛔ **They are no longer statements about the core pin, and that is declared rather than
+> disclaimed.** `[track.core.model_pins]` in `TRACKS.toml`, a `MODELING-PIN-OVERRIDE:` marker
+> in each file, both directions gated by `make trackcheck` §E. **`make coverage` holds their
+> citations out of the pin's pair, so core fell 29 → 27 of 91** — nothing verifies §4.7 or
+> §5.2a as the PIN states them any more, which is the true reading and the reason the override
+> is a registry fact. §3f of `docs/COVERAGE-MATRIX.md` is the off-pin grid.
+>
+> **The prediction below was right and under-stated it.** It said the model "gets simpler" when
+> the pin moves. It did — the contested-cell constant collapsed — and the retarget also *added*
+> four §4.7 rows and the whole of §4.11, so the module went from 3 modeled rows to 5 plus a
+> second table. The paragraphs below are left as written, because what a pre-move assessment
+> got right and wrong is the thing worth reading later.
+
 
 `tla/ConnCodes.tla` and `spin/conncodes.pml` transcribe §4.7's status table. Four things
 moved under them:

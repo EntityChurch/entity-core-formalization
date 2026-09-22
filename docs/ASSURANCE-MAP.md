@@ -22,7 +22,7 @@ one tool, on the layer it can actually reach.
 
 > **Pinned at spec 0.8.2; the live spec is 0.8.2.25.** Rows 4 and 5 below — the two this
 > repo owns — are answered against the SHA-pinned `spec-data/v0.8.2/` snapshot, and
-> `make specdrift` reports **16 of 31 cited sections moved**. Fifteen of the sixteen contradict no model — one of them, §5.8, is a **single backtick** removed
+> `make specdrift` reports **14 of 29 cited sections moved**. Fifteen of the sixteen contradict no model — one of them, §5.8, is a **single backtick** removed
 > from a cross-reference row; §4.7 is the one that contradicts a model constant. Measured section by
 > section in `docs/SPEC-DRIFT-ASSESSMENT.md` — which is also where the earlier movements
 > (§5.2 and §5.6, 0.8.2.16) are classified: they contradict no model here, and they land on

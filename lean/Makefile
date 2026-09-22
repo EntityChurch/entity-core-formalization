@@ -1,10 +1,15 @@
 # ============================================================================================
 # The Lean seam tier — do the proofs our assumption ledger cites still HOLD?
 #
-# This workspace holds NO Lean source. `docs/LEAN-SEAM.md` cites 21 theorems (+1 pinned as a
-# rejected correspondence) in the sibling `entity-core-keystone` peer; this builds them, from
-# a read-only copy of that peer's tree, and grades the result. See ./README.md for what the
-# tier asserts and — more to the point — what it does not.
+# This workspace holds NO Lean source. `docs/LEAN-SEAM.md` cites theorems in the sibling
+# `entity-core-keystone` peer — **26 discharging + 1 pinned as a rejected correspondence** as
+# of 2026-09-15; this builds them, from a read-only copy of that peer's tree, and grades the
+# result. See ./README.md for what the tier asserts and — more to the point — what it does not.
+#
+# ⚠ THAT PAIR IS DERIVED AND PRINTED BY `make leanseam` ON EVERY RUN. Read it there, not here.
+# This line said "21 theorems" from 2026-08-30 to 2026-09-15 while the ledger cited 24 — a
+# count in a Makefile header, which nothing greps and which does not read as a claim. D15's
+# mechanism in the same medium as the tracker heading and the rhetorical question.
 #
 #   make image        build the entity-lean toolchain image (the only network step)
 #   make smoke        prove the toolchain runs and matches the version keystone pins

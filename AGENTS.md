@@ -513,9 +513,20 @@ gap, not a work gap**, which is cheaper to fix and invisible from inside either 
 in place with the wrong sentence left standing.
 
 **Status:** pinned at `v0.8.2`; the live spec is **0.8.2.25** and `make specdrift` reports
-**16 of 31 cited sections moved**. Fifteen of the sixteen contradict no model — one of them (§5.8) is a
-single backtick removed from a cross-reference row; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
-`tla/ConnCodes.tla` transcribes 400.
+**14 of 29 cited sections moved**, and **none of the fourteen now contradicts a model** — one of them
+(§5.8) is a single backtick removed from a cross-reference row.
+⭐ **§4.7 WAS the exception and is not any more, 2026-09-15.** `connection_sequence_error` moved
+400 → 409 at 0.8.2.4 while `tla/ConnCodes.tla` transcribed 400; that module, its Apalache port
+and `spin/conncodes.pml` are now **retargeted to `spec-data/v0.8.2.25`** and measure **0 of 11
+cited sections moved**. ⛔ **They are therefore NOT statements about the pin, and the mechanism
+for saying so is a gate rather than a sentence:** `[track.core.model_pins]` in `TRACKS.toml`,
+a `MODELING-PIN-OVERRIDE:` marker in each file, both directions checked by `make trackcheck` §E,
+their citations held out of the coverage pair by `make coverage` and measured against their own
+snapshot by `make specdrift`. **The cost is visible on purpose: core's published coverage fell
+29 → 27 of 91**, because no pin-targeting model cites §4.7 or §5.2a any more, so nothing here
+verifies those two sections AS THE PIN STATES THEM. A header sentence would have left the 29
+standing and made it false — D15's eleventh shape, *a disclaimer is not a gate*. The off-pin grid
+is `docs/COVERAGE-MATRIX.md` §3f.
 **§4.10 is the sixteenth, and 0.8.2.25 put the largest MODELABLE surface on the board in the
 one place no other instrument can reach it.** New **§4.11** makes the pre-admission refusal a
 single invariant — *a peer refusing a frame before admission MUST put a coded EXECUTE_RESPONSE
@@ -562,7 +573,7 @@ sections touched — so no finding changes. Read both halves: the file-level ans
 section-level answer are different questions and this repo publishes the second one.
 Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**609-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+**633-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
 (15 ProVerif / 14 Tamarin lemmas), 100 negative controls and 13 non-vacuity witnesses.
 No inductive invariant is deferred; no control is known-weak.
@@ -1660,6 +1671,26 @@ have found this one any faster than asking D17's question of §3.1 would have. T
   every published result is a statement about. Vendoring a newer snapshot does **not**
   move it. It moves only when the models have been re-validated against the new text, and
   moving it is the last step of that work, not the first. `make specdrift` reads it.
+  **⭐ A SINGLE MODEL MAY TRANSCRIBE A NEWER SNAPSHOT, AND THE MECHANISM IS A GATE, NOT A
+  SENTENCE — new 2026-09-15.** `[track.<name>.model_pins]` in `TRACKS.toml` maps a model file
+  to its own snapshot; the file must carry a matching `MODELING-PIN-OVERRIDE:` marker; and
+  `make trackcheck` §E checks **both directions** — a row with no marker fails, a marker with
+  no row fails, a redundant override (same as the track pin) fails, and a snapshot that does
+  not exist fails. `spec-drift` then measures that file against its own pin and `coverage`
+  holds its citations out of the track's coverage pair, into the `offpin_heading` grid.
+  **This does NOT move `MODELING-PIN` and is not a step toward moving it.** Three files use it
+  today (`ConnCodes`, its Apalache port, `conncodes.pml` → `v0.8.2.25`), because §4.11 does not
+  exist at the core pin at all.
+  ⛔ **Two rules come with it, both learned in the hour it was built.** (1) **RETARGET A WHOLE
+  SUBJECT, NEVER ONE FILE.** `docs/CORROBORATION.md` credits `conncodes` to three engines;
+  three engines on three different texts is one reading per snapshot presented as agreement,
+  which is worse than one engine honestly scoped. (2) **EXPECT THE COVERAGE NUMBER TO FALL AND
+  DO NOT ARGUE WITH IT.** Retargeting removed §4.7 and §5.2a from core's pair — no
+  pin-targeting model cites either — so it went **29 → 27 of 91**, and that is the true
+  statement: nothing now verifies those sections *as the pin states them*. The rejected
+  alternative was a paragraph in each module header, which would have left 29 standing and made
+  it false — D15's eleventh shape, **a disclaimer is not a gate**, applied before it bit rather
+  than after.
 - **Ratified / superseded phase reports are historical record.** The phase outcomes are
   lineage; `docs/FINAL-ASSURANCE-SUMMARY.md` is the single live capstone pointer — don't
   rewrite closed reports to look current.

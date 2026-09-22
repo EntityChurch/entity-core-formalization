@@ -231,6 +231,10 @@ TLC_NEG := \
   "ConnCodes|ConnCodesCollapseBug|Invariant ReasonCodesDistinct is violated" \
   "ConnCodes|ConnCodesStatusBug|Invariant StatusMatchesCode is violated" \
   "ConnCodes|ConnCodesSeqReadingBug|Invariant PreHelloAuthIsInvalidNonce is violated" \
+  "ConnCodes|ConnCodesAddressOrderBug|Invariant AddressVerdictPhaseIndependent is violated" \
+  "ConnCodes|ConnCodesDropBug|Invariant NoSilentDrop is violated" \
+  "ConnCodes|ConnCodesBareCloseBug|Invariant NoBareCloseOnly is violated" \
+  "ConnCodes|ConnCodesEcfBug|Invariant FramingIsNotEcf is violated" \
   "Bootstrap|BootstrapEarlyIndexBug|Invariant BootAllOrNothing is violated" \
   "Bootstrap|BootstrapGateBug|Invariant NoRegistrationBeforeBootstrap is violated" \
   "Bootstrap|BootstrapConnectBug|Invariant ConnectPreAuthorized is violated" \
@@ -575,6 +579,12 @@ APALACHE_GREEN := \
   "CoreApalache ConstInitOK3 InvComposed IndInitComposed" \
   "ConnCodesApalache ConstInitOK ReasonCodesDistinct IndInit" \
   "ConnCodesApalache ConstInitOK StatusMatchesCode IndInit" \
+  "ConnCodesApalache ConstInitOK StateConflictsAre409 IndInit" \
+  "ConnCodesApalache ConstInitOK AddressVerdictPhaseIndependent IndInit" \
+  "ConnCodesApalache ConstInitOK PreHelloAuthIsInvalidNonce IndInit" \
+  "ConnCodesApalache ConstInitOK PreAdmissionRefusalIsCoded IndInit" \
+  "ConnCodesApalache ConstInitOK RefusalCodeMatchesCause IndInit" \
+  "ConnCodesApalache ConstInitOK FramingIsNotEcf IndInit" \
   "BootstrapApalache ConstInitOK InvAllOrNothing IndInitAllOrNothing" \
   "BootstrapApalache ConstInitOK InvRegGate IndInitRegGate" \
   "BootstrapApalache ConstInitOK InvConnect IndInitConnect" \
@@ -1058,6 +1068,10 @@ APALACHE_NEG := \
   "ConnCodesApalache ConstInitBugCollapse ReasonCodesDistinct Init 6" \
   "ConnCodesApalache ConstInitBugStatus   StatusMatchesCode   Init 6" \
   "ConnCodesApalache ConstInitSeqReading  PreHelloAuthIsInvalidNonce Init 6" \
+  "ConnCodesApalache ConstInitBugAddressOrder AddressVerdictPhaseIndependent Init 6" \
+  "ConnCodesApalache ConstInitBugDrop      NoSilentDrop       Init 3" \
+  "ConnCodesApalache ConstInitBugBareClose NoBareCloseOnly    Init 3" \
+  "ConnCodesApalache ConstInitBugEcf       FramingIsNotEcf    Init 3" \
   "BootstrapApalache ConstInitBugEarlyIndex BootAllOrNothing             Init 6" \
   "BootstrapApalache ConstInitBugGate       NoRegistrationBeforeBootstrap Init 6" \
   "BootstrapApalache ConstInitBugConnect    ConnectPreAuthorized          Init 6" \

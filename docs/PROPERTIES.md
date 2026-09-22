@@ -365,7 +365,7 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
      stopped matching.
 
      *The full grader inventory, so the class is closed rather than sampled* (AGENTS.md D14 —
-     the finding is what made that discipline necessary). Seventeen targets decide the 609 runs.
+     the finding is what made that discipline necessary). Seventeen targets decide the 633 runs.
 
      **This table carries no run counts, deliberately — corrected 2026-09-07.** It used to,
      and they were stale: `tlc-neg` sat at 40 against a real 45, `tlc-green` at 15 against 24,
@@ -519,7 +519,31 @@ Reproduce: `make -C tamarin green`; 15 ProVerif + 14 Tamarin bug controls each f
 Per repo discipline any defect is a proposal/review-note in the sibling protocol repo,
 **never a spec edit here.**
 
-1. **§4.7's error-code table contradicts itself — and §4.6 step 1 — on the same input.**
+1. ✅ **CLOSED AND BANKED 2026-09-15 — the ruling landed and the models now transcribe it.**
+   `0.8.2.1` (FM-1) narrowed row 10's parenthetical exactly as argued below — at `.25` the row
+   reads *"**Not** a pre-hello `authenticate` (see below)"* and a following paragraph pins the
+   input to 401 by §4.2, §4.6 step 1 and row 6. `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla`
+   and `spin/conncodes.pml` are retargeted to `spec-data/v0.8.2.25`, so the contested-cell
+   constant is gone and `ConnCodesSeqReadingBug` is an ordinary injected defect.
+
+   ⭐ **A FINDING ROW RETIRES BY BEING OVERTAKEN, AND THIS ONE EXPOSED A FILING ERROR ON THE WAY
+   OUT.** `tla/Makefile`'s `TLC_FINDING` table exists because a finding row and a negative
+   control grade identically and mean opposite things on a green — a green on a control means
+   *the property has no teeth*, a green on a finding means *the defect was fixed upstream, retire
+   the row*. That table was created 2026-09-07 for the attestation track. **This row, which is
+   the shape the table was written for and predates it, was never moved into it** — it sat in
+   `TLC_NEG` under a header whose sentence was false of it, for eight days. D14's own rule
+   (*enumerate the class, do not fix the instance*) missed by the session that wrote it. It is
+   correctly filed now without being moved, because the spec moved instead: at `.25` it really is
+   an ordinary control. **A row that was misfiled and is now correctly filed by an upstream fix
+   is the hardest kind to notice — nothing was ever red.**
+
+   ⚠ **The census and the ruling's own two corrections stand unchanged** — our source census was
+   upheld exactly; our *remedy* and our *impact argument* were not, and that is still the record
+   this repo cites when it argues that a finding is three separable things. The original finding
+   follows, unedited.
+
+   **§4.7's error-code table contradicts itself — and §4.6 step 1 — on the same input.**
    *This is the first finding here that is a genuine defect in the spec text rather than a
    boundary worth stating, and it is the only one machine-exhibited by all three TLA+-track
    engines.* An `authenticate` frame arriving before any hello nonce has been issued is named

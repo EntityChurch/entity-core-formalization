@@ -40,6 +40,35 @@ What this asserts
   D. PROSE. Every declared site states the track inventory this file derives. Silence fails,
      the `runcount` / `ledgercount` rule -- deleting the sentence is otherwise the cheapest
      way to green.
+  E. PER-MODEL PIN OVERRIDES, both directions. A track's pin is the snapshot its models
+     transcribe; a model that transcribes a DIFFERENT one declares it in
+     `[track.<name>.model_pins]` AND says so in its own text, and the two must agree.
+
+Why E exists, stated concretely because the alternative was on the table
+------------------------------------------------------------------------
+`spec-data/MODELING-PIN` says every published result is a statement about that snapshot "and
+no other". Modelling `§4.11` -- a section that does not exist at the core pin -- makes that
+sentence false the moment the file lands, and the obvious remedy is a paragraph in the module
+header saying which snapshot it targets.
+
+**That remedy is a disclaimer, and `AGENTS.md` D15's eleventh shape is that a disclaimer is
+not a gate** -- it is where a stale figure survives longest, because it reads as a site
+someone has already thought about. So the override is a machine-read fact with a tripwire on
+each side:
+
+  * every key must be a declared model OF THAT TRACK, and name an existing snapshot;
+  * the snapshot must DIFFER from the track's own pin -- a redundant override is a claim that
+    goes stale silently the moment the track pin moves;
+  * the model file must carry `MODELING-PIN-OVERRIDE: <snapshot>` in its own text, agreeing;
+  * and the REVERSE direction, which is the one that catches the real failure: a model file
+    carrying that marker with no row here FAILS. Transcribing newer text and forgetting to
+    declare it is the error this whole section is about, and it is invisible from inside the
+    file that does it.
+
+`spec-drift.py` and `coverage-check.py` both read these overrides, so an overridden model is
+measured against ITS OWN pin -- otherwise the drift gate would report a §4.11 citation as
+unresolvable against a snapshot that has no §4.11, which is a true complaint about the wrong
+thing.
 
 What this does NOT assert
 -------------------------
@@ -311,6 +340,82 @@ def main() -> int:
         else:
             problems.append(f"track {name}: status {status!r} is not 'modeled' or 'scoped'")
             print(f"  BADSTATUS   {name}: {status!r}")
+
+    # ---- E. per-model pin overrides, both directions --------------------------
+    # Runs before D so a failure here prints next to the track it belongs to.
+    print("\n== E. per-model pin overrides ==")
+    overridden: set[str] = set()
+    n_over = 0
+    for name, t in sorted(tracks.items()):
+        mp: dict[str, str] = t.get("model_pins", {}) or {}
+        if not mp:
+            continue
+        track_models = set(t.get("models", []))
+        track_pin = (pin_dir(root, t.get("pin_file", "")) or "").removeprefix("spec-data/")
+        for f, snap in sorted(mp.items()):
+            n_over += 1
+            overridden.add(f)
+            if f not in track_models:
+                problems.append(
+                    f"track {name}: model_pins names {f!r}, which is not a model of this track"
+                )
+                print(f"  NOTOURS     {f} (track {name})")
+                continue
+            if not os.path.isdir(os.path.join(root, "spec-data", snap)):
+                problems.append(
+                    f"track {name}: model_pins {f!r} -> {snap!r}, but spec-data/{snap}/ does not exist"
+                )
+                print(f"  NOSNAPSHOT  {f} -> {snap}")
+                continue
+            if snap == track_pin:
+                problems.append(
+                    f"track {name}: model_pins {f!r} -> {snap!r} equals the track pin."
+                    "\n      -> a redundant override asserts nothing and goes stale silently the"
+                    "\n         moment the track pin moves. Delete the row instead."
+                )
+                print(f"  REDUNDANT   {f} -> {snap} (== track pin)")
+                continue
+            text = read(os.path.join(root, f))
+            m = re.search(r"MODELING-PIN-OVERRIDE:\s*(\S+)", text)
+            if not m:
+                problems.append(
+                    f"{f}: declared in model_pins as {snap!r} and the FILE DOES NOT SAY SO."
+                    "\n      -> add a `MODELING-PIN-OVERRIDE: <snapshot>` line to the model. A"
+                    "\n         reader opening the model must be able to see which text it"
+                    "\n         transcribes without opening TRACKS.toml."
+                )
+                print(f"  UNMARKED    {f}")
+                continue
+            if m.group(1) != snap:
+                problems.append(
+                    f"{f}: model_pins says {snap!r}, the file's own marker says {m.group(1)!r}"
+                )
+                print(f"  DISAGREE    {f}: {snap} != {m.group(1)}")
+                continue
+            print(f"  ok          {f:28s} -> {snap} (track pin {track_pin})")
+
+    # The reverse direction, and the one that catches the real failure: a model that declares
+    # an override IN ITSELF with no row here. Transcribing newer text and forgetting to declare
+    # it is invisible from inside the file that does it.
+    for f in sorted(on_disk - overridden):
+        text = read(os.path.join(root, f))
+        m = re.search(r"MODELING-PIN-OVERRIDE:\s*(\S+)", text)
+        if m:
+            problems.append(
+                f"{f}: carries `MODELING-PIN-OVERRIDE: {m.group(1)}` and NO model_pins row."
+                "\n      -> declare it in TRACKS.toml under its track's [track.<name>.model_pins],"
+                "\n         or remove the marker. An undeclared override is measured against the"
+                "\n         track pin by every other gate, which is the wrong text."
+            )
+            print(f"  UNDECLARED  {f} -> {m.group(1)}")
+    if n_over == 0 and not any(
+        re.search(r"MODELING-PIN-OVERRIDE:", read(os.path.join(root, f))) for f in sorted(on_disk)
+    ):
+        # Stated rather than silent: a section with an empty input set asserts nothing about
+        # the live registry, which is D15's seventh shape and cost this repo a gate once.
+        print("  ok          no track declares a model_pins override, and no model claims one")
+        print("              (NOTE: with no overrides this check has no live subject --")
+        print("               its teeth are in tools/ test paths, not in TRACKS.toml)")
 
     # ---- D. the prose ---------------------------------------------------------
     print("\n== D. the inventory as published ==")

@@ -56,8 +56,8 @@ Files pinned by this ledger, at the revision the correspondences below were deri
 
 | File | sha256 |
 |---|---|
-| `protocol-generator/lean/proofs/EntityCoreProofs/CapabilityProofs.lean` | `3a123b2a746f11dd37e39550d8e81b2389dbce6adf9aed31c20cd6236ec12ab4` |
-| `protocol-generator/lean/src/EntityCore/Capability.lean` | `fa032dcbd96257596eebf5835da42fbecc2250ba2427eee67243d0f61441eb52` |
+| `protocol-generator/lean/proofs/EntityCoreProofs/CapabilityProofs.lean` | `78a157cdad043c4cab305636abd9aefe2a89cb8e98f6df456c07494aa567a1f8` |
+| `protocol-generator/lean/src/EntityCore/Capability.lean` | `dcba5d3442e32b64a289057c8d503502fedd83ad173ba892b1f6e3d6a52eccfc` |
 
 > **These two digests were WRONG from 2026-09-06 to 2026-09-09, with `make leanseam` green
 > every day, and the mechanism is this repo's own headline class.** The gate parses the
@@ -215,9 +215,12 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   relation over path patterns, and its transitivity is a **substantial theorem** — without
   it, Tamarin's lemma is a true statement about `narrow` and says nothing about the protocol.
 - **Discharged:** `isAttenuated_trans`, via `grantSubset_trans` → `scopeSubset_trans` →
-  `matchesSeg_trans` — all in `CapabilityProofs.lean`, no residual hypotheses beyond the two
-  premises, and the expiry conjunct (a finite parent forbids an infinite child) proved
-  inline in `isAttenuated_trans`.
+  **`matchesSegNM_trans`** (was `matchesSeg_trans` until 2026-09-15) — all in
+  `CapabilityProofs.lean`, and the expiry conjunct (a finite parent forbids an infinite
+  child) proved inline in `isAttenuated_trans`. ⛔ **"No residual hypotheses beyond the two
+  premises" was true until 2026-09-15 and is not true now** — see the next two notes. The
+  sentence is left visible rather than silently replaced, because it is the claim that moved.
+
 - **Scope note, 2026-09-10 — what the transitivity is transitivity OF (K1), and it is not a
   drift note.** §3.6's **id-scope pattern grammar is normative at OUR OWN PIN** (0.8.1, F40):
   `operations` and `peers` match the raw value **literally**, with none of the §5.4 path
@@ -242,9 +245,62 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   (wrong matcher applied to id dimensions) and K2 (wrong matcher on the path dimension itself).
   The theorems remain true and `make lean` remains green; what is qualified is what they are
   theorems *about*.
-- **Verdict: CLOSED.** This is the strongest single link in the whole assurance map, and
-  worth stating in exactly this shape: *the Tamarin result is conditional, and Lean is what
-  discharges the condition.*
+- **⛔ T5a IS CONDITIONAL NOW, 2026-09-15, AND THE VERDICT MOVES WITH IT.** Keystone landed
+  this repo's `K-6` and `K-7` at `fee2e422` and **told us the cost in the same packet**
+  (`entity-core-keystone/docs/status/ROUTING-2026-09-15-b-…`, §3a). `scopeSubset` is now typed
+  by `ScopeKind`; its `.id` branch compares with §3.6's literal `matchesIdPattern`, and the
+  transitivity of *that* matcher is carried as an explicit undischarged hypothesis:
+
+  > `abbrev IdPatternTrans : Prop := ∀ x y z : String, matchesIdPattern x y = true → matchesIdPattern y z = true → matchesIdPattern x z = true`
+
+  So `isAttenuated_trans` composes **unconditionally** on the two **path** dimensions
+  (`handlers`, `resources` — via `matchesSegNM_trans`) and on the **whole expiry half**, and
+  composes **through `IdPatternTrans`** on the two **id** dimensions (`operations`, `peers`).
+  Their source records the argument that the hypothesis holds — `z = "*"` immediate, `z`
+  literal forces equality, `z = Q ++ "/*"` a prefix argument with the `y = "*"` case vacuous
+  on a length bound — and declines to derive it because `String.startsWith` routes through the
+  `ForwardPattern` typeclass and it becomes a from-scratch string theory. **That is the same
+  boundary `grantPattern_namespace_isolation` declines by name (L7's H), for the same reason,
+  in the same file.**
+- **The trade is in the spec's favour and saying so is part of the row.** Before F50 this
+  theorem was **unconditional** — and it was, for two of four dimensions, a theorem about a
+  matcher §3.6 calls non-conformant. **Conditional-and-about-the-right-function is strictly
+  better than unconditional-and-about-the-wrong-one**, which is keystone's own framing and is
+  correct. ⭐ **And that is exactly what this row's K1 note asked for**: K1 said the discharge
+  was "for a function that is not that relation on two of four dimensions." It now is that
+  relation on all four. **K1 is CLOSED** — see L6.
+- ⚠ **What this costs us, stated as a decision we owe rather than a fact we observed.**
+  Keystone asked, in that packet, whether we want `IdPatternTrans` discharged, and named three
+  ways: mathlib in `proofs/`, a hand-rolled prefix lemma in their tree, or **this seat proving
+  it and them citing it**. They have no preference and will not pick unilaterally. Our own
+  `A-3` answer — *"not worth the mathlib dependency for one decidable check"* — is now
+  **load-bearing on whether this stays a hypothesis**, which it was not when we gave it.
+  Routed back in
+  `docs/status/ROUTING-2026-09-15-b-entity-core-keystone-t5a-is-conditional-the-capstone-carries-three-hypotheses-and-we-are-not-picking-the-discharge-for-you.md`;
+  the row stays CLOSED-MODULO-H until one of the three lands.
+- **Verdict: CLOSED-MODULO-H.** **H = `IdPatternTrans`** — transitivity of §3.6's id-scope
+  literal matcher, undischarged in either tree. Scope of H, because it is narrow and the row
+  should not read as weaker than it is: **`resources` is the dimension the nine `tamarin/`
+  theories at this row's model site actually frame, it is path-scope, and it composes
+  unconditionally.** H reaches `operations` and `peers`.
+  **The END-TO-END form (`allowed_chain_leaf_atten_root`, pinned below, the declaration that
+  folds this row through L11 into "a leaf's authority is a subset of the root's") carries two
+  further conditions**, and they are named here rather than left in the Lean: `IdPatternRefl`
+  — the same boundary as H, reflexivity instead of transitivity, used only at the induction's
+  base — and `entityMatchable`, a side condition excluding capabilities with an unmatchable
+  path pattern. ⭐ **The second one is not a residual**: read against `spec-data/v0.8.2.25`
+  §5.4 it excludes exactly the capabilities the spec rules **INVALID `[MUST]`**, include and
+  exclude arrays alike, scoped to the same two path dimensions. **Verified here rather than
+  taken from the packet** — see L11 — so it does not enter H.
+  *(Previously CLOSED, on the strength of a theorem with no hypotheses. The change is in the
+  Lean text, not in anything here, and the second half of `make lean` is what refused to
+  accept it silently.)*
+  **This is still the strongest single link in the whole assurance map**, and the shape is
+  unchanged — *the Tamarin result is conditional, and Lean is what discharges the condition* —
+  with one word added: **Lean discharges it for the dimension those theories frame, and names
+  its own hypothesis for the other two.** A link whose residual is written down is stronger
+  than one whose residual is a phrase in a different file, which is the whole argument for
+  this ledger and is worth having a row demonstrate.
 
 ### L6 · The path matcher is reflexive and transitive; excludes override includes
 
@@ -320,6 +376,38 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   **Recorded plainly: this row named the distinction and nobody here followed it into §5.6 for
   three days, eleven lines away in a file we had read for another reason.** K1 —
   `docs/status/ROUTING-2026-09-09-KEYSTONE-SCOPE-SUBSET-TYPING.md`.
+- **⭐ K1 IS CLOSED, 2026-09-15 — ADOPTED, AND THE SENTENCE ABOVE IS NOW FALSE OF THE LIVE
+  TREE.** *"`scopeSubset` takes no `ScopeKind`"* was the finding; at keystone's `fee2e422` it
+  takes one, dispatching `.id` for `operations`/`peers` and `.path` for `handlers`/`resources`,
+  with `grantSubset` naming the kind per dimension and **no default** — because, in their own
+  note at the site, a default is how the next dimension inherits the wrong matcher silently,
+  which is the original F40 defect. The two `#eval` divergences this row published (parent
+  `operations = ["/*/get"]` admitting child `["/other/get"]`; parent `["*"]` failing to cover
+  it) are both repaired by construction: neither operand reaches `canonSegs` any more.
+  **The scope note above is left standing unedited** — it was true of the tree it was written
+  against, and per `FINDINGS-INDEX.md` §7 a finding retires when the measurement is re-run,
+  which is this bullet, not when the amendment lands.
+- **⭐ K2 SURVIVES, AND IT IS MEASURED RATHER THAN INFERRED, 2026-09-15.** The obvious reading
+  of the same commit is that a typed `scopeSubset` repairs this row too. It does not, and the
+  gate is what says so: `matchesSeg` itself is **byte-unchanged** — keystone kept its clause
+  order deliberately, because six `rfl`-level arm-characterization lemmas are facts about that
+  order — and `resources` is `.path`, so the interior-`*` arm still fires at every position on
+  the one dimension nine `tamarin/` theories frame. `make leanlemma` re-ran `lean/lemmas/Chain.lean`
+  against the new tree and **every published K2 figure reproduces exactly**: `ksSoundKS=0`,
+  `specSoundSpec=0`, `ksSoundSpec=147`, `escReal=147`, `escParentInterior=147`,
+  `escChildInterior=0`, `chainNewKS=0`, `chainEsc=0`, `admitKS=591`, `reach2KS=591`.
+  **`K-4a` remains the open ask.** *This is the reason that gate carries every published figure
+  one-to-one rather than a summary: "the definition moved and the result is unchanged" is a
+  measurement, and reading the diff would have given an opinion.*
+- **What DID move here is the matcher on the ATTENUATION path, and it moved toward the spec.**
+  `scopeSubset` now calls **`matchesSegNM`**, the §5.4-guarded wrapper, in both arms — this
+  repo's `K-6`, adopted verbatim with the reasoning quoted at the site. So §5.4's *"`NEVER_MATCH`
+  never matches, in either operand"* is enforced on the subset path as well as the dispatch
+  path, closing a bypass that ran in the **permissive** direction. The new lemma
+  `matchesSegNM_trans` is what made that possible without disturbing L5's proof surface, and it
+  is pinned below. **This row's five cited theorems are unchanged and its verdict does not
+  move**; what changed is that the function they sit beside is closer to §5.4 than it was, in
+  one respect and not in the one K2 names.
 - **Verdict: CLOSED.**
 
 ### L7 · Canonicalization roots a relative pattern at the granter's namespace
@@ -413,6 +501,14 @@ what it says is proved without a hole. Neither says the correspondence is the ri
   expiry forbids a child with none.
 - **Discharged:** the expiry conjunct of `isAttenuated_trans` — `CapabilityProofs.lean` —
   which proves exactly the `{finite < ∞}` lattice step, `none` as top.
+- **This row did NOT move with L5 on 2026-09-15, and that is worth one line rather than
+  silence.** `isAttenuated_trans` became conditional on `IdPatternTrans` at keystone's
+  `fee2e422`, and L5 is CLOSED-MODULO-H because of it. **The expiry conjunct is explicitly
+  unconditional** — keystone's own note says so (*"the expiry half is unconditional"*) and the
+  proof is the `≤` step in the finite-or-∞ lattice, which touches no matcher. A reader who saw
+  L5's verdict move and assumed the whole theorem weakened would be wrong about this row.
+  *Two rows citing one theorem can have different verdicts once that theorem grows a
+  hypothesis, and only reading which conjunct the hypothesis reaches tells you which.*
 - **Verdict: CLOSED.**
 
 ### L11 · The verdict actually enforces the per-edge check
@@ -424,8 +520,41 @@ what it says is proved without a hole. Neither says the correspondence is the ri
 - **Discharged:** `walk_allow_cons` and `walk_allow_leaf_attenuated` —
   `CapabilityProofs.lean` — extracting `edgeOk` (and hence `isAttenuated`) from an allowing
   walk, plus `walk_allow_head`, `walk_allow_link_facts`, `edgeOk_atten`, `edgeOk_caveats`.
+- **⚠ THE END-TO-END CAPSTONE GAINED THREE HYPOTHESES ON 2026-09-15, AND KEYSTONE'S PACKET
+  NAMED ONE. This row's own six theorems did not move.** `allowed_chain_leaf_atten_root` — the
+  declaration that folds L11's per-edge extraction through L5's transitivity into *"a leaf
+  capability's authority is a subset of the root's"* — now reads
+  `(hid : IdPatternTrans) (hidr : IdPatternRefl) … (∀ l ∈ chain, ∀ f, l.granterPeer = some f → entityMatchable lp f l.entity)`.
+  Their `ROUTING-2026-09-15-b` §3a announces `IdPatternTrans` and lists four changed
+  signatures; the capstone is not among them, and the third condition is a **different species**
+  from the other two — not a lemma about a matcher but a **semantic side condition on the
+  capabilities in the chain**, used only at the induction's base, where the statement degenerates
+  to *"the leaf is an attenuation of itself"*. It is needed because `K-6`'s guard makes
+  self-subset FALSE for a capability carrying an unmatchable path pattern.
+- **We checked their justification instead of taking it, and it holds.** They argue the
+  condition *"excludes exactly the capabilities the spec excludes."* Read against
+  `spec-data/v0.8.2.25/ENTITY-CORE-PROTOCOL.md` §5.4: *"a capability any of whose `handlers`
+  or `resources` scope patterns canonicalizes to `NEVER_MATCH` MUST be refused … at mint, at
+  delegation, and at chain verification"*, scoped to path-scope at 0.8.2.24 and explicitly **not
+  reaching `operations` or `peers`**. `grantMatchable` quantifies over exactly `handlers` and
+  `resources`, and `scopeMatchable` over both the include and the exclude array — which is what
+  *"any of whose … patterns"* says. **Sound, and the alignment is the finding's absence rather
+  than the finding.**
+- **The transferable piece, because it is not about this capstone.** ⭐ *A counterpart's
+  enumeration of what changed is an INPUT SET, and it can be narrower than the diff.* Their
+  packet is careful, correct in every claim we checked, and volunteers the cost — and it still
+  under-reports, because §3a's subject was *"signatures your `make leanproof` should refuse to
+  accept silently"* and the capstone's axiom set did not move, so it was not in that frame.
+  **Reading the diff is what found it**; the gate went red on a different declaration entirely.
+  This is D15's mechanism — *what is the input set* — asked of a packet rather than of a glob,
+  and it is the counterpart of the rung we routed to keystone as `K-5` (*ask of a packet which
+  of its claims were executed and which were read*), now pointed the other way: **ask of a
+  packet which of the changes it enumerates, and re-derive the set yourself.**
 - **Verdict: CLOSED.** Cited explicitly because it is the row a reader forgets: L5 proves
-  the step composes, L11 proves the step is taken.
+  the step composes, L11 proves the step is taken. **The six theorems this row cites are
+  byte-unchanged and carry no new hypothesis** — the capstone that consumes them is where the
+  conditions landed, and the ledger's own convention of citing the narrowest theorem that
+  discharges a row is why this row holds while L5 moves.
 
 ### L12 · An absolute pattern denotes the same thing in any frame
 
@@ -551,9 +680,18 @@ checking it also checks the components. It checks §4.2's dispatch gate and noth
 own.
 
 **Ledger state — derived, and now gated.** As of 2026-09-15, the ledger is **42 rows**
-(13 Class L, 5 Class T, 24 Class O): **15 CLOSED**, 3 CLOSED — ASSUMPTION FALSE (L7's row, O21
+(13 Class L, 5 Class T, 24 Class O): **14 CLOSED**, 3 CLOSED — ASSUMPTION FALSE (L7's row, O21
 and O22), 2 CLOSED — ASSUMPTION ISOLATED (O6, O20), 1 CLOSED — ASSUMPTION ISOLATED AND CORRECTED
-(O10), 1 CLOSED-MODULO-H (L1), 2 N/A — device, 3 BY-DESIGN, and **15 OPEN**.
+(O10), **2 CLOSED-MODULO-H (L1, and L5 as of 2026-09-15)**, 2 N/A — device, 3 BY-DESIGN, and
+**15 OPEN**.
+
+> **The 15 → 14 is L5, and it moved because a COUNTERPART COMMITTED, not because anything here
+> changed.** Keystone adopted this repo's `K-6`/`K-7` packet; the adoption typed `scope_subset`
+> and left `isAttenuated_trans` — T5a, the theorem `L5` discharges Tamarin's `no_escalation`
+> condition with — conditional on an undischarged `IdPatternTrans`. **The row got weaker and the
+> result got better**: the theorem is now about the function §3.6 requires instead of one it
+> calls non-conformant. *A verdict moving down is not always a regression, and a ledger that
+> could not express that would be pressure to leave the verdict alone.*
 
 > **O23 is the newest row and it is a different species from every other one here.** Each of
 > O1–O22 is an abstraction somebody *chose* and wrote down — the ledger's whole purpose. O23 is
@@ -937,8 +1075,8 @@ above; every prose citation must have a line here.
 >   K1 is adopted; the `scopeSubset` half is not.
 
 ```leanseam-pins
-file  proofs/EntityCoreProofs/CapabilityProofs.lean  3a123b2a746f11dd37e39550d8e81b2389dbce6adf9aed31c20cd6236ec12ab4
-file  src/EntityCore/Capability.lean                 fa032dcbd96257596eebf5835da42fbecc2250ba2427eee67243d0f61441eb52
+file  proofs/EntityCoreProofs/CapabilityProofs.lean  78a157cdad043c4cab305636abd9aefe2a89cb8e98f6df456c07494aa567a1f8
+file  src/EntityCore/Capability.lean                 dcba5d3442e32b64a289057c8d503502fedd83ad173ba892b1f6e3d6a52eccfc
 
 theorem  verifyChain_time_stable          proofs/EntityCoreProofs/CapabilityProofs.lean  L1
 theorem  verifyChain_time_independent     proofs/EntityCoreProofs/CapabilityProofs.lean  L1
@@ -949,6 +1087,7 @@ theorem  isAttenuated_trans               proofs/EntityCoreProofs/CapabilityProo
 theorem  grantSubset_trans                proofs/EntityCoreProofs/CapabilityProofs.lean  L5
 theorem  scopeSubset_trans                proofs/EntityCoreProofs/CapabilityProofs.lean  L5
 theorem  matchesSeg_trans                 proofs/EntityCoreProofs/CapabilityProofs.lean  L5,L6
+theorem  matchesSegNM_trans               proofs/EntityCoreProofs/CapabilityProofs.lean  L5,L6
 theorem  matchesSeg_refl                  proofs/EntityCoreProofs/CapabilityProofs.lean  L6
 theorem  matchesScope_excl_override       proofs/EntityCoreProofs/CapabilityProofs.lean  L6
 theorem  matchesScope_id_excl_override    proofs/EntityCoreProofs/CapabilityProofs.lean  L6
@@ -964,6 +1103,7 @@ theorem  walk_allow_head                  proofs/EntityCoreProofs/CapabilityProo
 theorem  walk_allow_link_facts            proofs/EntityCoreProofs/CapabilityProofs.lean  L11
 theorem  edgeOk_atten                     proofs/EntityCoreProofs/CapabilityProofs.lean  L11
 theorem  edgeOk_caveats                   proofs/EntityCoreProofs/CapabilityProofs.lean  L11
+theorem  allowed_chain_leaf_atten_root    proofs/EntityCoreProofs/CapabilityProofs.lean  L5,L11
 
 # A `rejected` pin is a correspondence that was CONSIDERED AND DOES NOT HOLD — a Lean
 # theorem that discharges nothing here. Pinning it is deliberate: it is what lets the
@@ -1078,14 +1218,19 @@ produce exactly that set — no more, no less, both directions:
    axioms (`propext`, `Classical.choice`, `Quot.sound`) *and* exactly its declared set. A
    row of `proof-gate.expect` may not declare an untrusted axiom: the file is rejected at
    parse time if it does, because a hole you can declare away is not a hole that was caught.
-4. **The ledger tie** — all 25 theorems pinned in §5's block (24 discharging + the one
+4. **The ledger tie** — all 27 theorems pinned in §5's block (26 discharging + the one
    pinned as **rejected**) are among the declarations that reported. This is what makes the
    gate about *this ledger* rather than about "some proofs built".
 5. **Warnings** — a Lean warning fails the build unless declared with an owner. One is
-   declared: a deprecated `String.dropRight` call in the shipping peer's
-   `src/EntityCore/Capability.lean` — inside the text this ledger pins by digest — whose
-   replacement returns a different type. Not ours to fix; **routed** to keystone rather than
-   tolerated, and the row disappears when they land it.
+   declared, 2026-09-15: Lean's linter reporting an unused `simp` argument inside
+   `matchesSegNM_trans`, new at keystone's `fee2e422`, in the proofs file this ledger pins.
+   Not a hole — that declaration's axiom set is graded standard on its own row — and not ours
+   to fix, since the keystone Lean tree is read-only input here. **Routed** rather than
+   tolerated, with the row's own retirement condition written into it, and declared in **both**
+   `lean/proof-gate.expect` and `lean/lemma-gate.expect` because the lemma tier builds our
+   files inside a copy of their tree and sees the same warning.
+   *(A previous row here was a deprecated `String.dropRight` call in the same file; keystone
+   landed the fix on 2026-09-06 and the row was deleted, which is the pattern this one follows.)*
 
 Five negative controls, each required to fail for its **own** declared reason, **on the
 declarations it names**:

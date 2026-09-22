@@ -356,6 +356,17 @@ def track_live(root: str, track: str) -> str:
                                          t.get("source_dir", "")))
 
 
+def model_pins(root: str, track: str) -> dict[str, str]:
+    """Models of this track that transcribe a DIFFERENT snapshot than the track pin.
+
+    Declared in `[track.<name>.model_pins]` and gated by `make trackcheck`, both directions
+    (the file must carry a `MODELING-PIN-OVERRIDE:` marker agreeing with the row, and a marker
+    with no row fails). See that tool's header for why this is a registry fact rather than a
+    sentence in a module header.
+    """
+    return dict(registry(root).get(track, {}).get("model_pins", {}) or {})
+
+
 def track_citations(root: str, track: str) -> dict[str, set[str]]:
     """Every section of THIS track's spec that any model in this repo depends on.
 
@@ -363,10 +374,18 @@ def track_citations(root: str, track: str) -> dict[str, set[str]]:
     other track. Those cross-track references are excluded from coverage (a reference is not
     a claim) but they ARE drift exposure: a model that reads core §6.2 is exposed when core
     §6.2 moves, whichever track it belongs to.
+
+    ⛔ PIN-OVERRIDDEN MODELS ARE EXCLUDED, and that exclusion is the whole point of the
+    override. This function answers "which sections of the PIN do the models depend on", and a
+    model transcribing a newer snapshot depends on that snapshot's text instead. Counting its
+    citations here would report the pin's §4.7 as covered by a model that transcribes §4.7 as
+    it reads three revisions later -- the phantom-row shape, arriving through the drift gate.
+    Their own drift is measured separately, against their own pin, in `measure_overrides`.
     """
     tracks = registry(root)
     t = tracks.get(track, {})
-    cites = model_citations(root, list(t.get("models", [])), bare=True)
+    own = [f for f in t.get("models", []) if f not in model_pins(root, track)]
+    cites = model_citations(root, own, bare=True)
     prefix = t.get("cite_prefix", "")
     others = [
         f for n, o in tracks.items() if n != track and o.get("kind") == "protocol"
@@ -593,8 +612,11 @@ def measure(root: str, track: str, live: str, fmt: str, emit) -> tuple[int, int,
              f"section (not headings in this spec): {', '.join('§' + s for s in rolled)}")
 
     # Exposure by ENGINE, not by track -- this grouping is by model checker, and since
-    # 2026-09-06 "track" means a proof track in this repo. Scoped to THIS track's files.
-    own = list(t.get("models", []))
+    # 2026-09-06 "track" means a proof track in this repo. Scoped to THIS track's files, and
+    # excluding pin-overridden models for the same reason `track_citations` excludes them:
+    # they are not exposed to the PIN moving, they are exposed to their own snapshot moving.
+    overrides = model_pins(root, track)
+    own = [f for f in t.get("models", []) if f not in overrides]
     emit(f"{bullet}exposure by engine:")
     for engine, roots in ENGINES.items():
         paths = [f for f in own if f.split("/")[0] in roots]
@@ -610,6 +632,40 @@ def measure(root: str, track: str, live: str, fmt: str, emit) -> tuple[int, int,
         affected = set().union(*(tc[s] for s in tmoved)) if tmoved else set()
         emit(f"    {engine:<18} {len(tmoved)}/{len(tc)} cited § moved; "
              f"{len(affected)}/{len(paths)} model files affected")
+
+    # ---- pin-overridden models, measured against THEIR OWN snapshot -------------------
+    # Reported as its own block rather than folded into the numbers above, because the pair
+    # `N of M cited sections moved` is a claim about THE TRACK PIN and must stay one. A
+    # reader who sees a total here is entitled to assume it is about the snapshot named at the
+    # top of this block; blending two pins into one figure is the shape D15 keeps finding.
+    if overrides:
+        emit("")
+        emit(f"{bullet}PIN-OVERRIDDEN MODELS — measured against their own snapshot, "
+             f"NOT against spec-data/{named}:")
+        for snap in sorted(set(overrides.values())):
+            paths = sorted(f for f, s in overrides.items() if s == snap)
+            snap_primary = os.path.join(root, "spec-data", snap, primary)
+            if not os.path.isfile(snap_primary):
+                emit(f"    spec-data/{snap}: MISSING {primary} — cannot measure")
+                unresolvable.append(f"<override snapshot {snap} has no {primary}>")
+                continue
+            snap_text = read(snap_primary)
+            ocites = model_citations(root, paths, bare=True)
+            ores: dict[str, bool] = {}
+            for sec in ocites:
+                hit = resolve_section(snap_text, sec)
+                if hit is None:
+                    unresolvable.append(f"{sec} (in {snap})")
+                    continue
+                actual, blk = hit
+                ores[actual] = ores.get(actual, False) or (blk not in live_text)
+            omoved = sorted([s for s in ores if ores[s]], key=secsort)
+            emit(f"    spec-data/{snap}: {len(omoved)} of {len(ores)} cited sections moved "
+                 f"({len(paths)} model file(s))")
+            for f in paths:
+                emit(f"      {f}")
+            for sec in omoved:
+                emit(f"      §{sec:<8} MOVED")
 
     return (len(moved), len(resolved), sorted(unresolvable, key=secsort),
             spec_version(live_text))

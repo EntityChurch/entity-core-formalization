@@ -118,7 +118,7 @@ Derived from the `§`-citations the `core` models themselves carry, not from pro
 with `make specdrift` (which reads the same citations) or by grepping `§` in the files
 `TRACKS.toml` assigns to `core`.
 
-**Coverage: 29 of 91 numbered `§N.M` sections (32%).** Read by area, not as one number —
+**Coverage: 27 of 91 numbered `§N.M` sections (30%).** Read by area, not as one number —
 see §5 for why the zeros are zeros. **This is a statement about the `core` track**; there is
 no repo-wide coverage number and there deliberately will not be one, because averaging a
 verified protocol with three unmodeled ones produces a figure that is true of nothing.
@@ -131,13 +131,11 @@ verified protocol with three unmodeled ones produces a figure that is true of no
 | 4.1 | connection establishment | handshake ordering | ● | ● | ● | | |
 | 4.2 | pre-auth gate | no dispatch pre-establishment | ● | ● | ● | | |
 | 4.6 | nonce handshake | no establish without issued nonce | ● | ● | ● | | |
-| **4.7** | **connection error codes** | **MUST-emit reason-code contract; status per code** | ● | ● | ● | | |
 | **4.8** | **store safety + refcount** | **data race; use-after-free** | ● | ● | ● | | |
 | 4.9 | resilience under load | responsive; deliver-or-signal; recover | ● | ● | ● | | |
 | 4.10 | resource bounds / admission | clean reject; bounded in-flight; chain depth | ● | ● | ● | | |
 | 5.1 | revocation | revoked never passes | ● | ● | ● | ● | ● |
 | **5.2** | **verification + dispatch authority** | **three-valued authority; resource binding** | ● | ● | ● | ● | ● |
-| **5.2a** | **verdict-to-status enumeration** | **the §4.7-vs-§5.2a disagreement on a pre-hello nonce; reason codes distinct** | ● | ● | ● | | |
 | 5.4 | pattern matching | **abstracted — cited only as a declared boundary (§3a)** | | | | | |
 | 5.5 | chain verification | linkage; unforgeability; caveats | ● | | ● | ● | ● |
 | **5.6** | **attenuation + temporal ingest** | **expiry; malformed-field fail-open** | ● | | ● | ● | ● |
@@ -156,6 +154,7 @@ verified protocol with three unmodeled ones produces a figure that is true of no
 | 7.3 | signatures | signature verification (as crypto wall) | | | | ● | ● |
 
 **Bold** rows are the surface added or sharpened at 0.8.1/0.8.2.
+
 
 ### 3a. One row is single-engine, one is ZERO-engine — and two others were never covered at all
 
@@ -306,6 +305,41 @@ a regex over the pin: a **lower bound** on the surface and an upper bound on not
 Audit: `docs/status/AUDIT-2026-09-14-THE-DENOMINATOR-WAS-OUR-OWN-CITATIONS.md`.
 
 ---
+
+## 3f. Matrix A-OFFPIN — sections modeled against a NEWER snapshot than the core pin
+
+⛔ **These rows are NOT part of the coverage pair above, and the pair went DOWN because of
+them.** `tla/ConnCodes.tla`, `tla/ConnCodesApalache.tla` and `spin/conncodes.pml` transcribe
+**`spec-data/v0.8.2.25`**, not the core pin `v0.8.2` — declared in `TRACKS.toml` under
+`[track.core.model_pins]`, marked in each file, and gated by `make trackcheck` §E in both
+directions. `make coverage` holds their citations out of Matrix A and requires them here
+instead; `make specdrift` measures them against `.25`.
+
+**Why they moved off the pin.** §4.11 *does not exist* at `v0.8.2`, and §4.7's out-of-order
+row carries a different status there (400 at the pin, **409** since 0.8.2.4). A model cannot
+transcribe both texts, and a model transcribing the newer one is not evidence about the older.
+
+⭐ **The cost is the honest part. §4.7 and §5.2a were Matrix A rows until 2026-09-15 and are
+not any more**, because no pin-targeting model cites either — so after the retarget **nothing
+in this repo verifies those two sections as the PIN states them**, and the published pair fell
+from 29 to 27. The alternative on the table was a sentence in each module header saying which
+snapshot it targeted, which would have left the 29 standing and made it false. `AGENTS.md`
+D15's eleventh shape: *a disclaimer is not a gate, and it is worse than nothing because it
+reads as though the risk was handled.*
+
+| § | area | property class | TLC | Apalache | Spin | ProVerif | Tamarin |
+|---|---|---|---|---|---|---|---|
+| **4.7** | **connection error codes** | **MUST-emit reason-code contract; status per code; state conflict is 409; address before authentication** | ● | ● | ● | | |
+| **4.11** | **pre-admission refusals** | **the coded-frame obligation; drop and bare-close as DISTINCT failures; cause → code** | ● | ● | ● | | |
+| **5.2a** | **verdict-to-status enumeration** | **reason codes distinct** | ● | ● | ● | | |
+
+⛔ **§4.11 arm (f) is NOT in the row above.** The conformance paragraph names *"a pre-admission
+refusal arriving while an admitted request is in flight on the same connection MUST NOT cost
+that request its response"* — a claim about interleavings on a multiplexed connection, which
+`ConnCodes` is structurally incapable of stating: it is a phase machine with one connection and
+no admitted requests. It is `tla/Reentry.tla`'s subject and `docs/LEAN-SEAM.md` **O24**. The
+dot in the §4.11 row credits the TABLE and the EMISSION obligation and nothing else — which is
+exactly the §5.4 mistake §3a records, so it is written down before anyone can make it again.
 
 ## 3c. Matrix A-ATT — attestation section × property class × engine
 
@@ -791,7 +825,7 @@ refers to `Revoke.pv`'s private-channel token — there is no `RevokeMech.pv`.
 
 ## 5. What is NOT covered — three different kinds of "no"
 
-Conflating these is how a coverage number becomes dishonest. **62 of 91 sections are not
+Conflating these is how a coverage number becomes dishonest. **64 of 91 sections are not
 cited by any model.** They fall into three groups and only the third is a backlog.
 
 ### (a) Out of scope by design — another layer owns it

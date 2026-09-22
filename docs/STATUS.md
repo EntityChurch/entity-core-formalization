@@ -4,7 +4,7 @@ _Updated: 2026-09-14 · this line: 0.8.2_
 
 > **The models are pinned at 0.8.2; the live spec is 0.8.2.25.** Every model in this repo is
 > written against the SHA-pinned snapshot in `spec-data/v0.8.2/`, which is the Entity Core
-> Protocol at spec version **0.8.2**. `make specdrift` reports **16 of 31 cited sections
+> Protocol at spec version **0.8.2**. `make specdrift` reports **14 of 29 cited sections
 > moved**, so the results below are a statement about **0.8.2** and not about the protocol as
 > it stands today. **0.8.2.24 and 0.8.2.25 are both vendored** (`spec-data/v0.8.2.24/`,
 > `spec-data/v0.8.2.25/`) for the re-check work; vendoring does not move the pin and no result
@@ -40,7 +40,7 @@ separately.
 
 | Track | Subject | Status |
 |---|---|---|
-| `core` | Entity Core Protocol | **modeled** — 95 model files, 302 runs, pinned at `spec-data/v0.8.2` |
+| `core` | Entity Core Protocol | **modeled** — 95 model files, 326 runs, pinned at `spec-data/v0.8.2` (3 of them at `v0.8.2.25`) |
 | `attestation` | signed-edge substrate; four mandatory indexes; supersedes chain | **modeled** — 3 modules, 68 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-attestation-v1.3` |
 | `quorum` | K-of-N rosters; `quorum-update`/`quorum-publish`; `current_signer_set(as_of)` | **modeled** — 3 modules, 100 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-quorum-v1.2` |
 | `identity` | cert chains; rotation by handoff and by recovery; retirement | **modeled** — 3 modules, 139 runs, **TLC + Apalache on all three modules**, pinned at `spec-data/ext-identity-v3.10` |
@@ -370,7 +370,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   `entity-core-protocol`; the census has since been *measured* by `entity-core-keystone` rather
   than read, which upheld ours and corrected two things we published. Full statement, both
   corrections, and why our four-word remedy was incomplete: `docs/PROPERTIES.md` §D.1.
-- **The full matrix is 609 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 633 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -412,23 +412,23 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 | slice | runs |
 |---|---|
 | TLC green (20 modules + Store liveness slice + `Reentry3` + `Core3` + `RevokeDeltaZero` + `CoreRefines` + 6 T4 classifier rows) | 31 |
-| TLC negative controls | 65 |
+| TLC negative controls | 69 |
 | TLC non-vacuity witnesses | 42 |
 | TLC findings (must be violated; `tla/Makefile:TLC_FINDING`, whose header states which rows weaken nothing, which read toward the spec, and which read toward an implementation because the spec is silent) | 25 |
-| Apalache inductive (59 invariants × base+step, + 2 at N=3) | 122 |
+| Apalache inductive (65 invariants × base+step, + 2 at N=3) | 134 |
 | Apalache strengthening closure (`apalache-closure`) | 37 |
 | Apalache enumeration green (extension tracks) | 43 |
-| Apalache negative controls + witnesses | 54 |
+| Apalache negative controls + witnesses | 58 |
 | Apalache enumeration controls + witnesses | 31 |
 | Apalache finding rows, enumeration models (must be violated) | 21 |
 | Apalache finding rows, transition systems (must be violated; bounded from `Init`) | 16 |
 | Spin green (7 × safety+LTL, 4 safety-only, 3 × safety+LTL variant rows) | 24 |
-| Spin negative controls | 39 |
+| Spin negative controls | 43 |
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
-| **total** | **609** |
+| **total** | **633** |
 
-Split by proof track, derived by `make runcount` rather than stated by hand: **302 runs** on
+Split by proof track, derived by `make runcount` rather than stated by hand: **326 runs** on
 `core`, **68** on `attestation`, **100** on `quorum` and **139** on `identity`. Attestation:
 `AttestIndex` — 1 green, 3 controls, 3 witnesses; `AttestLive` — 1 green, 2 controls,
 3 witnesses, 2 findings; `AttestRevoke` — 1 green, 2 controls, 3 witnesses, 2 findings; plus
@@ -454,9 +454,20 @@ separately and deliberately: they require an `entity-core-keystone` checkout, so
 reproducible from a bare clone and must not inflate a number that is.
 
 **Section-by-section coverage, per-engine, with every limit stated:
-`docs/COVERAGE-MATRIX.md`** — the document to send a new reader to. Headline: **29 of 91
-numbered sections (32%)**, which by area is **§4 64% · §5 91% · §6 57%** — the three surfaces
+`docs/COVERAGE-MATRIX.md`** — the document to send a new reader to. Headline: **27 of 91
+numbered sections (30%)**, which by area is **§4 55% · §5 82% · §6 57%** — the three surfaces
 this repo owns — with §2/§3/§7–§9 deliberately out of scope rather than missed.
+
+> ⚠ **The §4 and §5 figures DROPPED on 2026-09-15 and nothing was un-verified.** §4.7 and
+> §5.2a left Matrix A when `tla/ConnCodes.tla`, its Apalache port and `spin/conncodes.pml`
+> were retargeted to `spec-data/v0.8.2.25` — they are in **§3f, Matrix A-OFFPIN**, checked
+> by all three engines against the newer text. What the drop says is exactly true: **no
+> model now verifies those two sections AS THE PIN STATES THEM**, because the pin's §4.7
+> gives `connection_sequence_error` a different status and has no §4.11 at all. ⛔ **These
+> by-area percentages are NOT gated** — `make coverage` checks the pair and the section
+> set, not this breakdown — so derive them from Matrix A's own rows rather than trusting
+> this line, which is the caveat D15's eleventh shape says is where a stale figure lives
+> longest.
 
 ### What 0.8.2 added, and where it now lives
 
@@ -690,9 +701,11 @@ item 4.
 
 ## Next
 
-0*********. ⛔ **RE-READ THE KEYSTONE LEAN SEAM — `make leanseam` IS RED BECAUSE OUR OWN PACKET
-   WAS ADOPTED, WITHIN ONE DAY. NEW 2026-09-15, and it is first because it is the only item on
-   this list that a gate is currently failing on.**
+0*********. ✅ **DONE 2026-09-15 — THE KEYSTONE LEAN SEAM IS RE-READ AND RE-PINNED. `make lean`
+   IS GREEN ON ALL 12 RUNS.** *(Kept in place rather than archived, because both of its written-down
+   hypotheses were answered and one of its premises was wrong — see the outcome block below.)*
+   *Original item:* ⛔ **RE-READ THE KEYSTONE LEAN SEAM — `make leanseam` IS RED BECAUSE OUR OWN
+   PACKET WAS ADOPTED, WITHIN ONE DAY.**
    `entity-core-keystone` `fee2e422` landed **both** defects we routed on 2026-09-14:
    `scopeSubset` now calls `matchesSegNM` rather than raw `matchesSeg` (**K-6**) and takes a
    `ScopeKind` parameter dispatching `.id` for `operations` and `.path` for
@@ -715,6 +728,40 @@ item 4.
    - **This is the 2026-09-06 §5.5a shape repeating**, and the second payout of D13's
      both-directions half: a proof *arriving* is a diff exactly as a proof *breaking* is.
 
+   **OUTCOME, 2026-09-15 — both hypotheses were right, and the two things that mattered were
+   neither of them.**
+
+   - ✅ **`K1` CLOSED, `K2` SURVIVES** — exactly as predicted, and **neither is a prediction any
+     more**: `make leanlemma` re-ran `lean/lemmas/Chain.lean` against the new definitions and
+     every published K2 figure reproduces (`ksSoundSpec=147`, `escParentInterior=147`,
+     `chainEsc=0`, `admitKS=591`). `K-4a` is unaffected. *Getting a written-down hypothesis right
+     is not the same as having measured it, and this item said so in advance.*
+   - ⛔ **`L5` MOVED CLOSED → CLOSED-MODULO-H.** The landing left `isAttenuated_trans` (T5a)
+     conditional on an undischarged `IdPatternTrans` — keystone disclosed it in the same packet.
+     Path dimensions and the whole expiry half are unconditional; the two id dimensions are not.
+     **The verdict got weaker and the result got better**, and the ledger's state block now says
+     so, because a ledger that could not express that would be pressure to leave a verdict alone.
+   - ⛔ **THE FINDING WAS IN THE DIFF, NOT IN THE PACKET OR THE GATE.** Their §3a names **one**
+     new hypothesis; the capstone `allowed_chain_leaf_atten_root` carries **three**, and the
+     third is a semantic side condition rather than a matcher lemma. Checked against
+     `spec-data/v0.8.2.25` §5.4 and **sound** — it excludes exactly the capabilities the spec
+     rules INVALID. `leanproof` went red on an entirely different declaration. **A packet's
+     enumeration of what changed is an input set and can be narrower than the diff** (`K-9`).
+   - ⚠ **AND THE BLOCKER THIS ITEM INHERITED WAS MEASURABLY FALSE.** The handoff held this item
+     back because keystone was mid-sweep. The two files we pin last moved at `fee2e422`; the six
+     commits after it, including the `0.8.2.25` vendor, touch **nothing** under
+     `protocol-generator/lean/`. **`git log -- <the exact paths you pin>` is thirty seconds.** A
+     blocker inherited from a handoff is a claim about someone else's tree and goes stale like
+     any other — the `driftclaim` class pointed at a *work-list*.
+   - ⬜ **One row stays open and it is not ours to close: `K-10`**, how `IdPatternTrans` gets
+     discharged. We stated a preference (we prove it, route it as a patch) and re-affirmed our
+     `A-3` "no" to mathlib **with the new information in hand** rather than by default, which is
+     the part that matters, because they were right that our answer became load-bearing after we
+     gave it. `L5` stays CLOSED-MODULO-H until one of the three routes lands.
+   - ⭐ **Keystone's `A-4` re-derivation is NOT done and is still owed** — it is the one bullet of
+     this item that the session did not reach. It needs the new `.id` dispatch, not the old
+     function.
+
 0*********. ⭐ **§4.11 ARM (f) — THE MULTIPLEXED PRE-ADMISSION REFUSAL. NEW 2026-09-15 with
    0.8.2.25, and it is the largest tractable modelable surface on the board.**
    New §4.11 states the pre-admission refusal as one invariant (*a peer refusing a frame before
@@ -736,13 +783,31 @@ item 4.
      a constant: every frame in `Reentry.tla` is an admitted request, so a refused frame is
      **inexpressible**, not merely unmodeled. And `spec-data/v0.8.2.25/` is vendored and
      digest-verified. **Blocked on nothing but the work.**
-   - **Second target in the same revision, cheaper and it pays a debt:** §4.11's cause → code
-     table is `tla/ConnCodes.tla`'s exact subject, and retargeting that module to `.25` also
-     collapses **the one live contradiction** between the pin and live text (§4.7's
-     `connection_sequence_error`, 400 → 409). The model gets *simpler* and a control demotes
-     from *"a conformant reading of the spec"* to an ordinary injected defect.
-     `docs/SPEC-DRIFT-ASSESSMENT.md` §1d; `spec-data/v0.8.2.25/MANIFEST.md`
-     §"What needs modeling work".
+   - ✅ **Second target in the same revision — DONE 2026-09-15.** `tla/ConnCodes.tla`, its
+     Apalache port and `spin/conncodes.pml` are retargeted to `spec-data/v0.8.2.25`: §4.11's
+     cause → code table, its emission obligation with **drop and bare-close as two distinct
+     controls** (the section says they are "distinct failures rather than one" and a single
+     boolean could not say that), §4.7's `connection_sequence_error` at **409**, the new
+     unknown-operation row, the half-open rule and 0.8.2.6's address-before-authentication
+     ordering. 3 engines, **24 new runs** (609 → 633), the contested-cell constant gone and
+     `ConnCodesSeqReadingBug` demoted to an ordinary injected defect.
+     **`make specdrift` now reports 0 of 11 cited sections moved for those three files, so the
+     repo's ONE live pin-vs-spec contradiction is closed.**
+   - ⛔ **And the mechanism it needed is the durable part: `[track.core.model_pins]`.** A model
+     on a different snapshot than its track pin is declared in `TRACKS.toml`, marked in the file
+     with `MODELING-PIN-OVERRIDE:`, and gated **both directions** by `make trackcheck` §E.
+     The rejected alternative was a paragraph in each module header — D15's eleventh shape says
+     a disclaimer is not a gate, and this is the first time that rule was applied *before* it
+     bit rather than after.
+     **The cost is that core's coverage pair fell 29 → 27 of 91**, because no pin-targeting
+     model cites §4.7 or §5.2a any more. That number going down is the gate working: nothing
+     here verifies those sections *as the pin states them*. Off-pin grid:
+     `docs/COVERAGE-MATRIX.md` §3f.
+   - ⚠ **What it did NOT do: arm (f).** §4.11's multiplexed arm is not modeled by `ConnCodes`
+     and cannot be — it is a phase machine with one connection and no admitted requests. The
+     §4.11 dot in §3f credits the TABLE and the EMISSION obligation only, which is written into
+     the grid so nobody infers the rest from a citation. **Arm (f) is still the flagship and
+     still `tla/Reentry.tla`'s job.**
 
 0********. ⛔ **MODEL THE `included`-MAP INDIRECTION. It is the top of this list because a
    capability forgery was closed upstream in text that was in our pin, and no model here could
@@ -941,7 +1006,7 @@ item 4.
    Two gates, two complementary blind spots.
 
 1. **Coverage breadth.** Measured by the `§`-citations the models carry — and now *checked*
-   against them by `make coverage` — they reach **29 of 91 numbered sections** of the core
+   against them by `make coverage` — they reach **27 of 91 numbered sections** of the core
    spec. By area that is **§4 · §5 · §6**, the three surfaces this repo owns. Near-zero
    coverage of §2, §3, §7, §8 and §9 is deliberate scope: registries, encoding, trusted crypto
    and the conformance profiles belong to other layers of the assurance map. The remaining
@@ -1127,10 +1192,12 @@ item 4.
      *(This bullet read **"21 of 23 rows are CLOSED and the two open ones (L1, L7) are both
      §5.5a granter-framing"** until 2026-09-06. Every number in it was wrong and so was the
      attribution. Derived now, **by `make ledgercount` rather than by hand**: the ledger is
-     **42 rows** — 13 Class L, 5 Class T, 24 Class O — of which **15 CLOSED**, 3 CLOSED —
+     **42 rows** — 13 Class L, 5 Class T, 24 Class O — of which **14 CLOSED**, 3 CLOSED —
      ASSUMPTION FALSE (T4; O21 and O22, 2026-09-09), 2 CLOSED — ASSUMPTION ISOLATED (O6; O20,
      2026-09-09), 1 CLOSED — ASSUMPTION ISOLATED AND CORRECTED (O10, 2026-09-08),
-     1 CLOSED-MODULO-H (L1),
+     **2 CLOSED-MODULO-H (L1; L5, 2026-09-15 — T5a became conditional on an undischarged
+     `IdPatternTrans` when keystone adopted our own `K-6`/`K-7` packet, so this figure moved
+     with NO commit here and no model touched)**,
      2 N/A-device, 3 BY-DESIGN, and **15 OPEN** (O5, O7–O9 from the attestation track,
      O11–O15 from quorum, O16–O19 from identity — all added 2026-09-07 with
      those tracks' first nine modules). **O20 was added 2026-09-08 by a rule rather than by a
