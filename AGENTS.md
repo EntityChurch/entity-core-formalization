@@ -236,6 +236,29 @@ mentions. The scope-disclaimer tripwire passed all thirty — it matches *discla
 *background* — so the audit down to **22** was discipline, not gate. `docs/COVERAGE-MATRIX.md`
 §3e states which nine and why two of the same shape were kept.
 
+**Where findings are tracked, 2026-09-08 — FOUR categories, and three of them had no home until
+this date.** `docs/status/FINDINGS-INDEX.md` is the single index; read it before any handoff.
+It covers: **spec defects** (21 across three extension protocols, 18 machine-checked, in three
+per-track routing notes); **validation-surface defects** (V1–V3, new, in
+`ROUTING-2026-09-08-VALIDATION-SURFACE.md`); **implementation divergences** (D1–D14 in
+`docs/status/CONFORMANCE-DIVERGENCE-REGISTER.md`); and **our own open work** (the ledger's OPEN
+rows and the three tracks with no second engine).
+
+**The divergence register is the one to understand, because the gap it closes was invisible.**
+Every spec finding here was written with a census of what `entity-core-{go,rust,py}` do — this
+repo's own rule is census before impact claim (`docs/PROPERTIES.md` §D.1). **Those censuses were
+evidence for spec findings and were tracked nowhere as observations in their own right.** An
+implementation divergence is not a bug report about an implementation; it is a **measurement of
+where the specification failed to converge three independent authors**, and it belongs in the
+packet. Classified C1–C5 — and the classes matter more than the rows: **C2 is where the cohort
+follows the text faithfully and nothing protects the field**, and **C3 is where the three
+disagree with each other**, which crosses a peer boundary. Writing the register is what surfaced
+V1–V3; none of them is visible from any single finding.
+
+**Neither the register nor the V-rows is gated, and that is stated in both files.** Their inputs
+are three sibling repos, so they go stale with our tree untouched — the `driftclaim` class
+exactly (D15). Re-read the source before quoting a row.
+
 **Status:** pinned at `v0.8.2`; the live spec is **0.8.2.11** and `make specdrift` reports
 **9 of 30 cited sections moved**. Eight of the nine are additive clarification no model
 contradicts; **§4.7 is the exception** — `connection_sequence_error` moved 400 → 409 and
@@ -337,6 +360,56 @@ three `UNDECLARED_GATE` failures naming each declaration, and the grader printed
 refusal: re-declaring the new axiom set is how this gate would come to assert nothing. **A
 proof arriving is a diff, exactly as a proof breaking is** — the asymmetry is easy to build in
 by accident, because only one of the two feels like a failure.
+
+*Seventh instance, 2026-09-08 — asked of A SIBLING REPO'S VALIDATION SURFACE, and both halves
+of D13 fired.* The fourth instance's transferable line was **"a gate a sibling repo says it has
+is a gate you have not checked."** Applied it to the cross-impl test vectors the three extension
+specs are conformance-tested against, and found two things.
+
+**(a) The validation surface is STRANDED, not absent — and the first draft of this paragraph got
+it wrong.** `VALIDATION-MATRIX-IDENTITY-FOUNDATIONS.md` is cited **20 times across 13 documents**
+in `entity-system-architecture` — seven of them normative specs, one citation inside
+`EXTENSION-ATTESTATION` §9's **conformance clause** — and `git log --all --diff-filter=AD` on the
+path is empty in that repo. **From which this repo concluded, and published in five places, that
+the file "has never existed." It exists**, in the archived pre-split architecture tree,
+under the v7.0 core-revision reviews,
+377 lines and **136 TV IDs** — including every vector we said was "defined nowhere," and
+helper-level rows (`TV-F5`, `TV-F6`) calling `find_live_head` directly. Corrected 2026-09-08; see
+the D15 note below, which is where the process lesson lives.
+
+**What survives the correction is larger than what it replaces.** Architecture had already found
+this (`REVIEW-2026-08-11-identity-pre-rotation-first-pass.md` §3) and **ruled** it
+(`ROUTING-2026-08-11-c` §2); it is their named **cited-but-absent** class, whose first instance —
+`system/peer/published-root`, definition stranded in the same archive — was routed and folded in
+August; and their designed remedy, the **Q4 corpus-scoped linter that fails legacy-tree hits**, is
+unbuilt. What this repo can add is the **cost**, which nobody had measured: `TV-IF19` is §9.2's
+controller-confinement vector and **no implementation enforces §9.2**; `TV-IF13` is quorum-publish
+caching and is exactly where the cohort split three ways. And **`PROPOSAL-IDENTITY-V3.2-MIGRATION-
+FIXES.md`** — the ratification record Rust cites by name for its conformance posture — is likewise
+in the archive, **uncited by the active corpus**, and is the common origin of F1's residue (SI-2),
+F4/Q4's two undefined helpers, and F3's `as_of` MUST. **A stranded derivation keeps producing
+defects in the corpus that survived it.**
+
+**(b) The vector that DOES exist asserts a symptom.** Asked D13's own question — *what does this
+assert, and what else satisfies it?* — of `ATTEST` TV-A4 (`A → A' → A''`, all live, expect
+`A''`). It passes, and our routed F1 says `find_live_head` **cannot traverse a chain of three**.
+Both are true: §5.1's head-resolution step is an identity map, so the vector exercises the
+composite and the composite is correct because the liveness filter already did the work. **What
+else satisfies TV-A4: a broken component whose defect is cancelled by its caller.** **Where a spec
+defines a helper as a named normative algorithm, a vector over the composite that consumes it
+asserts nothing about the helper.** Routed in
+`docs/status/ROUTING-2026-09-08-VALIDATION-SURFACE.md`.
+
+*Also corrected 2026-09-08:* this paragraph claimed TV-A4 "shaped three divergent walk
+implementations" and left it there. **`TV-A4a`–`TV-A4d` exist, are behavioral, and pass in all
+three peers** — Go drives all four over the wire (`cmd/internal/validate/behavioral_v33.go`),
+Rust tests them at `extensions/attestation/src/tests.rs`. The cohort did the work. The divergence
+is in *how* they walk, not in whether the transitive case is covered, and the helper-level rows
+that would pin it were written and stranded rather than never designed.
+
+The transferable piece, and it is why this is D13 rather than a bug report: **a test vector is a
+grader, and every question this discipline asks of our own graders applies to someone else's.**
+We had been reading TV rows as ground truth for three tracks.
 
 *Sixth instance, 2026-09-07 — and it is about a gate table meaning TWO things.* The
 attestation chain-walk model produces rows that **must be violated on a model where nothing is
@@ -588,6 +661,35 @@ that were kept (§6.0b, §6.0c) look like the same shape and are not — the cla
 validates this" is modeled as a constant there. `docs/COVERAGE-MATRIX.md` §3e names all eleven
 and says which way each went. The gate is worth having and the discipline still does work the
 gate does not; do not let a green `coverage` stand in for reading your own citations.
+
+*Ninth shape, 2026-09-08 — the input set of a PROVEN NEGATIVE, and it is the most expensive one
+yet because the claim was published as a finding.* `AGENTS-STANDARD.md` says *"prove a negative
+before you claim it — run an exhaustive named search and `git log --since`."* V1 did exactly that:
+name search, `*MATRIX*` search, `git ls-files`, `git log --all --diff-filter=AD`, all clean, and
+published **"the file has never existed"** in five places. **Every command was correct and the
+input set was one repository.** The file is in the pre-split archive of that repository's
+architecture tree, with 136 TV IDs — *including the three vector IDs the note asserted were
+"defined nowhere."*
+
+Three things make this worth the space. **The pointer was in hand and read backwards:**
+`docs/LEGACY-ARCHIVE-INDEX.md` was cited by the note as evidence of absence ("indexes it as an
+existing document"), and that file is a **title index OF the archive** whose own header says to
+grep it before writing *"this is new to us."* A hit in an archive index is a location, not a
+symptom. **The class was already known upstream and ruled** — same corpus, same month, same
+`cited-but-absent` name — so the finding was not new, and *"has this already been found"* is part
+of proving a negative about someone else's tree. And **the same bug recurred inside the
+correction**: the first re-audit pass searched the archive with a wrong relative path, returned
+zero hits for six terms, and would have "confirmed" our findings had a control not been run. **Run
+a term you KNOW is present before believing a zero.**
+
+*Enforcement, such as it is:* no gate — the input lives in two trees outside this repo, the
+`driftclaim` class. What is enforceable is the checklist, and it is written here rather than in a
+tool: a negative about the ecosystem's design corpus is not proven until the **pre-split archive**
+has been searched full-text, `docs/LEGACY-ARCHIVE-INDEX.md` has been grepped, the owning repo's
+own `docs/status/` and `reviews/` have been searched for a prior ruling, and a **positive control
+term** has been run against every tree searched. Not numbered: this is D15's mechanism — *what is
+the input set, and what else produces this result* — in a ninth medium, and the standing rule
+holds. Full correction and the reframed ask: `docs/status/ROUTING-2026-09-08-VALIDATION-SURFACE.md`.
 
 *And the corollary held for a fifth consecutive session, twice in one module.*
 `IdentityRecovery`'s `RecoveryIdempotent` first read "two deliveries, one verdict" and the GREEN

@@ -1215,6 +1215,57 @@ item 4.
     Dolev-Yao gap counted once per track — deliberately not merged, so its growth is visible.
     Read all three extension tracks as defect reports, not as assurance.
 
+    **CONSOLIDATION PASS 2026-09-08 — and it found three defects in the VALIDATION machinery
+    rather than in any spec's design.** Writing a consolidated register of what
+    `entity-core-{go,rust,py}` actually do (`docs/status/CONFORMANCE-DIVERGENCE-REGISTER.md`,
+    D1–D14, classified C1–C5) surfaced a category that had been evidence-only:
+    **an implementation divergence is a measurement of where the specification failed to
+    converge three independent authors**, and every one of ours was buried inside a spec
+    finding's Impact section rather than tracked in its own right. Three things fell out, routed
+    together in `docs/status/ROUTING-2026-09-08-VALIDATION-SURFACE.md`:
+
+    > **V1 WAS WRONG AND WAS REWRITTEN THE SAME DAY, before anything was filed.** It said the
+    > matrix "has never existed." **It exists** — pre-split archive, 377 lines, **136 TV IDs**,
+    > including the three vector IDs V1 called "defined nowhere" — and architecture had already
+    > found and ruled on the problem on **2026-08-11**. Every search command was correct; the
+    > **input set was one repository**. `AGENTS.md` **D15 ninth shape** carries the process
+    > lesson and the checklist. The corrected finding is *stranded, not absent*, and is stronger.
+
+    - **V1. A 136-vector cross-impl matrix is stranded in the pre-split archive.** Cited **20
+      times across 13 documents** in `entity-system-architecture`, seven of them normative specs
+      — including inside `EXTENSION-ATTESTATION` §9's **conformance clause**, which requires
+      passing vectors "per" it — and the path resolves in **neither** the active corpus nor any
+      implementation's checkout. This is architecture's own **`cited-but-absent`** class, third
+      confirmed instance after `published-root` and `§3.3a`; their **Q4 corpus-scoped linter**,
+      which is scoped to fail exactly on legacy-tree hits, is filed and **unbuilt**.
+    - **V1a. `PROPOSAL-IDENTITY-V3.2-MIGRATION-FIXES.md` is archive-only and cited by no active
+      document** — yet `entity-core-rust` names it as the ratification authority for its
+      conformance posture, and it is the **common origin of F1, F4/Q4 and F3**. SI-2 rewrote
+      §4.3 transitively and left §5.3 filtering on the new predicate (**F1**), introduced
+      `not_expired` and `is_self_revoked` without defining either (**F4/Q4**), and SI-16 made
+      `as_of` a normative MUST on a parameter §5.3 does not define (**F3**). **A stranded
+      derivation keeps producing defects in the corpus that survived it.**
+    - **V2. `EXTENSION-IDENTITY` carries ZERO inline test vectors**, against 16 in attestation
+      and 15 in quorum. Its ~24 vectors **were written and did not cross the split** — and two
+      land on our register by name: **`TV-IF19` is §9.2's controller-confinement vector**, which
+      **D7 measures as implemented by nobody**, and **`TV-IF13` is quorum-publish caching**,
+      which is **exactly where D9 splits the cohort three ways**. The correlation now has a
+      mechanism; still not a controlled experiment.
+    - **V3. `ATTEST` TV-A4 passes while `find_live_head` is broken.** §5.1's head-resolution
+      step is an identity map, so the vector exercises the composite and the composite is right
+      because the liveness filter already did the work. D13's own question asked of someone
+      else's grader — *what else satisfies it?* — answers: **a broken component whose defect
+      is cancelled by its caller.** A vector over a composite asserts nothing about a helper the
+      spec defines as a named normative algorithm — and the **helper-level rows exist**
+      (`TV-F5`, `TV-F6` call `find_live_head` directly), stranded with the rest.
+      *(Corrected: the first draft said TV-A4 "shaped three divergent walk implementations" and
+      stopped. `TV-A4a`–`TV-A4d` exist and pass in all three peers, Go over the wire in
+      `cmd/internal/validate/behavioral_v33.go`. The cohort did the work.)*
+
+    **Nothing has been filed upstream.** `docs/status/FINDINGS-INDEX.md` is now the single index
+    over all four categories — spec defects, validation-surface defects, implementation
+    divergences, and our own open work — and it is what a handoff should start from.
+
 13. **~~Vacuity, the last of it.~~ DONE 2026-09-06 — no thin positive remains.**
     `Register`'s correct-model atomicity was near-tautological because the five §6.2 writes
     landed in **one assignment**: `tree[h] \in {{}, FACETS}` restated the assignment and could
@@ -1282,3 +1333,35 @@ item 4.
     What it does **not** assert, stated in the tool: that the prose *around* the anchor
     describes the drift correctly, and that no undeclared site says otherwise. Same
     acknowledged hole as `runcount`'s.
+
+15. **Six canonical documents cite `docs/status/` paths, which are never published.**
+    *Measured 2026-09-08, not fixed — the fix is a publishing-policy call rather than an edit.*
+    [ADR-0031] is explicit that a published file is addressed to a reader outside this ecosystem
+    and that **internal paths do not belong in a file you declare canonical**. `docs/status/` is
+    never published. Yet **28 citations across 6 of the 25 declared canonical docs** point there:
+
+    | Doc | Citations | Distinct targets |
+    |---|---|---|
+    | `docs/STATUS.md` | 11 | 8 |
+    | `AGENTS.md` | 10 | 7 |
+    | `TRACKS.toml` | 4 | 4 |
+    | `README.md` | 1 | 1 |
+    | `docs/PROPERTIES.md` | 1 | 1 |
+    | `docs/LEAN-SEAM.md` | 1 | 1 |
+
+    A public reader following any of them gets nothing. **Pre-existing and long-standing** — this
+    is not damage from the extension work, though that work added to it.
+
+    **Why it is tracked rather than fixed.** There is a real tension the repo has not resolved.
+    `docs/STATUS.md` is simultaneously the rolling canonical log *and* this repo's working
+    notebook, and its citations to routing notes are what make it usable internally. Stripping
+    them makes the internal artifact worse to serve an external reader who may be better served
+    by a sentence than by a link. Three defensible resolutions and none of them is obviously
+    right: (a) replace each path with a description ("the routed attestation findings"), (b)
+    undeclare `docs/STATUS.md` from `CANONICAL-DOCS.toml` and publish a thinner overview, (c)
+    decide the citations are acceptable because a name is informative even when the file is not
+    reachable, and write that decision down.
+
+    **No gate covers this.** `spec-tool pins` is scoped to commit-SHA citations and does not look
+    at paths. If (a) or (b) is chosen, a gate is a ten-line addition to `tools/` and should land
+    with it — otherwise it regrows, which is the D14 shape.
