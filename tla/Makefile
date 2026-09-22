@@ -24,8 +24,15 @@ SPEC         ?= Reentry
 # (e.g. the bug variant: make tlc SPEC=Reentry CFG=ReentryBug).
 CFG          ?= $(SPEC)
 PODMAN       ?= podman
-# :Z relabels the bind mount for SELinux (Fedora). Drop to :z if shared across containers.
-MOUNT        := -v $(CURDIR):/work:Z -w /work
+# SELinux relabel for the bind mount (Fedora host). MUST be lowercase :z, because this
+# directory IS shared across containers: RUN uses $(IMAGE) (entity-tla/TLC) and APRUN uses
+# $(APIMAGE) (entity-apalache) over the SAME mount. Uppercase :Z relabels the volume PRIVATE
+# to one container, so the second image's relabel invalidates the first's and Apalache fails
+# mid-sweep with "Configuration error: Could not find or create directory: /work/_apalache-out/
+# <spec>.tla" — a flake that reads like a model error and is not one. Found 2026-08-30 when it
+# broke `make matrix` twice at different rows; the line above this one already said "Drop to :z
+# if shared across containers" and the condition had been true since Apalache was added.
+MOUNT        := -v $(CURDIR):/work:z -w /work
 RUN          := $(PODMAN) run --rm $(PODMAN_RUN_CAPS) $(MOUNT) $(IMAGE)
 # tla2tools workers: bound for a laptop; raise for bigger state spaces.
 WORKERS      ?= 4
@@ -86,6 +93,8 @@ TLC_GREEN := Reentry Conn Store Revoke Emit Register Core Authority Bounds \
 # BROKEN CONFIG satisfies reintroduces exactly the vacuity it was added to rule out.
 TLC_WITNESS := \
   "Reentry|ReentryWitness|Invariant WitnessBothComplete is violated" \
+  "Reentry|ReentryWitness3|Invariant WitnessBothComplete is violated" \
+  "Core|CoreWitness3|Invariant WitnessExchangeComplete is violated" \
   "Store|StoreWitness|Invariant WitnessStoreLive is violated" \
   "Conn|ConnWitness|Invariant WitnessDispatched is violated" \
   "Revoke|RevokeWitness|Invariant WitnessRevocationObserved is violated" \
@@ -110,6 +119,9 @@ TLC_WITNESS := \
 TLC_NEG := \
   "Reentry|ReentryBug|Deadlock reached" \
   "Reentry|ReentryFrameBug|Invariant FramesNotInterleaved is violated" \
+  "Reentry|ReentryBug3|Deadlock reached" \
+  "Core|CoreBug3|Deadlock reached" \
+  "Reentry|ReentryFrameBug3|Invariant FramesNotInterleaved is violated" \
   "Store|StoreRaceBug|Invariant StoreRaceFree is violated" \
   "Store|StoreAdmitBug|Invariant ResourceBounded is violated" \
   "Store|StoreRefcountBug|Invariant NoUseAfterFree is violated" \
@@ -146,13 +158,58 @@ TLC_NEG := \
   "Bootstrap|BootstrapConnectBug|Invariant ConnectPreAuthorized is violated"
 
 .PHONY: tlc-green apalache-green green tlc-witness tlc-neg
+# D13 applied to the GREEN sweep, not only to the controls. This target used to grade on
+# TLC's EXIT STATUS alone (`|| exit 1`). TLC exits 0 for "no error found" and also for runs
+# that checked far less than intended, so exit status is a symptom of success, not the
+# assertion of it. Every green row now additionally requires TLC's positive completion line.
+TLC_OK := Model checking completed. No error has been found.
+
+# ...and the completion line is NOT sufficient on its own. Asked D13's question of it: what
+# else produces "No error has been found"? A cfg that declares NO INVARIANT and NO PROPERTY.
+# TLC enumerates the state space, checks nothing, exits 0 and prints exactly that line. So
+# each green row must ALSO be shown to assert something: its cfg declares at least one
+# INVARIANT or PROPERTY. That is a check on the CONFIG, not on the output, because no output
+# distinguishes "verified everything" from "verified nothing" here.
+tlc_asserts = grep -qE '^[[:space:]]*(INVARIANT|PROPERTY)' $(1).cfg || { \
+	    echo "FAIL: $(1).cfg declares no INVARIANT and no PROPERTY — it checks NOTHING,"; \
+	    echo "      and TLC reports that outcome with the same line as a real green run."; \
+	    exit 1; }
+
+# Green rows whose CFG name differs from the module name (module|cfg). The scalar TLC_GREEN
+# list above assumes cfg == module; these are the N-peer variants, which share one module.
+TLC_GREEN_PAIRS := \
+  "Reentry|Reentry3" \
+  "Core|Core3"
+
 tlc-green:
 	@for s in $(TLC_GREEN); do \
-	  echo "== TLC $$s =="; \
-	  $(RUN) tlc2.TLC -workers $(WORKERS) -config $$s.cfg $$s.tla || exit 1; \
+	  echo "== TLC $$s (MUST report: $(TLC_OK)) =="; \
+	  $(call tlc_asserts,$$s); \
+	  out=$$($(RUN) tlc2.TLC -workers $(WORKERS) -config $$s.cfg $$s.tla 2>&1) || { \
+	    echo "$$out" | grep -E '^Error:' | head -5; exit 1; }; \
+	  echo "$$out" | grep -qF "$(TLC_OK)" || { \
+	    echo "FAIL: $$s exited 0 but never reported completion — it did not verify what it claims."; \
+	    echo "$$out" | tail -5; exit 1; }; \
+	  echo "   ok (No error has been found)"; \
+	done
+	@for row in $(TLC_GREEN_PAIRS); do \
+	  mod=$$(echo "$$row" | cut -d'|' -f1); cfg=$$(echo "$$row" | cut -d'|' -f2); \
+	  echo "== TLC $$mod/$$cfg (MUST report: $(TLC_OK)) =="; \
+	  $(call tlc_asserts,$$cfg); \
+	  out=$$($(RUN) tlc2.TLC -workers $(WORKERS) -config $$cfg.cfg $$mod.tla 2>&1) || { \
+	    echo "$$out" | grep -E '^Error:' | head -5; exit 1; }; \
+	  echo "$$out" | grep -qF "$(TLC_OK)" || { \
+	    echo "FAIL: $$cfg exited 0 but never reported completion."; \
+	    echo "$$out" | tail -5; exit 1; }; \
+	  echo "   ok (No error has been found)"; \
 	done
 	@echo "== TLC Store (liveness slice, StoreLive.cfg) =="
-	@$(RUN) tlc2.TLC -workers $(WORKERS) -config StoreLive.cfg Store.tla || exit 1
+	@$(call tlc_asserts,StoreLive); \
+	  out=$$($(RUN) tlc2.TLC -workers $(WORKERS) -config StoreLive.cfg Store.tla 2>&1) || { \
+	  echo "$$out" | grep -E '^Error:' | head -5; exit 1; }; \
+	  echo "$$out" | grep -qF "$(TLC_OK)" || { \
+	    echo "FAIL: StoreLive exited 0 but never reported completion."; exit 1; }; \
+	  echo "   ok (No error has been found)"
 
 # Each witness MUST be violated, AND MUST BE VIOLATED FOR THE DECLARED REASON. Both halves
 # matter: a clean run means the witnessed state became unreachable (the model went inert); a
@@ -221,6 +278,7 @@ APALACHE_GREEN := \
   "EmitApalache   ConstInitOK InvType IndInitType" \
   "RegisterApalache ConstInitOK Inv IndInit" \
   "ReentryApalache ConstInitOK InvFrame IndInitFrame" \
+  "ReentryApalache ConstInitOK3 InvFrame IndInitFrame" \
   "AuthorityApalache ConstInitOK InvGrantless IndInitGrantless" \
   "AuthorityApalache ConstInitOK InvEntry IndInitEntry" \
   "AuthorityApalache ConstInitOK InvResource IndInitResource" \
@@ -229,6 +287,7 @@ APALACHE_GREEN := \
   "BoundsApalache ConstInitOK InvCount IndInitCount" \
   "BoundsApalache ConstInitOK InvCodes IndInitCodes" \
   "CoreApalache ConstInitOK InvComposed IndInitComposed" \
+  "CoreApalache ConstInitOK3 InvComposed IndInitComposed" \
   "ConnCodesApalache ConstInitOK ReasonCodesDistinct IndInit" \
   "ConnCodesApalache ConstInitOK StatusMatchesCode IndInit" \
   "BootstrapApalache ConstInitOK InvAllOrNothing IndInitAllOrNothing" \
@@ -253,6 +312,7 @@ APALACHE_NEG := \
   "StoreApalache ConstInitBugAdmit ResourceBounded Init     8" \
   "StoreApalache ConstInitBugRefs  InvUAFPlain  Init        8" \
   "ReentryApalache ConstInitBugFrame FramesNotInterleaved Init 8" \
+  "ReentryApalache ConstInitBugFrame3 FramesNotInterleaved Init 8" \
   "AuthorityApalache ConstInitBugAllow   NoGrantlessAllow         Init 6" \
   "AuthorityApalache ConstInitBugDeny    EntryNotSpuriouslyDenied Init 6" \
   "AuthorityApalache ConstInitBugSubGate ResourceAuthorized       Init 6" \
@@ -262,6 +322,7 @@ APALACHE_NEG := \
   "BoundsApalache ConstInitBugDouble TtlNotDoubleCounted Init 4" \
   "BoundsApalache ConstInitBugCode   ReasonCodesDistinct Init 6" \
   "CoreApalache ConstInitBugFrame  FramesNotInterleaved     Init 8" \
+  "CoreApalache ConstInitBugFrame3 FramesNotInterleaved     Init 8" \
   "CoreApalache ConstInitBugEstab  DispatchNeedsEstablished Init 6" \
   "CoreApalache ConstInitBugRevoke NoServeWhenRevoked       Init 8" \
   "ConnCodesApalache ConstInitBugCollapse ReasonCodesDistinct Init 6" \

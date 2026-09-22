@@ -22,7 +22,10 @@ PV_IMAGE  ?= entity-proverif
 TM_IMAGE  ?= entity-tamarin
 THEORY    ?= Unforge
 PODMAN    ?= podman
-MOUNT     := -v $(CURDIR):/work:Z -w /work
+# Lowercase :z — this mount is shared across TWO images (PV_RUN = $(PV_IMAGE), TM_RUN =
+# $(TM_IMAGE)). Uppercase :Z relabels it private to one container and the other's relabel
+# then invalidates it. Same defect as tla/Makefile; see the note there.
+MOUNT     := -v $(CURDIR):/work:z -w /work
 PV_RUN    := $(PODMAN) run --rm $(PODMAN_RUN_CAPS) $(MOUNT) $(PV_IMAGE)
 TM_RUN    := $(PODMAN) run --rm $(PODMAN_RUN_CAPS) $(MOUNT) $(TM_IMAGE)
 

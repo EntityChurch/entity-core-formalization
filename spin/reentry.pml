@@ -31,37 +31,48 @@
  * exactly as in the TLA+ model — this checks the protocol AROUND the verdict.
  */
 
+/* NUMBER OF PEERS. Was hard-wired to 2 (`#define other(p) (1 - p)`), which is not a low
+ * bound but the assertion that every peer has exactly one counterparty AND that the peer a
+ * client dispatches to is the peer whose request its server answers. Those coincide iff
+ * NPEERS == 2. Dispatch topology is a directed ring, matching tla/Reentry.tla; see that
+ * module's THE PEER BOUND block for the full statement and the D11 topology boundary. */
+#ifndef NPEERS
+  #define NPEERS 2
+#endif
 #define A 0
 #define B 1
-#define other(p)  (1 - p)
+#define succ(p)  ((p + 1) % NPEERS)              /* the peer p's client dispatches TO   */
+#define pred(p)  ((p + NPEERS - 1) % NPEERS)     /* the peer whose request p's server answers */
 
 /* Per-peer pooled-connection write lock (§6.11(a)/(a′)). Tracks the OWNER, not just a free
  * bit, because a writer must release only a lock it actually holds — under the fix the
  * client releases at end-of-frame, so by the time its response arrives the lock may belong
  * to this peer's own server, mid-frame. 0 = free, 1 = client, 2 = server. */
-byte wlock[2] = 0;
+byte wlock[NPEERS] = 0;
 #define WFREE   0
 #define WCLIENT 1
 #define WSERVER 2
-bool inReq[2]    = false;   /* an inbound request awaits peer p's server */
-bool resp[2]     = false;   /* a response has been delivered back to peer p's client */
-byte store[2]    = 0;       /* §4.8 live-key store count a handler has written */
-byte cstate[2]   = 0;       /* client: 0=init 1=sent 2=done */
-byte sstate[2]   = 0;       /* server: 0=idle 1=serving 2=done */
+bool inReq[NPEERS] = false;   /* an inbound request awaits peer p's server */
+bool resp[NPEERS]  = false;   /* a response has been delivered back to peer p's client */
+byte store[NPEERS] = 0;       /* §4.8 live-key store count a handler has written */
+byte cstate[NPEERS] = 0;       /* client: 0=init 1=sent 2=done */
+byte sstate[NPEERS] = 0;       /* server: 0=idle 1=serving 2=done */
 
 /* §6.11(a′): how many writers currently hold a PARTIALLY WRITTEN frame on peer p's
  * connection. A writer is counted between its first and last chunk. */
-byte midframe[2] = 0;
+byte midframe[NPEERS] = 0;
 /* §6.11(a′) violation flag, latched — the corruption is not undone by finishing the
  * frame. Set when a writer begins or ends a frame while another writer is mid-frame. */
 bool interleaved = false;
 
 
 /* LTL predicates (§4.9(a) — every admitted request eventually resolves) */
-#define sentA  (cstate[A] == 1)
-#define doneA  (cstate[A] == 2)
-#define sentB  (cstate[B] == 1)
-#define doneB  (cstate[B] == 2)
+#define sent(p)  (cstate[p] == 1)
+#define done(p)  (cstate[p] == 2)
+#define sentA  sent(0)
+#define doneA  done(0)
+#define sentB  sent(1)
+#define doneB  done(1)
 
 /* Client(p): originate an EXECUTE to other(p), await the correlated response. */
 proctype client(byte p) {
@@ -84,7 +95,7 @@ proctype client(byte p) {
        :: else -> skip
     fi;
     midframe[p]--;
-    inReq[other(p)] = true;      /* the complete frame reaches the peer's server */
+    inReq[succ(p)] = true;       /* the complete frame reaches succ(p)'s server */
     cstate[p] = 1;               /* sent */
     /* END OF FRAME — release here. This is the (a′)-conformant hold duration.
      * SERIALIZED defect (§6.11(a) violated): keep holding it across the recv. */
@@ -137,7 +148,7 @@ proctype server(byte q) {
        :: else -> skip
     fi;
     midframe[q]--;
-    resp[other(q)] = true;       /* respond to the requesting client */
+    resp[pred(q)] = true;        /* respond to the REQUESTER (pred), not to our own target */
     sstate[q] = 2;               /* done */
 #ifndef NOATOMICFRAME
     wlock[q] = WFREE;            /* END OF FRAME */
@@ -152,9 +163,12 @@ proctype server(byte q) {
  * analog of the TLA+ check (gate verdict abstracted true). */
 
 init {
+  byte i = 0;
   atomic {
-    run client(A); run client(B);
-    run server(A); run server(B);
+    do
+    :: i < NPEERS -> run client(i); run server(i); i++
+    :: else -> break
+    od
   }
 }
 
@@ -162,4 +176,10 @@ init {
  * property nothing else in the assurance stack proves. Needs weak fairness (pan -f).
  * Holds in the fix; in the SERIALIZED defect the deadlock makes it FAIL (and pan also
  * reports the invalid end state). Mirrors TLA+ EventuallyResolved. */
-ltl resolve { [] ((sentA -> <> doneA) && (sentB -> <> doneB)) }
+/* Promela has no quantifier in an LTL claim, so the conjunction is written out per peer
+ * and selected by NPEERS at preprocess time. */
+#if NPEERS == 2
+ltl resolve { [] ((sent(0) -> <> done(0)) && (sent(1) -> <> done(1))) }
+#else
+ltl resolve { [] ((sent(0) -> <> done(0)) && (sent(1) -> <> done(1)) && (sent(2) -> <> done(2))) }
+#endif

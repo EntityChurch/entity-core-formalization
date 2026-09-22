@@ -32,26 +32,34 @@ CONSTANTS
   \* @type: Bool;
   Serialized,   \* TRUE = §6.11(a) defect: hold the write lock across the send+recv cycle
   \* @type: Bool;
-  AtomicFrame   \* TRUE = §6.11(a′): the write lock is held for one frame's bytes
+  AtomicFrame,  \* TRUE = §6.11(a′): the write lock is held for one frame's bytes
+  \* @type: Int;
+  N             \* NUMBER OF PEERS — was hard-wired to 2. See Reentry.tla §THE PEER BOUND.
 
-Peers == {"A", "B"}
-\* @type: Str => Str;
-Other(p) == IF p = "A" THEN "B" ELSE "A"
+\* Peers are INTEGERS, matching Reentry.tla: the dispatch topology is a directed ring, and
+\* `Other(p) == IF p = "A" THEN "B" ELSE "A"` was not a low bound but the assertion that every
+\* peer has exactly one counterparty. It also CONFLATED two peers — the one a peer dispatches
+\* to (Succ) and the one whose request it answers (Pred) — which coincide iff N = 2.
+Peers == 1..N
+\* @type: Int => Int;
+Succ(p) == IF p = N THEN 1 ELSE p + 1
+\* @type: Int => Int;
+Pred(p) == IF p = 1 THEN N ELSE p - 1
 
 VARIABLES
-  \* @type: Str -> Str;
+  \* @type: Int -> Str;
   wlock,        \* §6.11(a)/(a′) per-connection write lock: "free" | "client" | "server"
-  \* @type: Str -> Set(Str);
+  \* @type: Int -> Set(Str);
   midframe,     \* §6.11(a′) who holds a partially-written frame on peer p's connection
   \* @type: Bool;
   interleaved,  \* §6.11(a′) latched violation flag
-  \* @type: Str -> Str;
+  \* @type: Int -> Str;
   cphase,       \* client lifecycle: "init" | "midframe" | "sent" | "done"
-  \* @type: Str -> Str;
+  \* @type: Int -> Str;
   sphase,       \* server lifecycle: "idle" | "serving" | "midframe" | "done"
-  \* @type: Str -> Bool;
+  \* @type: Int -> Bool;
   inReq,        \* an inbound request awaits peer p's server
-  \* @type: Str -> Bool;
+  \* @type: Int -> Bool;
   resp          \* a response has been routed back to peer p's client
 
 vars == << wlock, midframe, interleaved, cphase, sphase, inReq, resp >>
@@ -113,7 +121,7 @@ CFrame2(p) ==
   /\ cphase[p] = "midframe"
   /\ interleaved' = (interleaved \/ midframe[p] # {"client"})
   /\ midframe' = [midframe EXCEPT ![p] = @ \ {"client"}]
-  /\ inReq' = [inReq EXCEPT ![Other(p)] = TRUE]
+  /\ inReq' = [inReq EXCEPT ![Succ(p)] = TRUE]
   /\ cphase' = [cphase EXCEPT ![p] = "sent"]
   /\ wlock' = [wlock EXCEPT ![p] = IF Serialized THEN "client" ELSE "free"]
   /\ UNCHANGED << sphase, resp >>
@@ -150,7 +158,7 @@ SFrame2(p) ==
   /\ sphase[p] = "midframe"
   /\ interleaved' = (interleaved \/ midframe[p] # {"server"})
   /\ midframe' = [midframe EXCEPT ![p] = @ \ {"server"}]
-  /\ resp' = [resp EXCEPT ![Other(p)] = TRUE]
+  /\ resp' = [resp EXCEPT ![Pred(p)] = TRUE]
   /\ sphase' = [sphase EXCEPT ![p] = "done"]
   /\ wlock' = [wlock EXCEPT ![p] = "free"]
   /\ UNCHANGED << cphase, inReq >>
@@ -165,11 +173,17 @@ IndInitFrame == TypeOK /\ FrameSound /\ FramesNotInterleaved
 
 \* ----- constant inits -----
 \* The §6.11 fix: concurrent dispatch (a) AND per-frame write serialization (a′).
-ConstInitOK        == Serialized = FALSE /\ AtomicFrame = TRUE
+ConstInitOK        == Serialized = FALSE /\ AtomicFrame = TRUE /\ N = 2
 \* NEG CONTROL: (a′) dropped — a yielding write primitive. Frames interleave.
-ConstInitBugFrame  == Serialized = FALSE /\ AtomicFrame = FALSE
+ConstInitBugFrame  == Serialized = FALSE /\ AtomicFrame = FALSE /\ N = 2
+
+\* The same two at THREE peers. This is what makes the N=3 result in Reentry.tla more than a
+\* bounded check: TLC enumerates every 3-peer interleaving, Apalache proves FramesNotInterleaved
+\* INDUCTIVE at N=3 — no execution of any length interleaves two frames' bytes on a 3-ring.
+ConstInitOK3       == Serialized = FALSE /\ AtomicFrame = TRUE  /\ N = 3
+ConstInitBugFrame3 == Serialized = FALSE /\ AtomicFrame = FALSE /\ N = 3
 \* The (a) defect holds the lock across recv. SAFETY still holds here — over-holding the lock
 \* is byte-safe — which is why this control belongs to the LIVENESS side (TLC/Spin) and is
 \* listed here only to make that split explicit rather than silent.
-ConstInitSerialized == Serialized = TRUE /\ AtomicFrame = TRUE
+ConstInitSerialized == Serialized = TRUE /\ AtomicFrame = TRUE /\ N = 2
 ====

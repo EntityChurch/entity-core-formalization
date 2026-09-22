@@ -67,7 +67,7 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
   no `validate-peer` probe for the input. Routed to `entity-core-protocol`; full statement in
   `docs/PROPERTIES.md` §D.1, routing packet in
   `docs/status/ROUTING-2026-08-30-PREHELLO-AUTHENTICATE.md`.
-- **The full matrix is 238 runs** and `make matrix` is the gate: **green** (does every
+- **The full matrix is 258 runs** and `make matrix` is the gate: **green** (does every
   property hold?) + **negative controls** (could it have failed?) + **witnesses** (does the
   model do anything?). Green alone answers only the first question, which is why `make
   check` now says so out loud. `make coverage` runs first and checks the coverage *claim*
@@ -79,16 +79,16 @@ normative surface 0.8.1/0.8.2 added was modeled, and `spec-data/MODELING-PIN` mo
 
 | slice | runs |
 |---|---|
-| TLC green (11 modules + Store liveness slice) | 12 |
-| TLC negative controls | 36 |
-| TLC non-vacuity witnesses | 11 |
-| Apalache inductive (23 invariants × base+step) | 46 |
-| Apalache negative controls | 21 |
-| Spin green (7 × safety+LTL, 4 safety-only) | 18 |
-| Spin negative controls | 35 |
+| TLC green (11 modules + Store liveness slice + `Reentry3` + `Core3`) | 14 |
+| TLC negative controls | 39 |
+| TLC non-vacuity witnesses | 13 |
+| Apalache inductive (23 invariants × base+step, + 2 at N=3) | 50 |
+| Apalache negative controls | 23 |
+| Spin green (7 × safety+LTL, 4 safety-only, 2 × safety+LTL at N=3) | 22 |
+| Spin negative controls | 38 |
 | ProVerif (15 green + 15 controls) | 30 |
 | Tamarin (14 green + 15 controls) | 29 |
-| **total** | **238** |
+| **total** | **258** |
 
 **Section-by-section coverage, per-engine, with every limit stated:
 `docs/COVERAGE-MATRIX.md`** — the document to send a new reader to. Headline: **28 of 85
@@ -353,13 +353,60 @@ item 4.
      3-cycle is a deadlock class two peers cannot make**, and whether §4.8's per-connection
      invariant composes around a cycle of connections is a question the models cannot
      currently ask. **That is the real prize, and it is reachable at N=3 with no new tool.**
-   **Revised order:** restructure `Reentry` for a peer-indexed request target (N stays a
-   `CONSTANT`; N=2 must reproduce today's results byte-for-byte — that equivalence is the
-   regression test, and the step most likely to fail silently) → run N=3 → *then* reassess
-   **Ivy** / `mypyvy` / TLAPS for unbounded N, informed by whether N=3 found anything and by an
-   inductive invariant we will have had to write regardless. Adopting the parameterized tool
-   first would answer at the expensive end a question not yet asked at the cheap one.
-   **Still the largest single upgrade available, and still the one with the least defence.**
+   **~~Revised order: restructure `Reentry` → run N=3.~~ DONE 2026-08-30.** `Reentry.tla` now
+   takes `CONSTANT N`, dispatches on a directed ring (`Succ`/`Pred`), and `Other(p)` is gone.
+   The regression held: at N=2 both full-exploration configs reproduce the old numbers exactly
+   (green 106/62, witness 105/62); the two counterexample configs abort at first error so they
+   differ only in how much was explored before it, with identical verdicts.
+   - **Green holds at N=3** — 1229 states, 488 distinct, `NoDispatchWithoutGate` +
+     `FramesNotInterleaved` + the `EventuallyResolved` liveness property, no error.
+   - **And it is not vacuous.** `ReentryBug3` (the `Serialized` defect at N=3) reaches
+     `wlock = <<"client","client","client">>` with all three clients in `CRecv` and all three
+     servers blocked at `SFrame1` — **a three-node wait-for cycle**, a state the previous model
+     could not represent. The state space does reach 3-cycles; the fix forbids them.
+   - **`Other` was not hiding a bound, it was hiding a conflation.** The response target read
+     `resp[Other(Pof(self))]` — "answer the other peer" — which silently identifies the peer
+     this one *dispatches to* with the peer whose request it is *answering*. Those are the same
+     peer iff N=2. The binary assumption was load-bearing in the response routing, where it
+     read as an obvious truth, not in the peer set where it was visible.
+   - **No new bug.** `ReentryBug3` exhibits the *same* defect as `ReentryBug`. What is new is
+     the claim: §6.11's contract is deadlock-free against a 3-cycle, a shape two peers cannot
+     form. Before this the honest position was "we did not look."
+   - 4 new gated runs (green + 2 controls + witness), matrix 238 → 242.
+
+   **~~Cross-check the N=3 result.~~ DONE, same day — all three engines now agree at N=3.**
+   `Other(p)` is gone from every model that had it: `Reentry.tla`, `Core.tla`,
+   `ReentryApalache.tla`, `CoreApalache.tla`, `spin/reentry.pml`, `spin/core.pml`. Each takes
+   a peer count (`CONSTANT N` / `-DNPEERS`) and runs the same directed ring.
+   - **TLC** — `Core3` green (composed model, 3 peers), `CoreBug3` deadlocks, `CoreWitness3`
+     fires. At N=2, `Core` reproduces its pre-change count **exactly**: 331 distinct states,
+     verified by re-running the stashed tree rather than by assuming.
+   - **Apalache** — `FramesNotInterleaved` (Reentry) and the composed `InvComposed` (Core) are
+     both proven **inductive at N=3**: no execution of any length interleaves two frames' bytes
+     on a 3-ring, and the composed invariant holds unboundedly in steps there. Two new controls
+     confirm the N=3 configurations still have teeth.
+   - **Spin** — `reentry` and `core` re-encoded with `-DNPEERS`, safety **and** LTL green at 3,
+     three new controls firing. `core` at N=3 runs 11 processes and pan's weak-fairness
+     construction caps at `NFAIR=3` → 10, so it *aborts* rather than mis-reporting; the bound
+     is carried per-row in `SPIN_GREEN_N3` instead of being rediscovered.
+   - Matrix 242 → **258**.
+
+   **Still open, and now the honest frontier:**
+   - **The ring is one topology, not all of them** (`Reentry.tla` §TOPOLOGY BOUNDARY). One
+     outbound request per peer, one predecessor. Arbitrary dispatch graphs — a peer with
+     several counterparties, or several concurrent outbound requests — are a strictly larger
+     question and are **not** modeled. This is now the *only* structural limit left on the
+     multi-peer claim, and it is the one a reviewer should press.
+   - **N=3, not all N.** Three is the smallest number that exhibits a cycle two peers cannot
+     form; it is not a proof for arbitrary N. **Ivy** / `mypyvy` / TLAPS remain the answer for
+     that, and are now better informed: N=3 found no new defect on any of the three engines,
+     which is evidence about how much is left to find rather than a reason to stop.
+   - **`pan`'s generated C emits gcc bounds warnings** (`writing 1 byte into a region of size
+     0`) on the array-indexed models. Pre-existing and *reduced* by this work — 41 on the old
+     `core.pml` at N=2, 26 on the new one — and the `spin` gate greps `errors:` and does not
+     read gcc's output at all. D13 says a tool warning is a build failure; that rule was
+     written about verification-tool warnings, and whether it should reach the generated-C
+     compile is an open question, named here rather than quietly answered "no".
 6. **Liveness is bounded everywhere and cannot be lifted by the current toolchain.** Apalache
    does safety/induction by construction. **TLAPS** machine-checks liveness proofs (fairness,
    well-founded ordering); deadlock-freedom for `Core` proved rather than model-checked would
@@ -376,9 +423,11 @@ item 4.
    section set and count from the models and fails on any disagreement with
    `COVERAGE-MATRIX.md`, including the denominator against the pinned spec. What it still does
    **not** check: the **engine columns** of Matrix A (a citation says a model is *about* a
-   section, not which engine verifies what), and the **run counts** quoted in prose — the 238
-   in this file and the capstone is still hand-derived from the gate tables. Deriving the run
-   total the same way is the remaining half.
+   section, not which engine verifies what), and the **run counts** quoted in prose — the 242
+   in this file, `README.md`, `AGENTS.md` and the capstone is still hand-derived from the gate
+   tables. Deriving the run total the same way is the remaining half. *(It moved 238 → 242 → 258
+   across two commits on 2026-08-30 as the N=3 rows landed, and all four sites had to be
+   hand-edited each time — which is the argument, restated as a chore, twice.)*
 10. **Model the §5.10 skew tolerance `δ`.** Found while writing the seam ledger (row **O4**):
     §5.10's cross-clock temporal model makes `δ` a declared Layer-1 input *alongside* `t`, and
     states the determinism argument in terms of both. `Revoke.tla` models `t` and not `δ`. The

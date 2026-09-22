@@ -38,7 +38,14 @@ So what binds here is the honesty half of the framework:
   (`tla/Containerfile` → `entity-tla`, `tamarin/Containerfile` → `entity-tamarin`) and
   invoked through `make`; never run `java`/`curl`/`opam`/`stack` on the host even though
   Java is present. This pins the toolchain into the reproducibility envelope alongside
-  the `spec-data/` SHA-pin. Bind mounts use `:Z` (SELinux/Fedora host).
+  the `spec-data/` SHA-pin. **Bind-mount relabel flag: `:z` where a directory is shared by two
+  images (`tla/` = TLC + Apalache, `tamarin/` = ProVerif + Tamarin), `:Z` only where one image
+  owns it (`spin/`).** Uppercase `:Z` relabels a volume *private to one container*, so on a
+  shared directory the second image's relabel invalidates the first's — Apalache then dies
+  mid-sweep with `Configuration error: Could not find or create directory`, which reads like a
+  model failure and is not one. *(This line said "bind mounts use `:Z`" until 2026-08-30, and
+  `tla/Makefile` carried "drop to `:z` if shared across containers" directly above a `:Z` that
+  had been shared since Apalache was added.)*
 - `make` is the door: the root `Makefile` carries `smoke` / `check`
   (= `check-tla` + `check-spin` + `check-provers`) / `crosscheck` / `caps` / `clean`; each
   per-engine dir (`tla/`, `spin/`, `tamarin/`) has its own `image` (build the podman image)
@@ -47,8 +54,10 @@ So what binds here is the honesty half of the framework:
 - Resource caps live in `caps.mk` (included by root + sub-Makefiles); `CAP_MEM=2g`,
   no swap (`CAP_SWAP == CAP_MEM` → the container is OOM-killed cleanly at the cap instead of
   dragging the host into swap-thrash). `caps.local.mk` is gitignored (per-host overrides).
-- Run the three toolchains **serially** — concurrent `:Z` relabel races cause transient
-  "file not found." `RevokeMech.spthy` is genuinely non-terminating (excluded from the
+- Run the three toolchains **serially.** *(The reason given here used to be "concurrent `:Z`
+  relabel races cause transient file-not-found" — that was a symptom of the shared-mount flag
+  bug above, now fixed; serial execution remains the rule for resource-cap reasons.)*
+  `RevokeMech.spthy` is genuinely non-terminating (excluded from the
   matrix by design); run it standalone or skip it, and reclaim hung containers with
   `podman kill` (a `timeout podman run` only kills the client, not the detached container).
 
@@ -70,9 +79,9 @@ is the learning on-ramp; `docs/PROPERTIES.md` is the PROVEN/MODELED scorecard.
 **Status:** pinned at `v0.8.2` and `make specdrift` reports **no drift** — the models
 transcribe the live spec. Phase 0 spikes, Phase 1 (TLA+ all-Core concurrency +
 Tamarin/ProVerif active-attacker) and Phase 2 (prover surface-closure) are done. The full
-**238-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
+**258-run** `make matrix` is the gate: all 11 concurrency/structural modules checked by TLC +
 Apalache (23 inductive invariants) + Spin, both provers running every attacker theory
-(15 ProVerif / 14 Tamarin lemmas), 92 negative controls and 11 non-vacuity witnesses.
+(15 ProVerif / 14 Tamarin lemmas), 100 negative controls and 13 non-vacuity witnesses.
 No inductive invariant is deferred; no control is known-weak.
 
 Two things are new and change how you read the rest. **`docs/LEAN-SEAM.md`** is the
@@ -110,6 +119,17 @@ requires `EXITCODE: ERROR (12)`; `spin/neg` requires the declared **pan failure 
 `invalid end state` in every run) and `spin/green` an explicit `errors: 0`. Adding a run
 without adding its expected verdict fails the build — the graders reject a theory that
 declares nothing.
+
+*Third instance, 2026-08-30 — the TLA+ GREEN sweep was the one grader nobody had asked the
+question of.* `tlc-green` ran `tlc2.TLC … || exit 1`: pure exit status, the criterion D13 was
+written about, sitting in the target that produces most of the repo's positive claims. It now
+requires TLC's completion line **and** — this is the part that has teeth — that the cfg
+**declares at least one `INVARIANT` or `PROPERTY`**. Asked "what else satisfies it?": a cfg
+declaring neither. TLC enumerates the state space, checks nothing, exits **0**, and prints
+`Model checking completed. No error has been found.` verbatim. **Both** the old exit-status
+grader and the first draft of the fix scored that green — demonstrated, not reasoned about,
+by building such a cfg and running it (the D15 corollary). No output distinguishes "verified
+everything" from "verified nothing", so the assertion has to be made against the **config**.
 
 ### D14 — a finding is not closed until it is applied to every instance of its shape
 

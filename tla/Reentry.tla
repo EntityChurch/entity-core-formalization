@@ -50,17 +50,68 @@ CONSTANT AtomicFrame  \* TRUE  = V7 §6.11(a′): the per-connection write lock 
                       \*         per-frame serialization — another writer can begin a frame
                       \*         between this frame's chunks (§6.11(a′) VIOLATED).
 
-Peers       == {"A", "B"}
-Other(p)    == IF p = "A" THEN "B" ELSE "A"
+CONSTANT N  \* NUMBER OF PEERS. Was hard-wired to 2 until 2026-08-30; see THE PEER BOUND below.
+
+Peers       == 1..N
+\* The dispatch topology: a directed RING. Peer p's client dispatches to Succ(p), so peer p's
+\* server is serving a request that arrived from Pred(p) and must respond THERE.
+Succ(p)     == IF p = N THEN 1 ELSE p + 1
+Pred(p)     == IF p = 1 THEN N ELSE p - 1
 MaxLiveKeys == 2      \* V7 §4.8/§4.9(b): store bounded by live keys
 
+\* ===================================================================================
+\* THE PEER BOUND (docs/status/SCOPING-2026-08-30-PEERS-BOUND.md)
+\* ===================================================================================
+\* This module read `Peers == {"A","B"}` and `Other(p) == IF p = "A" THEN "B" ELSE "A"`
+\* through 0.8.2. `Other` is not a bound that was set low — it is the ASSERTION that every
+\* peer has exactly one counterparty and it is the other one. Under it the wait-for graph has
+\* two nodes, so the ONLY deadlock the model can express is the mutual 2-cycle, which is the
+\* Class-G shape §6.11(a) already names. A 3-cycle — A's handler waiting on B's, B's on C's,
+\* C's on A's — is a distinct deadlock class that two peers are structurally incapable of
+\* exhibiting, and no amount of state-space exploration at N=2 reaches it.
+\*
+\* WHAT `Other` WAS HIDING, precisely. The response target was `resp[Other(Pof(self))]`: a
+\* server answered "the other peer." That conflates two DIFFERENT peers — the one this peer
+\* DISPATCHES TO (Succ) and the one whose request it is ANSWERING (Pred) — which are the same
+\* peer if and only if N = 2. The binary assumption was not localized in the peer set; it was
+\* load-bearing in the response routing, where it read as an obvious truth.
+\*
+\* THE RESULT (2026-08-30, N=3). The green config — §6.11(a)+(b)+(a′) all honored — holds at
+\* three peers: 1229 states, 488 distinct, NoDispatchWithoutGate + FramesNotInterleaved +
+\* the EventuallyResolved liveness property, no error (Reentry3.cfg). It is NOT vacuous:
+\* ReentryBug3.cfg (the Serialized defect at N=3) reaches
+\*     wlock = <<"client","client","client">>  /\  cstate = <<"sent","sent","sent">>
+\*     pc    = <<"CRecv","CRecv","CRecv","SFrame1","SFrame1","SFrame1">>
+\* — all three clients blocked awaiting a response while each holds its own write lock, and
+\* all three servers blocked awaiting that lock. That is a THREE-node wait-for cycle, and it
+\* is a state the pre-2026-08-30 model could not represent at all. So the state space does
+\* reach cyclic waits of length 3, and the fix forbids them.
+\*
+\* What this does and does not add. The defect ReentryBug3 exhibits is the SAME defect as
+\* ReentryBug — holding the lock across recv — not a new one; N=3 found no new bug. What is
+\* new is the claim: §6.11's contract is deadlock-free against a 3-cycle, which is a shape
+\* two peers cannot form. Before this the honest position was "we did not look."
+\*
+\* TOPOLOGY BOUNDARY (D11 — what is NOT here). The topology is a fixed directed ring, not an
+\* arbitrary graph: each peer dispatches to exactly one successor and serves exactly one
+\* predecessor. The ring is the MINIMAL shape that exhibits an N-cycle, which is the property
+\* this generalization exists to reach. Arbitrary dispatch graphs (a peer with several
+\* counterparties, or several concurrent outbound requests per peer) are a strictly larger
+\* question and are NOT modeled here. At N=2 the ring IS the complete 2-peer topology, so
+\* nothing is lost relative to the previous model — Succ = Pred = Other, and the N=2 results
+\* are unchanged (same verdicts, same distinct-state counts; the renaming A,B -> 1,2 is an
+\* isomorphism). That equivalence is the regression test for this restructuring.
+\*
 \* Each peer runs a CLIENT activity and a SERVER activity CONCURRENTLY (the deadlock needs
 \* the client to hold the lock while the server contends for it). They must be distinct
 \* PlusCal processes, so servers get disjoint ids mapped back to their peer by Pof.
-\* Both write on the SAME pooled connection — peer p's connection to Other(p) — which is
-\* what makes them two concurrent writers and puts §6.11(a′) in scope.
-Servers     == {"sA", "sB"}
-Pof(s)      == IF s = "sA" THEN "A" ELSE "B"   \* server-id -> its peer
+\* Both write on the SAME pooled connection — peer p's connection — which is what makes them
+\* two concurrent writers and puts §6.11(a′) in scope.
+\* Server ids are integers in a range DISJOINT from Peers, not tuples: the PlusCal translation
+\* emits `CASE self \in Peers -> ... [] self \in Servers -> ...` over the combined ProcSet, and
+\* TLC refuses to evaluate `<<"s",1>> \in 1..N` (tuple tested against an integer interval).
+Servers     == (N+1)..(2*N)
+Pof(s)      == s - N                           \* server-id -> its peer
 
 \* Abstract dispatch gate (V7 §6.5). The real verdict (§5.2/§5.5/§5.6) is Lean's and is
 \* deliberately NOT modeled; here it is an opaque predicate that gates handler entry, so
@@ -76,7 +127,7 @@ Gate(p) == TRUE
 (*--algorithm reentry
 variables
   \* Per-peer pooled-connection WRITE LOCK — THE contended resource (V7 §6.11(a)/(a′)).
-  \* wlock[p] guards writes on peer p's pooled connection to Other(p): p's outbound requests
+  \* wlock[p] guards writes on peer p's pooled connection: p's outbound requests to Succ(p)
   \* AND p's server responses / handler reentries. Its HOLD DURATION is the whole design
   \* question — see the header.
   wlock  = [p \in Peers |-> "free"];
@@ -87,13 +138,13 @@ variables
   \* another writer's chunk on the same connection ("the bytes of two distinct frames
   \* interleaved"). Latched, because the corruption is not undone by finishing the frame.
   interleaved = FALSE;
-  inReq  = [p \in Peers |-> FALSE];   \* an inbound request awaits p's server (from Other(p))
+  inReq  = [p \in Peers |-> FALSE];   \* an inbound request awaits p's server (from Pred(p))
   resp   = [p \in Peers |-> FALSE];   \* a response has been delivered back to p's client
   store  = [p \in Peers |-> {}];      \* V7 §4.8 store: set of live keys a handler has written
   cstate = [p \in Peers |-> "init"];  \* client lifecycle: init | sent | done
   sstate = [p \in Peers |-> "idle"];  \* server lifecycle: idle | serving | done
 
-\* ---- Client(p): originate an outbound EXECUTE to Other(p) and await the response ----
+\* ---- Client(p): originate an outbound EXECUTE to Succ(p) and await the response ----
 fair process client \in Peers
 begin
   CFrame1:
@@ -116,7 +167,7 @@ begin
       interleaved := TRUE;
     end if;
     midframe[self] := midframe[self] \ {"client"} ||
-    inReq[Other(self)] := TRUE ||        \* the complete frame is delivered to the peer's server
+    inReq[Succ(self)] := TRUE ||         \* the complete frame is delivered to Succ(p)'s server
     cstate[self] := "sent" ||
     \* END OF FRAME — release the write lock HERE. This is the (a′)-conformant hold duration:
     \* "held only for the duration of one frame's bytes, never across the await."
@@ -166,13 +217,13 @@ begin
       interleaved := TRUE;
     end if;
     midframe[Pof(self)] := midframe[Pof(self)] \ {"server"} ||
-    resp[Other(Pof(self))] := TRUE ||   \* respond to the requesting client
+    resp[Pred(Pof(self))] := TRUE ||    \* respond to the REQUESTER (Pred), not to our own target
     sstate[Pof(self)] := "done" ||
     wlock[Pof(self)] := "free";
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "c23a49ff" /\ chksum(tla) = "7128d826")
+\* BEGIN TRANSLATION (chksum(pcal) = "63336e5b" /\ chksum(tla) = "b5a172f4")
 VARIABLES pc, wlock, midframe, interleaved, inReq, resp, store, cstate, 
           sstate
 
@@ -212,7 +263,7 @@ CFrame2(self) == /\ pc[self] = "CFrame2"
                        ELSE /\ TRUE
                             /\ UNCHANGED interleaved
                  /\ /\ cstate' = [cstate EXCEPT ![self] = "sent"]
-                    /\ inReq' = [inReq EXCEPT ![Other(self)] = TRUE]
+                    /\ inReq' = [inReq EXCEPT ![Succ(self)] = TRUE]
                     /\ midframe' = [midframe EXCEPT ![self] = midframe[self] \ {"client"}]
                     /\ wlock' = [wlock EXCEPT ![self] = IF Serialized THEN "client" ELSE "free"]
                  /\ pc' = [pc EXCEPT ![self] = "CRecv"]
@@ -264,7 +315,7 @@ SFrame2(self) == /\ pc[self] = "SFrame2"
                        ELSE /\ TRUE
                             /\ UNCHANGED interleaved
                  /\ /\ midframe' = [midframe EXCEPT ![Pof(self)] = midframe[Pof(self)] \ {"server"}]
-                    /\ resp' = [resp EXCEPT ![Other(Pof(self))] = TRUE]
+                    /\ resp' = [resp EXCEPT ![Pred(Pof(self))] = TRUE]
                     /\ sstate' = [sstate EXCEPT ![Pof(self)] = "done"]
                     /\ wlock' = [wlock EXCEPT ![Pof(self)] = "free"]
                  /\ pc' = [pc EXCEPT ![self] = "Done"]

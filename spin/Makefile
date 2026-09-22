@@ -16,6 +16,9 @@ include ../caps.mk
 
 IMAGE   ?= entity-spin
 PODMAN  ?= podman
+# Uppercase :Z is correct HERE and only here: spin/ is mounted by exactly one image
+# ($(IMAGE)), so a private relabel has nothing to conflict with. tla/ and tamarin/ are each
+# shared by two images and use :z — see the note in tla/Makefile.
 MOUNT   := -v $(CURDIR):/work:Z -w /work
 RUN     := $(PODMAN) run --rm $(PODMAN_RUN_CAPS) $(MOUNT) $(IMAGE)
 MODEL   ?= smoke
@@ -73,6 +76,16 @@ SPIN_GREEN := reentry conn store revoke emit register core
 # independently-written enumerator agreeing on the verdicts, NOT interleaving search; that
 # weaker form of corroboration is stated in each .pml header.
 SPIN_GREEN_SAFETY := authority bounds conncodes bootstrap
+
+# N=3 green rows (2026-08-30). `reentry` and `core` are the two models whose peer topology was
+# hard-wired binary by `other(p) == 1 - p`; both now take -DNPEERS and run a directed ring.
+# Format: MODEL|DEFS|LTLFLAGS. LTLFLAGS is per-row because `core` at 3 peers runs 11 processes
+# (3 link + 3 client + 3 server + revoker + init) and pan's weak-fairness construction caps at
+# NFAIR=3 -> 10 procs; it aborts with "too many processes" rather than reporting a wrong
+# verdict, but it aborts, so the bound is carried explicitly instead of being discovered.
+SPIN_GREEN_N3 := \
+  "reentry|-DNPEERS=3|$(LTLFLAGS)" \
+  "core|-DNPEERS=3|-DNFAIR=4"
 
 # NEGATIVE CONTROLS — each row MUST report errors > 0. Format: MODEL DEFS MODE.
 # MODE is `safety` (assertions / invalid-end) or `ltl` (acceptance cycles under -a -f).
@@ -144,6 +157,9 @@ SPIN_NEG := \
   "core|-DNOATOMICFRAME|safety|assertion violated !(interleaved)" \
   "core|-DNOESTABGATE|safety|assertion violated established[p]" \
   "core|-DNOREVGATE|safety|assertion violated !(servedRevoked)" \
+  "reentry|-DNPEERS=3 -DSERIALIZED|safety|invalid end state" \
+  "reentry|-DNPEERS=3 -DNOATOMICFRAME|safety|assertion violated !(interleaved)" \
+  "core|-DNPEERS=3 -DSERIALIZED|safety|invalid end state" \
   "conncodes|-DCOLLAPSE|safety|rowOf[i]!=rowOf[j]" \
   "conncodes|-DWRONGSTATUS|safety|statOf[i]!=want" \
   "conncodes|-DSEQREADING|safety|fired[3]&&(codeOf[3]!=1)" \
@@ -201,6 +217,18 @@ green:
 	  $(RUN) spin -a $$m.pml || exit 1; \
 	  out=$$($(RUN) sh -c "gcc -O2 $(LTLFLAGS) -o pan pan.c && ./pan -a -f" 2>&1); echo "$$out"; \
 	  echo "$$out" | grep -q "errors: 0" || { echo "FAIL: $$m liveness did not report errors: 0"; exit 1; }; \
+	done
+	@for row in $(SPIN_GREEN_N3); do \
+	  m=$$(echo "$$row" | cut -d'|' -f1); d=$$(echo "$$row" | cut -d'|' -f2); \
+	  lf=$$(echo "$$row" | cut -d'|' -f3); \
+	  echo "== Spin $$m $$d (safety) =="; \
+	  $(RUN) spin -a $$d $$m.pml || exit 1; \
+	  out=$$($(RUN) sh -c "gcc -O2 -DNOCLAIM -o pan pan.c && ./pan" 2>&1); echo "$$out"; \
+	  echo "$$out" | grep -q "errors: 0" || { echo "FAIL: $$m $$d safety did not report errors: 0"; exit 1; }; \
+	  echo "== Spin $$m $$d (liveness/LTL) =="; \
+	  $(RUN) spin -a $$d $$m.pml || exit 1; \
+	  out=$$($(RUN) sh -c "gcc -O2 $$lf -o pan pan.c && ./pan -a -f" 2>&1); echo "$$out"; \
+	  echo "$$out" | grep -q "errors: 0" || { echo "FAIL: $$m $$d liveness did not report errors: 0"; exit 1; }; \
 	done
 	@for m in $(SPIN_GREEN_SAFETY); do \
 	  echo "== Spin $$m (safety; no LTL claim) =="; \

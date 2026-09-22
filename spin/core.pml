@@ -42,9 +42,16 @@
  *   liveness: make ltl    MODEL=core
  */
 
+/* NUMBER OF PEERS — see reentry.pml and tla/Reentry.tla §THE PEER BOUND. `other(p)` was not
+ * a low bound: it asserted one counterparty per peer and conflated the dispatch target with
+ * the request's requester, which coincide iff NPEERS == 2. Directed ring, as in Core.tla. */
+#ifndef NPEERS
+  #define NPEERS 2
+#endif
 #define A 0
 #define B 1
-#define other(p)  (1 - p)
+#define succ(p)  ((p + 1) % NPEERS)              /* p's client dispatches TO this peer   */
+#define pred(p)  ((p + NPEERS - 1) % NPEERS)     /* p's server answers THIS peer's request */
 
 /* Per-peer pooled-connection write lock (§6.11(a)/(a′)) — tracks the OWNER, because a writer
  * releases only a lock it holds (see the same note in reentry.pml; found by
@@ -52,19 +59,19 @@
 #define WFREE   0
 #define WCLIENT 1
 #define WSERVER 2
-byte wlock[2] = WFREE;
+byte wlock[NPEERS] = WFREE;
 
-bool established[2] = false;  /* §4: per-connection phase */
-bool inReq[2]       = false;  /* an inbound request awaits peer p's server */
-bool resp[2]        = false;  /* §6.11(b) a demuxed response routed back to p's client */
-byte store[2]       = 0;      /* §4.8 bounded content store written by handlers */
-byte cstate[2]      = 0;      /* client: 0=init 1=sent 2=done */
-byte sstate[2]      = 0;      /* server: 0=idle 1=serving 2=done */
+bool established[NPEERS] = false;  /* §4: per-connection phase */
+bool inReq[NPEERS]       = false;  /* an inbound request awaits peer p's server */
+bool resp[NPEERS]        = false;  /* §6.11(b) a demuxed response routed back to p's client */
+byte store[NPEERS]       = 0;      /* §4.8 bounded content store written by handlers */
+byte cstate[NPEERS]      = 0;      /* client: 0=init 1=sent 2=done */
+byte sstate[NPEERS]      = 0;      /* server: 0=idle 1=serving 2=done */
 bool revoked        = false;  /* §5.1 a revocation marker, consulted by the dispatch gate */
 bool servedRevoked  = false;  /* ghost: a handler wrote under a cap it observed revoked */
 
 /* §6.11(a′) partially-written-frame bookkeeping, per connection. */
-byte midframe[2] = 0;
+byte midframe[NPEERS] = 0;
 bool interleaved = false;
 
 /* §6.5/§5.10 verdict gate (abstracted): honored iff not revoked. */
@@ -75,12 +82,20 @@ bool interleaved = false;
 #endif
 
 /* LTL predicates (§4.9(a)). */
-#define sentA (cstate[A] == 1)
-#define doneA (cstate[A] == 2)
-#define sentB (cstate[B] == 1)
-#define doneB (cstate[B] == 2)
+#define sent(p) (cstate[p] == 1)
+#define done(p) (cstate[p] == 2)
+#define sentA sent(0)
+#define doneA done(0)
+#define sentB sent(1)
+#define doneB done(1)
 
-ltl EventuallyResolved { [] ((sentA -> <> doneA) && (sentB -> <> doneB)) }
+/* No quantifier in a Promela LTL claim, so the conjunction is written per peer and selected
+ * at preprocess time by NPEERS. */
+#if NPEERS == 2
+ltl EventuallyResolved { [] ((sent(0) -> <> done(0)) && (sent(1) -> <> done(1))) }
+#else
+ltl EventuallyResolved { [] ((sent(0) -> <> done(0)) && (sent(1) -> <> done(1)) && (sent(2) -> <> done(2))) }
+#endif
 
 /* §4: the connection handshake completes — the precondition for any dispatch. */
 proctype link(byte p) {
@@ -111,7 +126,7 @@ proctype client(byte p) {
   atomic {
     if :: midframe[p] > 1 -> interleaved = true; :: else -> skip fi;
     midframe[p]--;
-    inReq[other(p)] = true;
+    inReq[succ(p)] = true;
     cstate[p] = 1;              /* sent */
 #ifndef NOATOMICFRAME
 #ifndef SERIALIZED
@@ -175,7 +190,7 @@ proctype server(byte q) {
   atomic {
     if :: midframe[q] > 1 -> interleaved = true; :: else -> skip fi;
     midframe[q]--;
-    resp[other(q)] = true;
+    resp[pred(q)] = true;
     sstate[q] = 2;             /* done */
 #ifndef NOATOMICFRAME
     wlock[q] = WFREE;
@@ -185,10 +200,12 @@ proctype server(byte q) {
 }
 
 init {
+  byte i = 0;
   atomic {
-    run link(A); run link(B);
     run revoker();
-    run client(A); run client(B);
-    run server(A); run server(B);
+    do
+    :: i < NPEERS -> run link(i); run client(i); run server(i); i++
+    :: else -> break
+    od
   }
 }

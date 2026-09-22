@@ -40,35 +40,42 @@ CONSTANTS
   \* @type: Bool;
   GateEstablished,
   \* @type: Bool;
-  GateRevocation
+  GateRevocation,
+  \* @type: Int;
+  N               \* NUMBER OF PEERS — was hard-wired to 2. See Reentry.tla §THE PEER BOUND.
 
-Peers == {"A", "B"}
-\* @type: Str => Str;
-Other(p) == IF p = "A" THEN "B" ELSE "A"
+\* Directed-ring dispatch topology, as in Core.tla / Reentry.tla. `Other(p)` was not a low
+\* bound: it asserted one counterparty per peer AND conflated the peer a client dispatches to
+\* (Succ) with the peer whose request a server answers (Pred) — the same peer iff N = 2.
+Peers == 1..N
+\* @type: Int => Int;
+Succ(p) == IF p = N THEN 1 ELSE p + 1
+\* @type: Int => Int;
+Pred(p) == IF p = 1 THEN N ELSE p - 1
 
 VARIABLES
-  \* @type: Str -> Str;
+  \* @type: Int -> Str;
   conn,          \* §4: "new" | "established"
-  \* @type: Str -> Str;
+  \* @type: Int -> Str;
   mtx,           \* §6.11(a)/(a') per-connection write lock: "free" | "client" | "server"
-  \* @type: Str -> Set(Str);
+  \* @type: Int -> Set(Str);
   midframe,      \* §6.11(a') partially-written-frame holders
   \* @type: Bool;
   interleaved,   \* §6.11(a') latched violation flag
-  \* @type: Str -> Bool;
+  \* @type: Int -> Bool;
   inReq,
-  \* @type: Str -> Bool;
+  \* @type: Int -> Bool;
   resp,
-  \* @type: Str -> Set(Str);
+  \* @type: Int -> Set(Str);
   store,         \* §4.8 content store (no bound asserted here — see below)
-  \* @type: Str -> Str;
+  \* @type: Int -> Str;
   cstate,        \* "init" | "midframe" | "sent" | "done"
-  \* @type: Str -> Str;
+  \* @type: Int -> Str;
   sstate,        \* "idle" | "serving" | "midframe" | "done"
   \* @type: Bool;
   revoked,       \* §5.1 revocation marker
-  \* @type: Set(Str);
-  servedRevoked  \* ghost: peers whose handler wrote under a revoked cap
+  \* @type: Set(Int);
+  servedRevoked  \* ghost: peers whose handler wrote under a revoked cap (peers are Int now)
 
 vars == << conn, mtx, midframe, interleaved, inReq, resp, store, cstate, sstate,
            revoked, servedRevoked >>
@@ -77,7 +84,7 @@ CPhases == {"init", "midframe", "sent", "done"}
 SPhases == {"idle", "serving", "midframe", "done"}
 Locks   == {"free", "client", "server"}
 
-\* @type: Str => Bool;
+\* @type: Int => Bool;
 Honored(p) == ~revoked
 
 \* ----- the four composed safety invariants (transcribed from Core.tla) -----
@@ -176,7 +183,7 @@ CFrame2(p) ==
   /\ cstate[p] = "midframe"
   /\ interleaved' = (interleaved \/ midframe[p] # {"client"})
   /\ midframe' = [midframe EXCEPT ![p] = @ \ {"client"}]
-  /\ inReq' = [inReq EXCEPT ![Other(p)] = TRUE]
+  /\ inReq' = [inReq EXCEPT ![Succ(p)] = TRUE]
   /\ cstate' = [cstate EXCEPT ![p] = "sent"]
   /\ mtx' = [mtx EXCEPT ![p] = IF Serialized THEN "client" ELSE "free"]
   /\ UNCHANGED << conn, resp, store, sstate, revoked, servedRevoked >>
@@ -220,7 +227,7 @@ SFrame2(p) ==
   /\ sstate[p] = "midframe"
   /\ interleaved' = (interleaved \/ midframe[p] # {"server"})
   /\ midframe' = [midframe EXCEPT ![p] = @ \ {"server"}]
-  /\ resp' = [resp EXCEPT ![Other(p)] = TRUE]
+  /\ resp' = [resp EXCEPT ![Pred(p)] = TRUE]
   /\ sstate' = [sstate EXCEPT ![p] = "done"]
   /\ mtx' = [mtx EXCEPT ![p] = "free"]
   /\ UNCHANGED << conn, inReq, store, cstate, revoked, servedRevoked >>
@@ -235,11 +242,18 @@ IndInitComposed == TypeOK /\ FrameSound /\ EstabSound /\ ComposedSafety
 
 \* ----- constant inits -----
 ConstInitOK == Serialized = FALSE /\ AtomicFrame = TRUE
-               /\ GateEstablished = TRUE /\ GateRevocation = TRUE
+               /\ GateEstablished = TRUE /\ GateRevocation = TRUE /\ N = 2
 ConstInitBugFrame == Serialized = FALSE /\ AtomicFrame = FALSE
-               /\ GateEstablished = TRUE /\ GateRevocation = TRUE
+               /\ GateEstablished = TRUE /\ GateRevocation = TRUE /\ N = 2
 ConstInitBugEstab == Serialized = FALSE /\ AtomicFrame = TRUE
-               /\ GateEstablished = FALSE /\ GateRevocation = TRUE
+               /\ GateEstablished = FALSE /\ GateRevocation = TRUE /\ N = 2
 ConstInitBugRevoke == Serialized = FALSE /\ AtomicFrame = TRUE
-               /\ GateEstablished = TRUE /\ GateRevocation = FALSE
+               /\ GateEstablished = TRUE /\ GateRevocation = FALSE /\ N = 2
+
+\* The composed model at THREE peers. Core.tla checks every 3-ring interleaving in TLC; this
+\* proves the composed invariant INDUCTIVE there — the cross-check the N=3 result needed.
+ConstInitOK3 == Serialized = FALSE /\ AtomicFrame = TRUE
+               /\ GateEstablished = TRUE /\ GateRevocation = TRUE /\ N = 3
+ConstInitBugFrame3 == Serialized = FALSE /\ AtomicFrame = FALSE
+               /\ GateEstablished = TRUE /\ GateRevocation = TRUE /\ N = 3
 ====

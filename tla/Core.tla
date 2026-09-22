@@ -71,12 +71,26 @@ CONSTANTS Serialized,     \* FALSE = §6.11 fix (reader-demux: mutex spans the w
           GateRevocation  \* TRUE = F §5.1/§6.5: handler write gated on the verdict (not revoked);
                           \*        FALSE = negative control: serve a revoked cap -> NoServeWhenRevoked fails.
 
-Peers    == {"A", "B"}
-Other(p) == IF p = "A" THEN "B" ELSE "A"
-Servers  == {"sA", "sB"}
-Pof(s)   == IF s = "sA" THEN "A" ELSE "B"   \* server-id -> the peer it serves
-Links    == {"lA", "lB"}                     \* distinct ids for the establishment activities
-Lof(l)   == IF l = "lA" THEN "A" ELSE "B"   \* link-id -> the peer it establishes
+CONSTANT N  \* NUMBER OF PEERS — was hard-wired to 2. See Reentry.tla §THE PEER BOUND for
+            \* what `Other(p)` was actually asserting, and why it was not merely a low bound.
+
+Peers    == 1..N
+\* Directed-ring dispatch topology, identical to Reentry.tla: p's client dispatches to Succ(p),
+\* so p's server answers Pred(p). The old `Other` collapsed those two roles into one peer,
+\* which is sound iff N = 2.
+Succ(p)  == IF p = N THEN 1 ELSE p + 1
+Pred(p)  == IF p = 1 THEN N ELSE p - 1
+\* Server ids are integers disjoint from Peers, not strings: the PlusCal translation emits
+\* `CASE self \in Peers -> ... [] self \in Servers -> ...` over the combined ProcSet, and TLC
+\* will not evaluate a non-integer against the interval 1..N.
+Servers  == (N+1)..(2*N)
+Pof(s)   == s - N                           \* server-id -> the peer it serves
+\* Link ids: a third integer band, disjoint from Peers (1..N) and Servers (N+1..2N), for the
+\* same reason Servers is — ProcSet mixes all three and TLC will not test a string against
+\* the interval 1..N.
+Links    == (2*N+1)..(3*N)                  \* distinct ids for the establishment activities
+Lof(l)   == l - 2*N                         \* link-id -> the peer it establishes
+Revoker  == 3*N+1                           \* the single §5.1 revocation-writer activity
 
 (*--algorithm core
 variables
@@ -149,7 +163,7 @@ begin
     conn[Lof(self)] := "established";
 end process;
 
-\* B client: once established, originate a reentrant cross-peer EXECUTE to Other(self) and await
+\* B client: once established, originate a reentrant cross-peer EXECUTE to Succ(self) and await
 \* the response. The §6.11 fix releases the write mutex after the WRITE (recv is demuxed by
 \* request_id); the Serialized defect holds it across recv — the deadlock surface.
 fair process client \in Peers
@@ -176,7 +190,7 @@ begin
       interleaved := TRUE;                                   \* another writer's chunk landed between ours
     end if;
     midframe[self] := midframe[self] \ {"client"} ||
-    inReq[Other(self)] := TRUE ||
+    inReq[Succ(self)] := TRUE ||
     cstate[self] := "sent" ||
     mtx[self] := IF Serialized THEN "client" ELSE "free";     \* B §6.11(a)
   CRecv:
@@ -237,20 +251,20 @@ begin
       interleaved := TRUE;
     end if;
     midframe[Pof(self)] := midframe[Pof(self)] \ {"server"} ||
-    resp[Other(Pof(self))] := TRUE ||
+    resp[Pred(Pof(self))] := TRUE ||
     sstate[Pof(self)] := "done" ||
     mtx[Pof(self)] := "free";
 end process;
 
 \* F §5.1: a revocation may (or may not) occur concurrently with in-flight dispatch.
-fair process revoker = "rev"
+fair process revoker = Revoker
 begin
   RWrite:
     either revoked := TRUE; or skip; end either;
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "9597ffe7" /\ chksum(tla) = "fb496b23")
+\* BEGIN TRANSLATION (chksum(pcal) = "73ec9b71" /\ chksum(tla) = "dcdc9f6d")
 VARIABLES pc, conn, mtx, inReq, resp, store, cstate, sstate, revoked, 
           servedRevoked, midframe, interleaved
 
@@ -279,7 +293,7 @@ FramesNotInterleaved == ~interleaved
 vars == << pc, conn, mtx, inReq, resp, store, cstate, sstate, revoked, 
            servedRevoked, midframe, interleaved >>
 
-ProcSet == (Links) \cup (Peers) \cup (Servers) \cup {"rev"}
+ProcSet == (Links) \cup (Peers) \cup (Servers) \cup {Revoker}
 
 Init == (* Global variables *)
         /\ conn = [p \in Peers |-> "new"]
@@ -296,7 +310,7 @@ Init == (* Global variables *)
         /\ pc = [self \in ProcSet |-> CASE self \in Links -> "Estab"
                                         [] self \in Peers -> "CEst"
                                         [] self \in Servers -> "SWait"
-                                        [] self = "rev" -> "RWrite"]
+                                        [] self = Revoker -> "RWrite"]
 
 Estab(self) == /\ pc[self] = "Estab"
                /\ conn' = [conn EXCEPT ![Lof(self)] = "established"]
@@ -334,7 +348,7 @@ CFrame2(self) == /\ pc[self] = "CFrame2"
                        ELSE /\ TRUE
                             /\ UNCHANGED interleaved
                  /\ /\ cstate' = [cstate EXCEPT ![self] = "sent"]
-                    /\ inReq' = [inReq EXCEPT ![Other(self)] = TRUE]
+                    /\ inReq' = [inReq EXCEPT ![Succ(self)] = TRUE]
                     /\ midframe' = [midframe EXCEPT ![self] = midframe[self] \ {"client"}]
                     /\ mtx' = [mtx EXCEPT ![self] = IF Serialized THEN "client" ELSE "free"]
                  /\ pc' = [pc EXCEPT ![self] = "CRecv"]
@@ -393,7 +407,7 @@ SFrame2(self) == /\ pc[self] = "SFrame2"
                             /\ UNCHANGED interleaved
                  /\ /\ midframe' = [midframe EXCEPT ![Pof(self)] = midframe[Pof(self)] \ {"server"}]
                     /\ mtx' = [mtx EXCEPT ![Pof(self)] = "free"]
-                    /\ resp' = [resp EXCEPT ![Other(Pof(self))] = TRUE]
+                    /\ resp' = [resp EXCEPT ![Pred(Pof(self))] = TRUE]
                     /\ sstate' = [sstate EXCEPT ![Pof(self)] = "done"]
                  /\ pc' = [pc EXCEPT ![self] = "Done"]
                  /\ UNCHANGED << conn, inReq, store, cstate, revoked, 
@@ -402,11 +416,11 @@ SFrame2(self) == /\ pc[self] = "SFrame2"
 server(self) == SWait(self) \/ SGate(self) \/ SFrame1(self)
                    \/ SFrame2(self)
 
-RWrite == /\ pc["rev"] = "RWrite"
+RWrite == /\ pc[Revoker] = "RWrite"
           /\ \/ /\ revoked' = TRUE
              \/ /\ TRUE
                 /\ UNCHANGED revoked
-          /\ pc' = [pc EXCEPT !["rev"] = "Done"]
+          /\ pc' = [pc EXCEPT ![Revoker] = "Done"]
           /\ UNCHANGED << conn, mtx, inReq, resp, store, cstate, sstate, 
                           servedRevoked, midframe, interleaved >>
 
