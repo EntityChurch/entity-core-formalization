@@ -9,9 +9,10 @@ checks MODELS of the V7 design on the two layers the Lean proof work structurall
 cannot reach: distributed correctness + liveness under concurrency (TLA+, cross-
 checked by an independent Spin re-encoding and unbounded Apalache SMT proofs), and
 active-attacker protocol security (Tamarin + ProVerif, Dolev-Yao). It is a sibling
-to entity-core-architecture (the spec authority), entity-core-keystone (peers +
-the Lean logic proof), and the reference implementations — it verifies the DESIGN,
-not the code and not any generated peer.
+to entity-core-protocol (the spec authority — it publishes the three specs this
+repo models), entity-core-keystone (peers + the Lean logic proof), and the
+reference implementations — it verifies the DESIGN, not the code and not any
+generated peer.
 
 Honesty first (this is design assurance, off the release critical path): it is a
 strong DEMONSTRATOR, not a closed proof, and NOT a claim that "the protocol is
@@ -94,7 +95,58 @@ blurb = "The 12 active-attacker lemmas (lockstep both provers) + the one documen
 group = "Tamarin/ProVerif specs"
 
 [[doc]]
-path  = "docs/status/STATUS.md"
+path  = "docs/STATUS.md"
 title = "Status"
 blurb = "Current project status — where the project is, recent work, backlog, and what's next."
 group = "Overview"
+
+# ── Project ─────────────────────────────────────────────────────────────────
+[[doc]]
+path  = "CHANGELOG.md"
+title = "Changelog"
+blurb = "What changed in each release, newest first."
+group = "Project"
+
+[[doc]]
+path  = "CONTRIBUTING.md"
+title = "Contributing"
+blurb = "How to propose a change, and the DCO sign-off the project requires."
+group = "Project"
+
+[[doc]]
+path  = "CODE_OF_CONDUCT.md"
+title = "Code of Conduct"
+blurb = "What we expect of each other."
+group = "Project"
+
+[[doc]]
+path  = "SECURITY.md"
+title = "Security"
+blurb = "How to report a vulnerability."
+group = "Project"
+
+# ── Working here ────────────────────────────────────────────────────────────
+# The agent + methodology overlay, shared byte-identical across the ecosystem.
+[[doc]]
+path  = "AGENTS.md"
+title = "AGENTS.md"
+blurb = "The durable agent context and operating agreement for this repo."
+group = "Working here"
+
+[[doc]]
+path  = "AGENTS-STANDARD.md"
+title = "Agent standard"
+blurb = "The shared cross-repo standard every repo's AGENTS.md builds on."
+group = "Working here"
+
+[[doc]]
+path  = "METHODOLOGY.md"
+title = "Methodology"
+blurb = "Disciplines, doctrines, the ratchet, and the promotion ladder (ADR-0028)."
+group = "Working here"
+
+[[doc]]
+path  = "CLAUDE.md"
+title = "CLAUDE.md"
+blurb = "A one-line shim to AGENTS.md (ADR-0016)."
+group = "Working here"
