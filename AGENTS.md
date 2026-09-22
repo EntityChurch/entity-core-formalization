@@ -271,8 +271,26 @@ With unbinds admitted the read-side closure holds and the cache still goes stale
 non-trigger 2 forbids invalidating on the write that removed the entry. **What §4.2 needs is
 write-side: the readable set changes only through validate-accept.** Routed as an amendment to Q5
 rather than a new number (`ROUTING-2026-09-09-QUORUM-CACHE-WRITE-CLOSURE.md`); LEAN-SEAM **O11**
-restated and still OPEN. Its cohort census for the two new directions is **declared not taken** in
-that note — naming a census is not taking one.
+restated and still OPEN. Its cohort census for the two new directions was **declared not taken**
+in that note — naming a census is not taking one — and was **taken later the same day**, which is
+the part worth carrying.
+
+**THE CENSUS ANSWERED BOTH QUESTIONS "UNANIMOUS" AND THE INTERESTING RESULT WAS IN THE MECHANISM,
+NOT THE VERDICT.** *Nobody* implements §4.2.1 **trigger 3** (D20) and *nobody* invalidates on a
+raw unbind (D21) — but Go **sees the delete and deliberately returns**
+(`if evt.ChangeType == store.ChangeDeleted { return nil }`, under a header citing §4.2.1), Rust
+**cannot see it** (no hook wiring), and Python **filters it out** on `entity is None`. A unanimous
+outcome reached three ways is not the same finding as a unanimous decision: **Go's early return is
+§4.2.1 non-trigger 2 implemented exactly as written**, which is the strongest evidence that the
+write-side closure §4.2 needs cannot be derived from the text by anyone. *Record how each peer
+arrives at the shared answer, not just that they share it.*
+
+**And the census found a third thing neither question asked for, which is the argument for taking
+one at all.** Rust does not implement **trigger 2** either — its only invalidation points are
+local ops, its own tests name a `SyncTreeHook` that is not in the tree, and `TV-QF13` passes by
+exercising the invalidation API rather than the arrival path. Two peers invalidate on a synced
+arrival and one does not (**D22**, C3). Neither of the two questions would have surfaced it; going
+to the source did.
 
 **Identity track, 2026-09-07 — promoted `scoped`→`modeled`, three modules, 33 runs, NINE
 findings, and the LAST scoped track.** `tla/IdentityProcess.tla` (§6.3 the arrival convergence
@@ -442,12 +460,23 @@ the complementarity claim stops being prose. **It paid out on 2026-09-06:** the 
 residual it found was adopted by the keystone peer, §5.5a now has a theorem per pattern form,
 and both gates caught the movement — `leanseam` on the digests, `leanproof` on three new
 theorems **by name**, refusing to accept a re-declare without a re-read. **Do not trust a
-count of the ledger's rows that you did not derive:** it is 40 rows / 13 Class L, **14 OPEN**,
-and a recalled figure has been published wrong here **four** times. Run **`make ledgercount`**
+count of the ledger's rows that you did not derive:** it is 40 rows / 13 Class L, **13 OPEN**,
+and a recalled figure has been published wrong here **five** times. Run **`make ledgercount`**
 — it parses the ledger and fails when a declared prose site disagrees. *Note what this line
 used to say and why it was wrong: "`leanseam` and `leanproof` print the live numbers." They do
 not. They derive THEOREM counts and say nothing about rows or verdicts, which is exactly why
 none of the four errors was reachable by a gate until `ledgercount` existed.*
+
+***And the fifth was THIS SENTENCE, found 2026-09-09.*** It read **14 OPEN** while the ledger
+held 13, with `make ledgercount` green over it — because this site declared **two** of the three
+facets its own sentence states. `rows` was gated, `Class L` was gated, and `OPEN`, sitting between
+them in the same clause, was declared nowhere. **A gate that reads SOME facets of a claim asserts
+nothing about the rest, and the unchecked facet is the one that moves.** Exactly the shape found
+the same afternoon in `spec-drift`, where the section COUNT was anchored and the live spec VERSION
+beside it went from 0.8.2.11 to 0.8.2.14 with `driftclaim` green. The facet is declared now.
+**Ask of any gated sentence which of its claims the gate actually reads** — a warning against
+recalling a number is not a substitute for deriving the number, even when the warning is the
+sentence carrying it.
 **Row T4 closed 2026-09-06 by being refuted** — the composed `Core` model carries **one** of
 six component invariants; the other five are manufactured by the refinement mapping
 (`tla/RefMap.tla`, `tla/CoreMapFree.tla`). "The composed model is checked and the components
@@ -572,6 +601,25 @@ that would pin it were written and stranded rather than never designed.
 The transferable piece, and it is why this is D13 rather than a bug report: **a test vector is a
 grader, and every question this discipline asks of our own graders applies to someone else's.**
 We had been reading TV rows as ground truth for three tracks.
+
+*Ninth instance, 2026-09-09 — the fourth instance's line generalized once more, and it cost a
+sibling a security behaviour.* The fourth said **"a gate a sibling repo says it has is a gate you
+have not checked."** Taking the Q5 cohort census turned that into: **a BEHAVIOUR a sibling repo
+says it has is a behaviour you have not checked.**
+`entity-core-rust/extensions/quorum/src/cache.rs`'s module documentation lists, under
+*"Invalidated on:"*, the line *"Live revocation arrival targeting a previously-seen quorum
+self-event"* — §QUORUM:4.2.1's trigger 3, stated as a property of the code. **It is the only
+occurrence of the word `revocation` in that entire extension.** No hook wiring exists there at
+all; both `invalidate` call sites are local op handlers; and the identity extension, which shares
+the same `SignerSetCache`, *reads* it on the revoke path and never invalidates. The same census
+found that the extension's own tests name a `SyncTreeHook` — *"(Phase 6) calls invalidate() on
+validate-accept"* — **for a type that does not exist in the tree**, so trigger 2 is unimplemented
+there too and `TV-QF13` passes anyway by exercising the invalidation API instead of the arrival
+path. Registered as D20 and D22.
+**A doc comment is a claim in a channel nothing executes** — the same shape as a `sorry` reported
+as a warning and ProVerif exiting 0 on a false query. Read the call sites, not the docstring, and
+**grep the whole subtree for the noun** (`revocation` → one hit, in a comment) rather than for the
+verb you expect to find.
 
 *Eighth instance, 2026-09-08 — asked of THE INDUCTIVE PROOF ITSELF, and the answer was "less
 than it says".* `apalache-green` checks two things per row: `Init => Inv`, and

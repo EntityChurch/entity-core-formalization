@@ -87,8 +87,38 @@ PROSE_SITES = [
      r"\*\*(\d+) OPEN\*\*"),
     ("AGENTS.md", "the LEAN-SEAM paragraph", "rows",
      r"it is (\d+) rows / \d+ Class L"),
+    # D14, same afternoon: the AGENTS.md instance was not the only site whose sentence
+    # states more facets than the gate reads. Both of these spell out the CLASS BREAKDOWN
+    # ("13 Class L, 5 Class T, 22 Class O") beside a gated row total, and none of the three
+    # was declared. They were correct when checked -- which is the point: an unread facet is
+    # not a wrong number, it is a number nothing will notice going wrong.
+    (LEDGER, "the Class-T closing note", "class_L",
+     r"the ledger is \*\*\d+ rows\*\* \((\d+) Class L"),
+    (LEDGER, "the Class-T closing note", "class_T",
+     r"the ledger is \*\*\d+ rows\*\* \(\d+ Class L, (\d+) Class T"),
+    (LEDGER, "the Class-T closing note", "class_O",
+     r"the ledger is \*\*\d+ rows\*\* \(\d+ Class L, \d+ Class T, (\d+) Class O"),
+    ("docs/STATUS.md", "the ledger-shape note in §Next", "class_L",
+     r"\*\*40 rows\*\* — (\d+) Class L"),
+    ("docs/STATUS.md", "the ledger-shape note in §Next", "class_T",
+     r"\*\*40 rows\*\* — \d+ Class L, (\d+) Class T"),
+    ("docs/STATUS.md", "the ledger-shape note in §Next", "class_O",
+     r"\*\*40 rows\*\* — \d+ Class L, \d+ Class T, (\d+) Class O"),
     ("AGENTS.md", "the LEAN-SEAM paragraph", "class_L",
      r"it is \d+ rows / (\d+) Class L"),
+    # Added 2026-09-09, and the figure it now checks was WRONG when the row was added.
+    # This site's sentence states three facets -- rows, Class L, and OPEN -- and only the
+    # first two were declared, so `14 OPEN` sat beside a gated `40 rows` and a gated
+    # `13 Class L` while the ledger held 13 OPEN. The gate was green over it because a
+    # gate that reads SOME facets of a claim asserts nothing about the rest, and the
+    # unchecked facet is the one that moves. Same shape as spec-drift anchoring the
+    # section COUNT while the live VERSION beside it went stale, found the same afternoon.
+    #
+    # The paragraph this appears in is the one that says "Do not trust a count of the
+    # ledger's rows that you did not derive ... a recalled figure has been published wrong
+    # here FOUR times." It was the fifth.
+    ("AGENTS.md", "the LEAN-SEAM paragraph", "open",
+     r"it is \d+ rows / \d+ Class L, \*\*(\d+) OPEN\*\*"),
     # Added 2026-09-09, and it had been stale for a day: this table said "14 of 38" when the
     # ledger was 13 of 40. Its own header says "do not quote these from here" -- which is a
     # DISCLAIMER, and a disclaimer is not a gate. It reads as though the risk has been handled,
